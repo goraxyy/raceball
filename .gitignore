@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+*.log
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# raw art sources live in the shared Drive folder (see docs/ASSETS.md)
+assets-src/
+*.blend1

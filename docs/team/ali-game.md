@@ -1,0 +1,484 @@
+# Ali: Game guide
+
+You own **the game**: how the ball moves, the race rules, the track, the items, and everything you see in 3D.
+
+| Area | Where |
+|---|---|
+| Simulation: physics, race rules, items, track loading | `packages/game-core` |
+| 3D rendering, cameras, VFX/audio hookup | `apps/web/src/game` |
+| Map greybox + gameplay markers | `happy_valley.blend` (Drive), exported to `packages/game-core/tracks/` and `apps/web/public/assets/maps/` |
+
+## How your work connects to the others
+
+- **Rasim** runs your `game-core` inside the server's 60 Hz loop. He feeds it phone inputs, broadcasts your `snapshot()` to every screen, and routes your events to phones. His net library (`apps/web/src/net`) gives you interpolated ball transforms every frame.
+- **Nuris** delivers models, materials, particles and sounds into `apps/web/public/assets` (conventions in [ASSETS.md](../ASSETS.md)). You load them and fire them from gameplay events. Nuris's React UI (HUD, map, results) sits on top of your canvas.
+- **The contract** is `packages/shared/src/protocol.ts`. Change it only through the [protocol process](../WORKFLOW.md#changing-the-protocol-packagessharedsrcprotocolts).
+
+## Golden rules
+
+1. **`game-core` is pure TypeScript:** no Babylon, no DOM, no network. It runs in Node (the server) and in the browser (local mode).
+2. **Online, physics runs only on the server.** Screens never simulate. The exception is local mode (`?local=1`), which is for your own testing and tuning.
+3. **Fixed timestep of 1/60 s.** Never pass a variable `dt` to Rapier.
+4. **One coordinate system:** right-handed, Y up, +Z forward, meters. In Babylon, always set `scene.useRightHandedSystem = true` ([conventions](../WORKFLOW.md#units-and-coordinates)).
+5. **Every feel number lives in `game-core/src/tuning.ts`.**
+
+## Setup
+
+Do [ONBOARDING.md](../ONBOARDING.md) first. Your packages (Rasim adds them in the bootstrap):
+
+```bash
+pnpm --filter @raceball/game-core add @dimforge/rapier3d-compat @gltf-transform/core gl-matrix
+pnpm --filter @raceball/game-core add -D vitest
+pnpm --filter @raceball/web add @babylonjs/core @babylonjs/loaders
+pnpm --filter @raceball/web add -D @babylonjs/inspector lil-gui
+```
+
+Suggested layout:
+
+```
+packages/game-core/src/
+  index.ts       public API (re-exports only)
+  physics.ts     Rapier init + world creation
+  race.ts        Race: players, phases, step, snapshot, events
+  ball.ts        per-ball controls: steer/gas/brake → forces
+  track.ts       loadTrack(): colliders + markers from the _col.glb
+  items.ts       item logic + odds by position
+  ranking.ts     progress + standings
+  tuning.ts      every feel constant
+packages/game-core/tracks/happy_valley_col.glb
+packages/game-core/test/*.test.ts
+
+apps/web/src/game/
+  GameView.tsx   React component that owns the Babylon engine
+  game.ts        createGame(scene, mode): meshes, cameras, update loop
+  balls.ts       ball meshes + skins, updated from snapshots
+  cameras.ts     chase camera, overview, follow-cam tiles
+  assets.ts      loading asset containers with progress
+  fx.ts          particles + sounds triggered by events
+  local.ts       local mode: runs game-core in the browser with the keyboard
+```
+
+---
+
+## M0: Setup
+
+### 1. Rapier world and one ball (`physics.ts`, `ball.ts`)
+
+```ts
+import RAPIER from "@dimforge/rapier3d-compat";
+
+export async function initPhysics() {
+  await RAPIER.init();                       // loads the WASM once, before anything else
+}
+
+export function createWorld() {
+  const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  world.timestep = 1 / 60;
+  return world;
+}
+
+export function addBall(world: RAPIER.World, x: number, y: number, z: number) {
+  const body = world.createRigidBody(
+    RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(x, y + 0.6, z)
+      .setCcdEnabled(true)                   // fast balls must not tunnel through thin track pieces
+      .setAngularDamping(0.4),
+  );
+  world.createCollider(
+    RAPIER.ColliderDesc.ball(0.5)            // 1 m diameter (see ASSETS.md)
+      .setFriction(1.0)
+      .setRestitution(0.3)
+      .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS),
+    body,
+  );
+  return body;
+}
+```
+
+Start with a flat ground (`RAPIER.ColliderDesc.cuboid(50, 0.1, 50)`) until the track loader exists.
+
+### 2. Keyboard adapter (local mode only)
+
+Turn W/S/A/D (or arrow keys) into the same `InputMsg` a phone sends:
+- `gas = W ? 1 : 0`
+- `brake = S`
+- `steer` ramps toward -1 / +1 while A/D is held, so it feels like a wheel, not a switch
+- `item = Space`
+
+Everything downstream then can't tell the keyboard from a phone.
+
+### 3. Babylon scene in React (`GameView.tsx`)
+
+```tsx
+import { useEffect, useRef } from "react";
+import { Engine, Scene, Vector3, HemisphericLight } from "@babylonjs/core";
+import "@babylonjs/loaders/glTF";
+import { createGame } from "./game";
+
+export function GameView({ mode }: { mode: "local" | "viewer" | "host" }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const engine = new Engine(canvasRef.current, true, { stencil: true });
+    const scene = new Scene(engine);
+    scene.useRightHandedSystem = true;       // match glTF + Rapier, no conversions
+    new HemisphericLight("sky", new Vector3(0, 1, 0), scene);
+
+    const game = createGame(scene, mode);
+    engine.runRenderLoop(() => {
+      game.update(engine.getDeltaTime() / 1000);
+      scene.render();
+    });
+    const onResize = () => engine.resize();
+    addEventListener("resize", onResize);
+    return () => {
+      removeEventListener("resize", onResize);
+      game.dispose();
+      engine.dispose();
+    };
+  }, [mode]);
+
+  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
+}
+```
+
+React StrictMode runs effects twice in development. The cleanup above disposes the first engine, so that's fine.
+
+### 4. Chase camera v0 (`cameras.ts`)
+
+The ball *rolls*, so never parent the camera to it. Follow the **heading** instead:
+
+```ts
+// every frame: dt in seconds, ball = rendered ball position, h = heading
+const fwd = new Vector3(Math.sin(h), 0, Math.cos(h));
+const desired = ball.subtract(fwd.scale(t.camDistance)).add(new Vector3(0, t.camHeight, 0));
+const k = 1 - Math.exp(-t.camStiffness * dt);    // smoothing that doesn't depend on frame rate
+camera.position = Vector3.Lerp(camera.position, desired, k);
+camera.setTarget(ball.add(fwd.scale(2)));
+```
+
+Use a `UniversalCamera` for this. Start with `camDistance = 6`, `camHeight = 3`, `camStiffness = 8`.
+
+### 5. Inspector toggle (dev only)
+
+```ts
+addEventListener("keydown", async (e) => {
+  if (!import.meta.env.DEV || !(e.shiftKey && e.code === "KeyI")) return;
+  await import("@babylonjs/inspector");
+  scene.debugLayer.isVisible() ? scene.debugLayer.hide() : scene.debugLayer.show({ embedMode: true });
+});
+```
+
+**Done when:** `/play?local=1` shows a ball you drive with the keyboard, the chase camera follows it, and Shift+I opens the Inspector.
+
+---
+
+## M1: Vertical slice
+
+### 1. Ball control model (`ball.ts`)
+
+Run this once per tick for each player, **before** `world.step()`:
+
+```ts
+export function applyControls(p: PlayerSim, input: InputMsg, dt: number, t: Tuning, world: RAPIER.World) {
+  const v = p.body.linvel();
+  const speed = Math.hypot(v.x, v.z);
+  const mass = p.body.mass();
+  const grounded = isGrounded(p, world);
+  const control = grounded ? 1 : t.airControl;
+
+  // 1. Steering turns the heading, a bit less at high speed. steer > 0 = right = heading decreases
+  const turnRate = t.turnRate * (1 - t.turnFalloff * Math.min(speed / t.maxSpeed, 1));
+  p.heading -= input.steer * turnRate * dt;
+  const fwd = { x: Math.sin(p.heading), z: Math.cos(p.heading) };
+
+  // 2. Gas pushes along the heading, with no push above max speed
+  if (input.gas > 0 && speed < p.maxSpeed) {
+    const j = t.engineForce * input.gas * control * dt;
+    p.body.applyImpulse({ x: fwd.x * j, y: 0, z: fwd.z * j }, true);
+  }
+
+  // 3. Grip removes part of the sideways speed, so the ball follows the heading
+  //    (grip 0 = pure marble, high = on rails). Surfaces like ice cream and ice lower it
+  const side = { x: fwd.z, z: -fwd.x };
+  const lateral = v.x * side.x + v.z * side.z;
+  const kGrip = 1 - Math.exp(-t.grip * p.surfaceGrip * control * dt);
+  p.body.applyImpulse({ x: -side.x * lateral * kGrip * mass, y: 0, z: -side.z * lateral * kGrip * mass }, true);
+
+  // 4. Brake damps horizontal speed
+  if (input.brake) {
+    const kBrake = 1 - Math.exp(-t.brakeStrength * dt);
+    p.body.applyImpulse({ x: -v.x * kBrake * mass, y: 0, z: -v.z * kBrake * mass }, true);
+  }
+}
+
+function isGrounded(p: PlayerSim, world: RAPIER.World) {
+  const ray = new RAPIER.Ray(p.body.translation(), { x: 0, y: -1, z: 0 });
+  // exclude our own body from the ray (last argument)
+  return world.castRay(ray, 0.5 + 0.15, true, undefined, undefined, undefined, p.body) !== null;
+}
+```
+
+Starting tuning values (`tuning.ts`):
+
+| Name | Start | Meaning |
+|---|---|---|
+| `maxSpeed` | 18 m/s | Top speed on flat ground |
+| `engineForce` | 25 | Acceleration strength |
+| `turnRate` | 2.4 rad/s | Heading change at full steer |
+| `turnFalloff` | 0.4 | Turn rate drops by 40% at top speed |
+| `grip` | 6 | How quickly sideways sliding is removed |
+| `brakeStrength` | 3 | How quickly the brake stops you |
+| `airControl` | 0.2 | Share of control while airborne |
+
+### 2. Greybox the route in Blender
+
+1. Open `happy_valley.blend` from Drive. Import Kenney Marble Kit pieces (File > Import > glTF 2.0).
+2. Lay out the 8 sections from [MAP.md](../MAP.md) with track pieces. Use **boxes for landmarks**, roughly the final size. Turn on increment snapping so pieces line up.
+3. Put collision meshes in the `collision` collection, named `*_col`. Keep them simple: a few hundred triangles per section is plenty.
+4. Add markers as Empties in the `markers` collection, using the [marker table](../ASSETS.md#blender-is-our-level-editor):
+   - `spawn_1..8` sit just behind `cp_00`. `cp_00` is the finish line.
+   - Checkpoints use **Cube** display with size 1. Scale the Empty to the gate size, since the scale becomes the half-extents.
+   - Put a `section` custom property on checkpoints (e.g. `"creamery"`). Overtake events and the standings use it.
+5. Export `collision` + `markers` to `packages/game-core/tracks/happy_valley_col.glb`, and the `visual` collection to `apps/web/public/assets/maps/happy_valley.glb`. Settings:
+   - glTF Binary
+   - +Y Up
+   - Include > Custom Properties
+   - Limit to: Visible Objects (hide the other collections)
+6. Playtest in local mode. Iterate until one lap takes 60–75 s and feels good.
+
+### 3. Track loader (`track.ts`)
+
+```ts
+import type { PlatformIO } from "@gltf-transform/core";
+import { mat4, vec3, quat } from "gl-matrix";
+
+/** io: new NodeIO() on the server, new WebIO() in the browser (local mode) */
+export async function loadTrack(world: RAPIER.World, glb: Uint8Array, io: PlatformIO): Promise<TrackData> {
+  const doc = await io.readBinary(glb);
+  const track: TrackData = { spawns: [], checkpoints: [], respawns: [], items: [], boosts: [], surfaces: [], cameras: [] };
+
+  for (const node of doc.getRoot().listNodes()) {
+    const extras = node.getExtras() as Record<string, unknown>;
+    const m = node.getWorldMatrix() as unknown as mat4;   // column-major 4×4
+    const pos = mat4.getTranslation(vec3.create(), m);
+    const rot = mat4.getRotation(quat.create(), m);
+    const scale = mat4.getScaling(vec3.create(), m);
+
+    switch (extras.rb) {
+      case "spawn": track.spawns.push({ slot: Number(extras.slot), pos, rot }); continue;
+      case "checkpoint": {
+        const c = world.createCollider(
+          RAPIER.ColliderDesc.cuboid(scale[0], scale[1], scale[2])
+            .setTranslation(pos[0], pos[1], pos[2])
+            .setRotation({ x: rot[0], y: rot[1], z: rot[2], w: rot[3] })
+            .setSensor(true)
+            .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+        );
+        track.checkpoints.push({ index: Number(extras.index), section: String(extras.section ?? ""), handle: c.handle, pos });
+        continue;
+      }
+      // "respawn", "item", "boost", "camera": same idea, store pos/rot/props
+      // "surface": build a sensor from the mesh (below) and store its grip
+    }
+
+    const mesh = node.getMesh();
+    if (!mesh) continue;
+    for (const prim of mesh.listPrimitives()) {
+      const local = prim.getAttribute("POSITION")!.getArray() as Float32Array;
+      const indices = new Uint32Array(prim.getIndices()!.getArray()!);
+      const verts = new Float32Array(local.length);
+      const p = vec3.create();
+      for (let i = 0; i < local.length; i += 3) {             // apply the node's world matrix
+        vec3.transformMat4(p, [local[i], local[i + 1], local[i + 2]], m);
+        verts.set(p, i);
+      }
+      world.createCollider(RAPIER.ColliderDesc.trimesh(verts, indices));
+    }
+  }
+  track.checkpoints.sort((a, b) => a.index - b.index);
+  return track;
+}
+```
+
+Write a Vitest test that loads the real `_col.glb` and checks it has 8 spawns, an unbroken checkpoint sequence, and at least one respawn per checkpoint.
+
+### 4. Respawn
+
+If a ball's `y < -10`, or it hasn't moved toward the next checkpoint for 5 s while touching nothing, then:
+1. Teleport it to the respawn marker for its last checkpoint: `setTranslation`, `setLinvel(0)`, `setAngvel(0)`.
+2. Set its heading to the marker's forward direction.
+3. Emit `{ type: "respawn" }`.
+
+### 5. Agree the `game-core` API with Rasim
+
+```ts
+export async function initPhysics(): Promise<void>;
+export async function createRace(trackGlb: Uint8Array, io: PlatformIO, cfg: { laps: number }): Promise<Race>;
+
+export interface Race {
+  addPlayer(id: string, ball: string): void;      // takes the next free spawn slot
+  removePlayer(id: string): void;
+  setInput(id: string, input: InputMsg): void;    // latest wins; the server handles staleness
+  start(countdownMs: number): void;               // lobby → countdown → racing
+  step(dt: number): void;                         // always 1/60
+  snapshot(tick: number, t: number): SnapMsg;
+  drainEvents(): GameEvent[];                     // events since the last call
+  standings(): Standing[];                        // id, place, lap, checkpoint, finishedAt
+  readonly phase: Phase;
+  // bots, for Rasim's fill-up and load tests:
+  botInput(id: string): InputMsg;                 // steer toward the next checkpoint, full gas
+}
+```
+
+Commit the types first, even with a stub implementation, so Rasim can build the server loop against them in parallel.
+
+### 6. Render server snapshots
+
+Rasim's net library exposes something like `net.sample(now)`, which returns `Map<id, { p, q, h }>` for other balls (interpolated) and your own ball (extrapolated). Each frame:
+
+- **New id:** create the ball mesh by cloning that player's skin. **Removed id:** dispose it.
+- `mesh.position.set(...p)`, `mesh.rotationQuaternion = new Quaternion(...q)`
+- The chase camera uses your own ball's `p` and `h`.
+
+### 7. Tuning workflow
+
+Tuning **only works in local mode**, because online the physics runs on the server.
+
+1. Open `/play?local=1`. A `lil-gui` panel edits the live `tuning` object.
+2. When it feels right, copy the values into `tuning.ts` and commit.
+3. Rasim redeploys the server.
+
+**Done when:** a phone steers your ball through the deployed server on a laptop, and the delay is measured (see TASKS.md).
+
+---
+
+## M2: Full race
+
+### Checkpoints, laps and ranking
+- Step with an event queue:
+
+  ```ts
+  const q = new RAPIER.EventQueue(true);
+  world.step(q);
+  q.drainCollisionEvents((h1, h2, started) => { /* ... */ });
+  ```
+
+- Map collider handles to a checkpoint index and a player. When the next checkpoint gets a `started` event:
+  - advance that player's `nextCheckpoint`
+  - crossing `cp_00` after the last checkpoint completes a lap
+  - out-of-order hits are ignored, which stops shortcuts across the map and driving backwards
+- `progress = lap * N + checkpointsThisLap + (1 - distToNext / segmentLength)`. Sort by progress, descending. Finished players sort by `finishedAt`.
+- The race ends when everyone has finished, or 30 s after the winner.
+
+### Race phases
+- `lobby`: no physics, balls parked on their spawns.
+- `countdown`: physics runs, inputs are ignored. Balls sit on the grid.
+- `racing`
+- `results`: freeze inputs, and let balls roll to a stop.
+
+### Collisions and bump events
+- Ball-to-ball: `setRestitution(0.5)` feels bouncy. Use the same mass for every ball, unless an item changes it.
+- Set a contact force threshold on ball colliders (`setContactForceEventThreshold`). Then in `q.drainContactForceEvents(e => ...)`, emit `bump` with `strength = clamp(e.totalForceMagnitude() / BIG_HIT, 0, 1)` for both balls.
+- **Overtake:** compare the standings order with the previous tick. Emit `overtake` with the section of the checkpoint where it happened.
+
+### Own-ball extrapolation (with Rasim)
+- Draw your own ball at `latest.p + latest.v * age`, where `age = serverNow - latest.t`, capped at 150 ms.
+- When a new snapshot disagrees, blend the error away with `1 - exp(-15 * dt)` per frame. Never snap.
+
+### Big-screen cameras
+- **Overview camera:** fly between the `cam_*` markers, or frame the leading pack with a high camera that keeps everyone in view. Pick whichever reads better on the projector.
+- **Follow-cam tiles for phone-only players**, up to 4:
+
+  ```ts
+  tile.viewport = new Viewport(0.75, 0.75, 0.25, 0.25);   // x, y, width, height (0–1, y from the bottom)
+  scene.activeCameras = [overview, ...tiles];
+  ```
+
+- If `engine.getFps() < 50` for 3 s, drop the tiles and show name tags instead. Every tile draws the scene again, so this is the safety valve.
+
+**Done when:** 4+ players (laptop and phone-only, real or bots) finish 3 laps in the correct order.
+
+---
+
+## M3: Happy Valley and items
+
+### Items (`items.ts`)
+
+| Item | Effect | Starting numbers |
+|---|---|---|
+| Blue & White Boost | Impulse along the heading, plus a higher `maxSpeed` for a while | +8 m/s, `maxSpeed` x1.5 for 1.5 s |
+| Lion Roar | Radial impulse on every other ball within range, with falloff | 6 m radius, 12 N·s at the center |
+| Creamery Spill | Spawn a puddle sensor 2 m behind you for 10 s. Inside it, `surfaceGrip = 0.2` | Puddle radius 2 m |
+| Snow Day (stretch) | Every ball ahead of you gets `maxSpeed` x0.7 for 3 s | |
+
+- **Item boxes:** a sensor at each `item` marker. When hit, give an item if the slot is empty, then hide the box for 5 s. Its active state goes in Rasim's schema (`itemBoxes`).
+- **Odds by place:**
+
+  | Place | Boost | Roar | Spill | Snow Day |
+  |---|---|---|---|---|
+  | 1st | 20% | 40% | 40% | 0% |
+  | Middle | 45% | 35% | 20% | 0% |
+  | Last two | 50% | 20% | 0% | 30% |
+
+  Tune these after playtests.
+
+### Section mechanics
+
+| Section | How to build it |
+|---|---|
+| Library steps | Real step geometry in the collision mesh, plus higher restitution on that collider |
+| Lion Shrine hairpin | A banked collision mesh. The jump is just a ramp, with a checkpoint on the landing so it stays legal |
+| Creamery cone | A ramp in the collision mesh. Puddles are `surface` markers (`grip = 0.2`) |
+| Beaver Stadium | Geometry only. Its checkpoint has `section = "stadium"` |
+| Snowy Arboretum | `surface` markers: snow (`grip = 0.6`, plus extra damping) and ice (`grip = 0.1`) |
+| College Ave | `boost` markers: a sensor that adds an impulse along the pad's forward direction |
+
+### Hooking up assets, VFX and audio
+- Load assets with `LoadAssetContainerAsync(url, scene)` while in the lobby, and report the progress to Nuris's loading UI. Call `container.addAllToScene()` at race start.
+- **Particles:** `ParticleSystem.Parse(json, scene, "/assets/fx/")`. Set `emitter` to the ball mesh, then `start()` and `stop()` them from events.
+- **Sounds:** trigger them from the same events. Give the rolling loop a pitch of `0.8 + speed / maxSpeed * 0.6`.
+- Keep an `fx.ts` table mapping each event to its particles, sound and camera shake, so Nuris can tweak names without digging through your code.
+
+### Performance pass (target: 60 fps on the demo laptops)
+- **Inspector > Statistics:** keep draw calls under 150.
+- **Static scenery:**
+  - `mesh.freezeWorldMatrix()`
+  - `scene.freezeActiveMeshes()` after loading, unfreezing when needed
+  - `material.freeze()`
+- **Repeated props:** `mesh.createInstance()`, or thin instances for hundreds of copies.
+- **Shadows:** **one** `DirectionalLight` with a `ShadowGenerator(2048)`. Only balls and big landmarks cast shadows.
+- **LOD** on landmarks: `mesh.addLODLevel(distance, lowMesh)`.
+- **Merge** static meshes that share a material: `Mesh.MergeMeshes`.
+
+### Camera polish
+- Widen the FOV slightly at speed.
+- Add a small shake on bumps and roars, which turns off when reduced motion is set in the settings.
+- Do a quick swoop over the grid during the countdown.
+
+---
+
+## Testing
+
+- **Vitest (`pnpm --filter @raceball/game-core test`):**
+  - crossing checkpoints in order counts a lap
+  - out-of-order crossings don't count
+  - ranking order
+  - respawn
+  - item odds sum to 100%
+  - a bot finishes a lap on the real track within 2 minutes
+- **Local mode** for feel. **Online with Rasim's bots** for the full race flow.
+
+## Pitfalls
+
+- **Forgetting `scene.useRightHandedSystem = true`:** everything ends up mirrored, or rotations go wrong.
+- **Tuning while online:** your sliders change nothing, because the server simulates. Use `?local=1`.
+- **The ball tunnels through thin track:** make sure CCD is on, and thicken the collision mesh rather than the visuals.
+- **Huge trimesh colliders:** keep collision meshes simple. They're not the visuals.
+- **Marker properties missing:** they must be on the Blender *object* (Object Properties pane), and "Custom Properties" must be ticked on export.
+- **Calling `RAPIER` before `await RAPIER.init()`** crashes with a WASM error.
+
+## Who to ask
+
+- **Rasim:** server loop, net library, phones, deploys, bots.
+- **Nuris:** asset names, sizes, materials, particles, sounds, and how the UI reads race state.

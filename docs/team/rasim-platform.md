@@ -364,7 +364,7 @@ apps/pad/src/
   orientation.ts   Android lock + layoutUI() counter-rotation
   touch.ts         gas/brake zones
   net.ts           join with room/token from the URL, 60 Hz input loop, reconnect
-  feedback.ts      vibration patterns, sounds, flashes
+  feedback.ts      sounds + visual cues (no vibration)
   debug.ts         overlay + Eruda
   style.css        Nuris
 ```
@@ -417,6 +417,7 @@ On the web (`~` key) and the pad (`?debug=1`), show:
 ## M2: Full race
 
 ### Lobby flow
+- **Host-only messages:** `start { laps }` (1 for the demo, 3 by default), `addBot`, `removeBot { id }` and `rematch`. Ignore them from any other role. Store `laps` in the schema so every screen shows "Lap 1/1" or "Lap 2/3".
 - `lobby` → host presses Start (only when every connected player is paired, calibrated, assets-loaded and ready) → `countdown` (3 s) → `racing` → `results` (15 s or rematch) → `lobby`.
 - `race.start()` drives the phase changes. Copy `race.phase` into the schema every tick.
 
@@ -437,7 +438,7 @@ For each `GameEvent`, send `evt` to the pads (and viewers) of the players involv
 - `bump` goes to both balls
 - `item`, `lap`, `finish` and `respawn` go to that player
 
-The pad plays the [haptic or sound pattern](../CONTROLLER.md#haptics-and-sound-feedback).
+The pad plays the [sound and visual cue](../CONTROLLER.md#sound-and-visual-feedback).
 
 ### Shake to fire an item
 See [CONTROLLER.md](../CONTROLLER.md#steering-math-use-gravity-in-the-device-frame). Start the threshold at 18 m/s² with a 600 ms cooldown, and tune it on both phones.
@@ -462,7 +463,7 @@ See [CONTROLLER.md](../CONTROLLER.md#steering-math-use-gravity-in-the-device-fra
 | Device | Cases |
 |---|---|
 | iPhone, Safari | Portrait Lock on and off; landscape left and right; permission allowed, and denied then retried; Low Power Mode; lock the phone mid-race; app switch |
-| Android, Chrome | Fullscreen + lock works; vibration patterns; lock the phone mid-race |
+| Android, Chrome | Fullscreen + lock works; sounds play; lock the phone mid-race |
 | Both | Venue Wi-Fi and a hotspot; join from the laptop QR and the big-screen QR; 8 players with bots |
 
 ## Pitfalls

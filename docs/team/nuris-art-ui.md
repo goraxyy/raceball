@@ -128,7 +128,7 @@ Build React components that **only take props**. Rasim's hooks feed them data, s
 
 | Component | Props | Shown on |
 |---|---|---|
-| `HostLobby` | `code`, `phoneJoinUrl`, `players[]`, `canStart`, `onStart` | Big screen |
+| `HostLobby` | `code`, `phoneJoinUrl`, `players[]`, `laps`, `onLapsChange`, `onAddBot`, `canStart`, `onStart` | Big screen |
 | `ViewerJoin` | `onJoin(code, name, ball)` | Laptop |
 | `PairingQR` | `url`, `paired` | Laptop |
 | `PlayerList` | `players[]` (name, ball, color, shape, paired, calibrated, ready, connected) | Both |
@@ -175,7 +175,7 @@ Rolling loop, bump, countdown beeps, UI click.
 
 - `TrackMap` is an SVG viewed from above. Fit `path` into the box, and draw each player as their **shape** in their **color**.
 - Ali exposes `path` and positions (throttled to about 10 Hz for the UI).
-- Everything must read from 5 meters away on a projector: big type, thick outlines, no thin gray text.
+- Everything must read from a couple of meters away on a laptop screen at a judging table: big type, thick outlines, no thin gray text.
 
 ### Player HUD (laptop)
 `RaceHud` props: `place`, `lap`, `laps`, `item`, `speed`, `wrongWay`. Keep it in the corners, and leave the middle clear for the race.

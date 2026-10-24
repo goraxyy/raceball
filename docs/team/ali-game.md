@@ -320,7 +320,7 @@ export interface Race {
   addPlayer(id: string, ball: string): void;      // takes the next free spawn slot
   removePlayer(id: string): void;
   setInput(id: string, input: InputMsg): void;    // latest wins; the server handles staleness
-  start(countdownMs: number): void;               // lobby → countdown → racing
+  start(countdownMs: number, laps: number): void; // lobby → countdown → racing. laps = 1 (demo) or 3
   step(dt: number): void;                         // always 1/60
   snapshot(tick: number, t: number): SnapMsg;
   drainEvents(): GameEvent[];                     // events since the last call

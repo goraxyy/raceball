@@ -28,7 +28,7 @@ Built at **HackPSU Fall 2026** for the General Track, *The Mystery Stack*: phone
 
 ## How a match works
 
-1. **Big screen** (the projector laptop) opens `/host`, which creates a room and shows the room code plus a "join with just your phone" QR code.
+1. **Big screen** (the host laptop, or a monitor or projector) opens `/host`, which creates a room and shows the room code plus a "join with just your phone" QR code.
 2. **Players with a laptop** open `/play` on it, enter the code, pick a name and ball, then scan the **pairing QR** on their laptop with their phone.
 3. **Players with only a phone** scan the big screen's QR code. They play by watching the big screen, which gives them a name tag and a follow-cam tile.
 4. Each phone becomes a steering wheel. Calibrate (hold level, then turn right) and tap **Ready**.
@@ -59,7 +59,7 @@ flowchart LR
   P -- "input, 60 Hz" --> S
   S -- "snapshots, 60 Hz" --> L
   S -- "snapshots, 60 Hz" --> B
-  S -- "haptic / sound events" --> P
+  S -- "sound / visual events" --> P
 ```
 
 - The **server runs the only physics simulation**. Phones send inputs, and screens draw what the server says, so there's no desync.
@@ -77,7 +77,7 @@ flowchart LR
 | UI (lobby, HUD, menus, results) | **React** + CSS, drawn as DOM over the canvas | Fast to style and iterate on, and keeps UI work separate from 3D work |
 | Physics | **Rapier** (`@dimforge/rapier3d-compat`) in `packages/game-core` | Fast WASM physics that runs in Node (the server) and in browsers (for client-side prediction). Good rolling-ball behavior |
 | Game server | **Node.js 24 LTS + Colyseus** | Built for authoritative multiplayer: rooms, join by ID, reconnection, binary state sync and a fixed simulation loop |
-| Phone controller | **Vite + TypeScript**, no framework | Tiny bundle that loads in seconds on a phone. Uses DeviceMotion, Pointer Events, Wake Lock and Vibration (Android) |
+| Phone controller | **Vite + TypeScript**, no framework | Tiny bundle that loads in seconds on a phone. Uses DeviceMotion, Pointer Events and Wake Lock. No vibration: feedback is sound + visuals on every phone |
 | Asset pipeline | **Blender, then glTF (.glb), then `gltf-transform`** (Meshopt + KTX2/WebP) | Smaller downloads and less GPU memory. Babylon loads all of these natively |
 | Hosting | **Vercel** for web + pad. **Railway, US East (Virginia)** for the server | Phones need HTTPS for motion sensors. Vercel can't hold WebSockets, so the server runs on Railway in Virginia, close to State College. Railway redeploys automatically on every push to `main` |
 | Dev tunnel | **cloudflared** quick tunnels | HTTPS URLs to your laptop so real phones can test |
@@ -189,7 +189,7 @@ How we work together (branches, PRs, conventions, protocol changes) is in **[doc
 
 ## Demo
 
-Setup, script and checklists are in **[docs/DEMO.md](docs/DEMO.md)**. The key point: judges join with **just their phones** by scanning the big-screen QR code. No app install.
+Judging is a **table presentation** with **2 laptops and 4 phones**, and demo races are **1 lap**. The setup, script and checklists are in **[docs/DEMO.md](docs/DEMO.md)**. Judges just pick up a phone (or scan the QR with their own). No app install.
 
 ## License and credits
 

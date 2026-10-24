@@ -4,9 +4,9 @@
 
 | Role | Runs on | Does |
 |---|---|---|
-| **host** | Projector laptop, `/host` | Creates the room and shows the code + the phone-only QR code. Renders the overview camera, live track map, standings, **follow-cam tiles for phone-only players**, and results |
+| **host** | The big-screen laptop (or a monitor/projector), `/host` | Creates the room and shows the code + the phone-only QR code. Renders the overview camera, live track map, standings, **follow-cam tiles for phone-only players**, and results |
 | **viewer** | A player's laptop, `/play` (optional) | Joins with name and ball, shows the pairing QR code, renders that player's chase camera and HUD |
-| **pad** | Each player's phone (`apps/pad`) | Reads sensors and touch, sends input, plays haptics and sounds. A phone-only player's pad also shows position, lap and item |
+| **pad** | Each player's phone (`apps/pad`) | Reads sensors and touch, sends input, plays sounds and visual feedback. A phone-only player's pad also shows position, lap and item |
 | **server** | Railway, US East (Virginia) | Runs the **only** physics simulation, and sends snapshots and events |
 
 ## Join and pairing flow
@@ -65,8 +65,9 @@ A phone-only player picks their name and ball on the pad itself. The big screen 
 | `input` | pad → server | 60 Hz, plus immediately on any button change | Latest wins. The server drops older `seq` values |
 | *(schema state)* | server → all | Colyseus patches (~20 Hz) | Lobby and race state: players, ready, lap, place, phase, countdown, item boxes |
 | `snap` | server → host + viewers | **60 Hz** (start at 30 Hz while debugging) | Ball transforms go in this custom message, **not** in the schema |
-| `evt` | server → pad + viewer + host | On event | bump / item / overtake / lap / finish / respawn, for haptics, sounds, VFX and standings animations |
+| `evt` | server → pad + viewer + host | On event | bump / item / overtake / lap / finish / respawn, for pad sounds and visuals, screen VFX and standings animations |
 | `ping` / `pong` | both ways | 1 Hz | Measures round-trip time and the server clock offset |
+| `start { laps }`, `addBot`, `removeBot { id }`, `rematch` | host → server | On click | Only the host may send these. `laps` is 1 (demo) or 3 (default) |
 
 - **Stale input rule:** if a pad's latest input is older than **200 ms**, treat it as neutral (no gas). Then a locked phone can't send its ball off a cliff.
 - **Bandwidth:** 8 balls × ~40 bytes × 60 Hz ≈ 20 KB/s per screen. That's not a concern.
@@ -177,7 +178,7 @@ export type GameEvent =
 Colyseus schema (synced automatically):
 
 ```
-RaceState  { phase, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[] }
+RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[] }
 PlayerState{ name, ball, color, shape, phoneOnly, paired, calibrated, assetsLoaded, ready,
              lap, checkpoint, place, finishedAt, connected }
 ItemBox    { id, x, y, z, active }

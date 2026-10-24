@@ -5,7 +5,7 @@ Owner: **Nuris**. Ali integrates the assets into gameplay. RaceBall is **asset-h
 ## Art direction (decide in M0)
 
 - **Theme:** a **toy-sized Penn State campus**: the Happy Valley Grand Prix ([docs/MAP.md](MAP.md)). Fall colors (orange/red trees, brick) for most of the lap, then a snowy finale. Navy and white serve as accent colors. Use **original art only**, with no official Penn State logos ([trademark note](MAP.md#trademark-note)).
-- **Style:** stylized, chunky low-poly shapes with PBR materials (soft roughness, saturated colors), readable from the back of a room on a projector.
+- **Style:** stylized, chunky low-poly shapes with PBR materials (soft roughness, saturated colors), readable from a couple of meters away on a laptop screen at a judging table.
 - **Landmarks:** one strong, simplified silhouette each (Old Main's bell tower, the Lion Shrine, the Creamery cone, the Beaver Stadium bowl). Exaggerate the proportions, and don't chase realism.
 - **Palette:** a main palette of 5–6 colors, plus **8 player colors that are colorblind-safe**. Each player color also gets a **shape or pattern** (stripes, dots, star, ring, …), so players never have to be told apart by color alone.
 - **Mood board:** 5–10 reference images (campus photos + target style) in `docs/moodboard/`.

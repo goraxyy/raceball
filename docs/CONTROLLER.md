@@ -127,29 +127,27 @@ screen.orientation?.addEventListener?.("change", layoutUI);
 
 > Check the angle signs on a real iPhone and Android phone with the debug overlay. Then build the test matrix: Portrait Lock on and off, landscape left and right.
 
-**Stretch:** a [native iPhone app](#native-iphone-app-stretch) gives a true orientation lock *and* iPhone haptics, but only on team phones.
+## Sound and visual feedback
 
-## Haptics and sound feedback
+**We don't use vibration** (decided). iPhone browsers have no vibration API, and we're not building a native app, so feedback is the same on every phone: a short sound plus a visual cue on the pad.
 
-The iPhone browser has **no vibration API**: WebKit doesn't implement it, and the known checkbox-switch workaround was reportedly patched in iOS 26.5. So every haptic has a sound + visual twin.
-
-| Event | Android `navigator.vibrate` pattern (ms) | iPhone fallback |
+| Event | Sound | Visual on the pad |
 |---|---|---|
-| bump | `[15]` up to `[40]`, scaled by strength | thud sound + edge flash |
-| item ready | `[30, 40, 30]` | chime + glowing item button |
-| boost | `[60]` | whoosh |
-| lap | `[80, 60, 80]` | lap jingle + flash |
-| finish | `[100, 50, 100, 50, 250]` | fanfare |
-| near an edge | `[10]` every 300 ms | tick sound |
+| bump | Thud, louder for harder hits | Edge flash in the player's color |
+| item ready | Chime | Item button glows and shows the item icon |
+| boost | Whoosh | Brief streak animation |
+| lap | Lap jingle | Full-screen flash + "Lap 2/3" |
+| final lap | Rising jingle | "Final lap" banner |
+| finish | Fanfare | Place in big type ("2nd") |
+| near an edge | Quick ticks | Pulsing edge on the side of the drop |
 
-Vibration on Android only works after the first tap, which our start button already provides.
+Sounds can only play after the first tap, which the start button already provides. Keep them short and clear, because phone speakers are small and the venue is loud.
 
 ## iPhone vs Android differences
 
 | Issue | iPhone (Safari) | Android (Chrome) | What we do |
 |---|---|---|---|
 | Motion permission | Only granted after a **tap** on `requestPermission()`, over HTTPS | No prompt, but HTTPS is still required | Big "Tap to start" button. HTTPS everywhere, including dev tunnels |
-| Vibration | **None** in the browser | `navigator.vibrate` works after the first tap | Sound + visual twin for every haptic |
 | Fullscreen | Not available for pages on iPhone | Works after a tap | Only needed on Android, for the orientation lock |
 | Orientation lock | Not available | Works in fullscreen | iPhone: Portrait Lock onboarding + self-rotated UI |
 | Screen sleeping | Wake Lock API (Safari 16.4+) | Wake Lock API | Request on start, and again on `visibilitychange` |
@@ -176,23 +174,3 @@ Vibration on Android only works after the first tap, which our start button alre
 ## Debug overlay (`?debug=1`)
 
 Shows: raw gravity x/y/z, steer value, send rate, round-trip time, permission state, screen angle, hold side, calibration values.
-
-## Native iPhone app (stretch)
-
-**What it is:** the same controller, built as a small app with **Expo (React Native)** instead of a web page in Safari. It sends the same `InputMsg` over the same protocol, so the server and the screens don't change at all.
-
-**What it fixes on iPhone:**
-- **Real haptics.** It uses the iPhone's vibration motor (`expo-haptics`), which Safari can't access at all. Bumps, items and laps would buzz on iPhones the way they already do on Android.
-- **A true landscape lock** (`expo-screen-orientation`). No Portrait Lock instructions, and no self-rotating UI.
-- **Reliable fullscreen and keep-awake** (`expo-keep-awake`), with no Safari motion-permission prompt.
-
-**What it costs:**
-- **Installing it is the hard part.** Judges can't get it on the spot, so it would only run on team phones:
-  - **Xcode on a Mac:** install it on team iPhones over a cable. A free Apple ID works, but the app expires after 7 days, and each iPhone needs Developer Mode turned on.
-  - **TestFlight:** a $99/year Apple Developer account, plus Apple's beta review (usually 1–2 days, sometimes much longer).
-  - **Expo Go:** only opens our project when the iPhone is signed into our Expo account.
-- **A second controller codebase to keep in sync:** sensors, calibration, UI and reconnecting.
-- **It doesn't help Android,** which already has vibration and an orientation lock in Chrome.
-- **Haptics still stop in Low Power Mode,** even in a native app.
-
-**Verdict:** the web pad stays the main controller for everyone. The native app is only worth building **after M3**, only if someone on the team has a Mac, and only to make the team's demo phones feel better.

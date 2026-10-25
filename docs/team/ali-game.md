@@ -6,6 +6,7 @@ You own **the game**: how the ball moves, the race rules, the track, the items, 
 |---|---|
 | Simulation: physics, race rules, items, track loading | `packages/game-core` |
 | 3D rendering, cameras, VFX/audio hookup | `apps/web/src/game` |
+| Server hosting on Railway | `railway.json`, `apps/server/Dockerfile`, `.dockerignore`, the Railway dashboard |
 | Map greybox + gameplay markers | `happy_valley.blend` (Drive), exported to `packages/game-core/tracks/` and `apps/web/public/assets/maps/` |
 
 ## How your work connects to the others
@@ -170,6 +171,72 @@ addEventListener("keydown", async (e) => {
 ```
 
 **Done when:** `/play?local=1` shows a ball you drive with the keyboard, the chase camera follows it, and Shift+I opens the Inspector.
+
+### 6. Deploying the server to Railway
+
+**You own Railway end to end:** the project, the service settings, deploys and logs, and the files it builds from. Rasim owns the server code; it listens on `process.env.PORT` and answers `/health`. Do this once the bootstrap PR is merged.
+
+**Files in the repo** (already added by the bootstrap PR; they sit at the repo root so the Docker build can see the workspace packages).
+
+`apps/server/Dockerfile`:
+
+```dockerfile
+FROM node:24-slim
+WORKDIR /app
+RUN corepack enable
+COPY . .
+RUN pnpm install --frozen-lockfile && pnpm --filter @raceball/server build
+ENV NODE_ENV=production TRACK_PATH=/app/packages/game-core/tracks/happy_valley_col.glb
+# Railway sets PORT itself. The server must listen on process.env.PORT (default 2567 locally)
+CMD ["node", "apps/server/dist/index.js"]
+```
+
+`.dockerignore`:
+
+```
+**/node_modules
+**/dist
+.git
+apps/web/public/assets
+```
+
+`railway.json` (config as code, so the settings live in git; check field names against Railway's "Config as Code" reference):
+
+```json
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "apps/server/Dockerfile",
+    "watchPatterns": ["apps/server/**", "packages/**", "pnpm-lock.yaml"]
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "restartPolicyType": "ON_FAILURE",
+    "multiRegionConfig": { "us-east4-eqdc4a": { "numReplicas": 1 } }
+  }
+}
+```
+
+**Steps:**
+1. Sign in at railway.com with GitHub.
+2. New Project > Deploy from GitHub repo. Authorize Railway for `goraxyy/raceball`, then select it.
+3. **In the service settings:**
+   - **Root Directory:** leave it **empty**, so Railway builds from the repo root and sees the whole workspace.
+   - **Builder:** taken from `railway.json`. Without it, set the variable `RAILWAY_DOCKERFILE_PATH=apps/server/Dockerfile`, spelled exactly like that.
+   - **Region:** US East (Virginia).
+   - **Replicas:** exactly **1**. Rooms live in memory, so a second replica would split players into different rooms.
+   - **Serverless / app sleeping:** **off**, so the server never sleeps.
+   - **Networking:** Generate Domain. Edit the prefix to `raceball-server` if it's free, giving `raceball-server.up.railway.app`.
+4. **Push to `main`.** Railway builds and deploys on its own. After that, every push that touches the watch paths redeploys the server. Doc and asset changes don't.
+5. **Check:** `curl https://raceball-server.up.railway.app/health` should return `ok`. Logs are under the service's Deployments tab.
+6. **Optional CLI** (`npm i -g @railway/cli`): `railway login`, `railway link` (pick the project), `railway logs`, and `railway up` (a manual deploy from your machine).
+
+**Cost:** the trial's one-time $5 credit covers the event. After that, Hobby is $5/month with $5 of usage included, which one small Node service fits in. After the event, delete the project (Project Settings > Danger), or keep it if we want to keep playing.
+
+**Fallback (Fly.io):** if Railway ever causes trouble, the same Dockerfile runs on Fly.io in `iad` (Ashburn). That needs `flyctl`, a `fly.toml` with `internal_port = 2567`, `auto_stop_machines = "off"`, `min_machines_running = 1`, and exactly one machine (`fly scale count 1`).
+
+**Done when:** `curl https://raceball-server.up.railway.app/health` returns `ok`.
 
 ---
 

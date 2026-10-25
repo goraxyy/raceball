@@ -6,17 +6,17 @@ const TRACKS = [
   {
     id: "lobby",
     file: "/assets/mus/mus_lobby_loop.wav",
-    title: "Lobby",
-    sub: "100 BPM · F major · swung",
-    notes: "Marimba, plucked bass, glockenspiel, brushes",
+    title: "Old Main Afternoon",
+    sub: "Lobby · 96 BPM · F major · swung",
+    notes: "Electric piano, vibraphone, round bass, lo-fi brushes",
     sleeve: "var(--brake)",
   },
   {
     id: "race",
     file: "/assets/mus/mus_race_loop.wav",
-    title: "Race",
-    sub: "148 BPM · G major",
-    notes: "Steel-drum hook, plucked bass, marimba, kit",
+    title: "Happy Valley Rush",
+    sub: "Race · 150 BPM · C major",
+    notes: "Pulse lead, supersaw stabs, synth bass, bell arpeggio, kit",
     sleeve: "var(--gas)",
   },
 ] as const;

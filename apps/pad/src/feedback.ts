@@ -49,7 +49,7 @@ function setScoops(racing: HTMLElement, count: number) {
   void meter.offsetWidth;
   meter.dataset.change = n > Number(meter.dataset.count) ? "up" : "down";
   meter.dataset.count = String(n);
-  meter.setAttribute("aria-label", `${n} scoops`);
+  meter.setAttribute("aria-label", `${n} stars`);
   meter
     .querySelectorAll("i")
     .forEach((pip, i) => pip.classList.toggle("is-held", i < n));

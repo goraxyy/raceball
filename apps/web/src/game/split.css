@@ -95,6 +95,17 @@
   width: clamp(220px, 22vw, 360px);
 }
 
+.host-board[data-layout="corner"] {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  width: clamp(200px, 19vw, 300px);
+}
+
+.host-board[data-layout="corner"] .track-map {
+  max-height: 22vh;
+}
+
 .host-board-controls {
   display: flex;
   justify-content: center;

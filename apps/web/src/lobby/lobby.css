@@ -11,3 +11,53 @@
   box-shadow: 3px 3px 0 #17151f;
   cursor: pointer;
 }
+
+/* The playing host's own phone: its pairing card over the lobby, then a pill once ready */
+.ui-screen.host-pad {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  background: rgb(23 21 31 / 0.55);
+}
+
+.ui-screen.host-pad::before {
+  content: none;
+}
+
+.host-pad-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.host-pad-pill {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 14px;
+  transform: translateX(-50%);
+  font:
+    800 14px system-ui,
+    sans-serif;
+  border: 3px solid #17151f;
+  border-radius: 999px;
+  background: #fff8ec;
+  box-shadow: 3px 3px 0 #17151f;
+}
+
+.host-pad-pill button {
+  padding: 4px 10px;
+  font: inherit;
+  border: 2px solid #17151f;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}

@@ -14,6 +14,9 @@ export interface HostLobbyProps {
   laps: number;
   onLapsChange: (laps: number) => void;
   onAddBot: () => void;
+  onRemoveBot?: (id: string) => void;
+  /** "Play on this laptop": the host races too, with their own view instead of the split screen */
+  onPlayHere?: () => void;
   canStart: boolean;
   onStart: () => void;
 }
@@ -26,6 +29,8 @@ export function HostLobby({
   laps,
   onLapsChange,
   onAddBot,
+  onRemoveBot,
+  onPlayHere,
   canStart,
   onStart,
 }: HostLobbyProps) {
@@ -64,7 +69,7 @@ export function HostLobby({
             {players.length}/{MAX_PLAYERS}
           </span>
         </header>
-        <PlayerList players={players} />
+        <PlayerList players={players} onRemoveBot={onRemoveBot} />
         <footer className="host-controls">
           <div className="laps" role="radiogroup" aria-label="Laps">
             <span className="laps-label">Laps</span>
@@ -81,6 +86,16 @@ export function HostLobby({
               </button>
             ))}
           </div>
+          {onPlayHere && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onPlayHere}
+              disabled={full}
+            >
+              Play here
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-ghost"

@@ -8,6 +8,8 @@ export interface ViewerJoinProps {
   taken?: string[];
   /** Pre-filled from ?room= in the URL */
   initialCode?: string;
+  /** A Back button next to Join (the host's "Play on this laptop") */
+  onCancel?: () => void;
 }
 
 /** A laptop player joins: room code, name and planet */
@@ -15,6 +17,7 @@ export function ViewerJoin({
   onJoin,
   taken = [],
   initialCode = "",
+  onCancel,
 }: ViewerJoinProps) {
   const [code, setCode] = useState(initialCode);
   const [name, setName] = useState("");
@@ -81,9 +84,16 @@ export function ViewerJoin({
             </label>
           ))}
         </fieldset>
-        <button type="submit" className="btn" disabled={!valid}>
-          Join race
-        </button>
+        <div className="join-actions">
+          {onCancel && (
+            <button type="button" className="btn btn-ghost" onClick={onCancel}>
+              Back
+            </button>
+          )}
+          <button type="submit" className="btn" disabled={!valid}>
+            Join race
+          </button>
+        </div>
       </form>
     </section>
   );

@@ -525,6 +525,19 @@ describe("items", () => {
     expect(step(r, { me: FIRE }).some((e) => e.type === "fire")).toBe(false);
   });
 
+  it("a Boost is worth an overtake: a clear lead on an equal rival", async () => {
+    const r = await race({ itemsAt: [[-3, -1.5]] }, 0, true);
+    step(r);
+    expect(held(r)).toBe("boost");
+    run(r, 1, { me: GAS, you: GAS });
+    const gap = () => ball(r).p[0] - ball(r, "you").p[0];
+    const start = gap();
+    step(r, { me: { ...GAS, item: true }, you: GAS });
+    run(r, 1.5, { me: GAS, you: GAS });
+    // about 30 m in 2.5 s (the old, gentler boost gave 23)
+    expect(gap() - start).toBeGreaterThan(27);
+  });
+
   it("Lion Roar knocks nearby balls away from the roarer", async () => {
     // two players: the leader's row again, and 0.3 lands in roar (20 … 60)
     const r = await race({ itemsAt: [[-3, -1.5]] }, 0.3, true);

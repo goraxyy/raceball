@@ -11,7 +11,6 @@ import { tuning } from "@raceball/game-core";
 import "@babylonjs/loaders/glTF";
 import { Mixer } from "../audio/mixer";
 import { Captions } from "../ui/Captions";
-import { SteerWheel } from "../ui";
 import type { BallPose } from "./balls";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
 import { HostBoard } from "./HostBoard";
@@ -20,6 +19,7 @@ import type { TileRect } from "./big-screen";
 import type { SnapshotSource } from "./net-feed";
 import { useRoute } from "./route";
 import { TileFrames } from "./TileFrames";
+import { ViewerHud } from "./ViewerHud";
 import "./local.css";
 
 /** The wheel indicator key for this laptop's own ball, whose id may arrive after the first render */
@@ -39,7 +39,7 @@ export function GameView({
   session?: SnapshotSource;
   /** Once the map is in and the race can be drawn (a laptop tells the server its assets loaded) */
   onLoaded?: () => void;
-  /** Host: the host's race buttons, shown on the race board */
+  /** The host's race buttons: on the race board (host), or on this laptop's board when the host plays (viewer) */
   hostControls?: ReactNode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -62,7 +62,10 @@ export function GameView({
   }, []);
   const spots = useRef(new Map<string, [number, number]>());
   const positions = useCallback(() => spots.current, []);
-  const path = useRoute(mode === "host");
+  // a laptop's own speed, m/s, from how far its ball moved each frame (smoothed)
+  const ownSpeed = useRef(0);
+  const speed = useCallback(() => ownSpeed.current, []);
+  const path = useRoute(mode !== "local");
 
   useEffect(() => {
     let active = true;
@@ -75,6 +78,7 @@ export function GameView({
     const ball = params.get("ball") ?? "";
     // the big screen gets the full mix with the crowd; a laptop hears mostly its own ball
     const mix = new Mixer(mode === "host" ? "big" : "laptop");
+    let last: { x: number; z: number; t: number } | undefined;
     if (params.has("mute")) mix.volume = 0;
     mix.load().then(
       () => active && setMixer(mix), // captions start once the cues can play
@@ -100,7 +104,18 @@ export function GameView({
           const drift = String(pose?.d ?? 0);
           if (el.dataset.drift !== drift) el.dataset.drift = drift;
         }
-        if (mode !== "host") return;
+        if (mode === "local") return;
+        if (mode === "viewer") {
+          const own = poses.get(session?.playerId ?? "");
+          const t = performance.now();
+          if (own && last && t > last.t) {
+            const v =
+              Math.hypot(own.p[0] - last.x, own.p[2] - last.z) /
+              ((t - last.t) / 1000);
+            ownSpeed.current += (Math.min(v, 80) - ownSpeed.current) * 0.15;
+          }
+          last = own ? { x: own.p[0], z: own.p[2], t } : undefined;
+        }
         const next = new Map<string, [number, number]>();
         for (const [id, pose] of poses) next.set(id, [pose.p[0], pose.p[2]]);
         spots.current = next;
@@ -186,8 +201,15 @@ export function GameView({
             controls={hostControls}
           />
         )}
-      {mode === "viewer" && status?.state === "ready" && (
-        <SteerWheel className="own-wheel" wheelRef={(el) => wheel(OWN, el)} />
+      {mode === "viewer" && session && status?.state === "ready" && (
+        <ViewerHud
+          session={session}
+          path={path}
+          positions={positions}
+          speed={speed}
+          controls={hostControls}
+          wheelRef={(el) => wheel(OWN, el)}
+        />
       )}
       {mode !== "local" && status && status.state !== "ready" && (
         <p
@@ -241,8 +263,8 @@ export function GameView({
                 {status.map !== "flat" && (
                   <p className="local-scoops" data-scoops={status.stats.scoops}>
                     {status.stats.scoops
-                      ? `Scoops ${status.stats.scoops}/${tuning.scoopMax} · top speed +${Math.round(status.stats.scoops * tuning.scoopTopSpeed * 100)}%`
-                      : "No scoops: roll through the ice creams"}
+                      ? `Stars ${status.stats.scoops}/${tuning.scoopMax} · top speed +${Math.round(status.stats.scoops * tuning.scoopTopSpeed * 100)}%`
+                      : "No stars: roll through the gold stars"}
                   </p>
                 )}
                 {status.map !== "flat" && (

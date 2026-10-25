@@ -23,6 +23,7 @@ export class NetFeed implements BallFeed {
   private looks = new Map<string, BallLook>();
   private names = new Map<string, string>();
   private phoneOnlyIds: string[] = [];
+  private allIds: string[] = [];
 
   constructor(session: SnapshotSource) {
     this.session = session;
@@ -47,7 +48,12 @@ export class NetFeed implements BallFeed {
     return this.names.get(id);
   }
 
-  /** Players without a laptop, in join order: the big screen gives them follow-cam tiles */
+  /** Every player in join order: the big screen splits into a view for each */
+  get all(): readonly string[] {
+    return this.allIds;
+  }
+
+  /** Players without a laptop, in join order */
   get phoneOnly(): readonly string[] {
     return this.phoneOnlyIds;
   }
@@ -67,6 +73,7 @@ export class NetFeed implements BallFeed {
       ]),
     );
     this.names = new Map(players.map(([id, p]) => [id, p.name]));
+    this.allIds = players.map(([id]) => id);
     this.phoneOnlyIds = players
       .filter(([, p]) => p.phoneOnly)
       .map(([id]) => id);

@@ -46,8 +46,11 @@ function HostRoom({ session }: { session: NetSession }) {
     return <ErrorScreen kind="disconnected" room={session.code} />;
   return (
     <>
-      {/* Ali's renderer: overview + follow-cam tiles. Mounted behind the lobby so the race shows at once */}
-      <GameView mode="host" session={session} />
+      {/* Split screen: a first-person view per player. Mounted from the countdown on, so the views don't draw
+          hidden behind the lobby (and can't trip the fps fallback before the race) */}
+      {state.phase && state.phase !== "lobby" && (
+        <GameView mode="host" session={session} />
+      )}
       {!state.phase && <LoadingScreen progress={0.6} label="Opening a room" />}
       {state.phase === "lobby" && (
         <HostLobby

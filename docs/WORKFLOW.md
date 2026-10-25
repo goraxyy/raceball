@@ -110,7 +110,7 @@ These are the same in Blender exports, Rapier and Babylon:
 
 | Variable | App | Example |
 |---|---|---|
-| `VITE_SERVER_URL` | web, pad | `wss://raceball-server.up.railway.app` |
+| `VITE_SERVER_URL` | web, pad | `wss://raceball-server-production.up.railway.app` |
 | `VITE_PAD_URL` | web | `https://raceball-pad.vercel.app` |
 | `PORT` | server | `2567` locally. Railway sets it automatically |
 | `TRACK_PATH` | server | Optional. Defaults to `../../packages/game-core/tracks/happy_valley_col.glb` (relative to `apps/server`) |

@@ -1,3 +1,4 @@
+import { updateOrientation } from "./orientation";
 import { steering } from "./steering";
 
 export type MotionPermission =
@@ -36,5 +37,6 @@ export function startMotion() {
     gravity.at = performance.now();
     gravity.events++;
     steering.update(g.x, g.y, e.timeStamp / 1000);
+    updateOrientation(steering.gx, steering.gy);
   });
 }

@@ -9,6 +9,7 @@ import {
 } from "./connection";
 import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
 import { lockDownGestures } from "./lockdown";
+import { flip, keepUpright } from "./orientation";
 import {
   CALIBRATE_TEXT,
   calibrateHtml,
@@ -23,7 +24,6 @@ import { steering } from "./steering";
 import { bindZones } from "./touch";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
-const FLIP_KEY = "raceball:flipped";
 
 /** Cancels the current screen's animation loop when the next screen shows */
 let stopScreen = () => {};
@@ -68,24 +68,6 @@ function showPermissionHelp() {
 
 // ---------------------------------------------------------------- calibrate
 
-/** Turns the whole UI 180° when the text came out upside down */
-function applyFlip(flipped: boolean) {
-  app.style.transform = flipped ? "translate(-50%, -50%) rotate(180deg)" : "";
-  try {
-    localStorage.setItem(FLIP_KEY, flipped ? "1" : "");
-  } catch {
-    // not saved
-  }
-}
-
-function savedFlip() {
-  try {
-    return localStorage.getItem(FLIP_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function showCalibrate() {
   steering.calib = null;
   const screen = show(calibrateHtml());
@@ -93,9 +75,7 @@ function showCalibrate() {
   const title = screen.querySelector("h1")!;
   const hint = screen.querySelector("p")!;
   const meter = screen.querySelector<HTMLElement>(".meter-fill")!;
-  screen.querySelector(".flip-btn")!.addEventListener("click", () => {
-    applyFlip(!app.style.transform);
-  });
+  screen.querySelector(".flip-btn")!.addEventListener("click", flip);
 
   const cal = new Calibrator();
   everyFrame(() => {
@@ -177,7 +157,7 @@ function showRacing() {
 // ---------------------------------------------------------------- boot
 
 lockDownGestures();
-applyFlip(savedFlip());
+keepUpright(app);
 showStart();
 if (debugEnabled) {
   mountDebugOverlay();

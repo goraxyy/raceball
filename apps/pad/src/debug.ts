@@ -1,5 +1,6 @@
 import { clock, inputAge, status } from "./connection";
 import { sentCount } from "./input-loop";
+import { orientation } from "./orientation";
 import { gravity, permission } from "./motion";
 import { steering } from "./steering";
 import { wakeLockActive } from "./wake-lock";
@@ -58,7 +59,7 @@ export function mountDebugOverlay() {
       `rtt       ${clock.offset === undefined ? "—" : `${Math.round(clock.rtt)} ms, p95 ${Math.round(clock.percentile(95))}, jitter ${Math.round(clock.jitter)}`}`,
       `input     ${Math.round(sendRate)} Hz, age at server ${inputAge === undefined ? "—" : `${inputAge} ms`}`,
       `fps       ${Math.round(fps)}`,
-      `hold side —`,
+      `hold side ${orientation.side ?? "upright"}, ui rotated ${orientation.rotation}°${orientation.flipped ? ", sensor flipped" : ""}`,
       `calib     —`,
     ].join("\n");
     requestAnimationFrame(render);

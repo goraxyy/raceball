@@ -1,4 +1,5 @@
 import "./style.css";
+import { connect, type ConnectionStatus } from "./connection";
 import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
 import { lockDownGestures } from "./lockdown";
 import { startFromTap } from "./start";
@@ -13,8 +14,9 @@ function showStart() {
     </section>
   `;
   app.querySelector("button")!.addEventListener("click", async () => {
-    if (await startFromTap()) showReady();
-    else showPermissionHelp();
+    if (!(await startFromTap())) return showPermissionHelp();
+    showReady();
+    void connect(showStatus);
   });
 }
 
@@ -22,9 +24,29 @@ function showReady() {
   app.innerHTML = `
     <section class="screen ready">
       <h1>Motion is on</h1>
-      <p>Calibration and pairing come next.</p>
+      <p class="status"></p>
     </section>
   `;
+}
+
+const STATUS_TEXT = (s: ConnectionStatus) => {
+  switch (s.state) {
+    case "offline":
+      return "No race yet: scan the QR code on the big screen or your laptop.";
+    case "connecting":
+      return `Joining race ${s.room}…`;
+    case "joined":
+      return s.phoneOnly
+        ? `In race ${s.room}. Watch the big screen!`
+        : `Paired with your laptop in race ${s.room}.`;
+    case "error":
+      return s.message;
+  }
+};
+
+function showStatus(s: ConnectionStatus) {
+  const el = app.querySelector<HTMLParagraphElement>(".status");
+  if (el) el.textContent = STATUS_TEXT(s);
 }
 
 function showPermissionHelp() {

@@ -26,8 +26,8 @@
 1. **Everyone (15 min):** accept the GitHub invite, clone the repo, and do sections 1–3 of [ONBOARDING.md](docs/ONBOARDING.md) (read, accounts, tools).
 2. **Ali (5 min):** protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main)).
 3. **Rasim:** open the **bootstrap PR** ([M0 steps 1–2](docs/team/rasim-platform.md#m0-setup)): monorepo, tooling, empty apps, `pnpm dev` working. Nobody can write app code until it's merged. While you wait:
-   - **Nuris:** start the art bible and download the asset packs (no code needed).
-   - **Ali:** sketch the route on paper from [MAP.md](docs/MAP.md), and start the greybox in Blender (no code needed).
+   - **Nuris:** start the art bible and download the particle and audio packs (no code needed).
+   - **Ali:** sketch the route on paper from [MAP.md](docs/MAP.md), download the Kenney Marble and Racing kits, and start the greybox in Blender (no code needed).
 4. **Everyone reviews and merges the bootstrap PR,** then runs `pnpm install && pnpm dev` (ONBOARDING section 4).
 5. **Everyone, together (30 min): the protocol meeting.**
    - Walk through the [protocol draft](docs/ARCHITECTURE.md#protocol-v1-draft-lives-in-packagessharedsrcprotocolts) and change what's needed.
@@ -87,6 +87,9 @@ Nothing right now. Add new questions here.
 - [x] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
 - [x] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
 - [x] Dev-only Inspector toggle (`Shift+I`)
+- [ ] Review the Kenney Marble Kit and Racing Kit; add track pieces and props to the shortlist
+- [ ] Take 1 ball + 1 track piece through the pipeline; verify in the Sandbox; commit to `apps/web/public/assets/`
+- [ ] Create the shared Drive folder `RaceBall/assets-src`, with `happy_valley.blend` inside
 
 **Rasim**
 - [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
@@ -96,9 +99,7 @@ Nothing right now. Add new questions here.
 
 **Nuris**
 - [ ] Art bible in `docs/ASSETS.md`: style, palette, the 8 player colors + shapes, Penn State mood board
-- [ ] Review the Kenney Marble Kit, Racing Kit, Particle Pack and audio packs; write a shortlist
-- [ ] Take 1 ball + 1 track piece through the pipeline; verify in the Sandbox; commit to `apps/web/public/assets/`
-- [ ] Create the shared Drive folder `RaceBall/assets-src`, with `happy_valley.blend` inside
+- [ ] Review the Kenney Particle Pack and audio packs; add particle textures and sounds to the shortlist
 
 ---
 
@@ -113,6 +114,8 @@ Nothing right now. Add new questions here.
 - [x] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
 - [ ] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly
 - [x] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
+- [ ] 4 ball skins (Lion, Creamery scoop, football, snowball), with a player-color ring
+- [ ] Track dressing kit on one shared palette texture: barriers, fall trees, lamp posts, start/finish arch; HDRI as `.env`
 
 **Rasim**
 - [x] `RaceRoom`: roles host/viewer/pad, short room code, join/leave, `PROTOCOL_VERSION` check
@@ -126,8 +129,6 @@ Nothing right now. Add new questions here.
 - [ ] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 
 **Nuris**
-- [ ] 4 ball skins (Lion, Creamery scoop, football, snowball), with a player-color ring
-- [ ] Track dressing kit on one shared palette texture: barriers, fall trees, lamp posts, start/finish arch; HDRI as `.env`
 - [ ] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen`
 - [ ] Pad screens in Figma; agree the markup contract with Rasim; write `apps/pad/src/style.css` (style.css done; every screen and its markup is in `apps/pad/screens.html` instead of Figma; waiting on Rasim to agree the markup)
 - [x] First sound set: rolling loop, bump, countdown, UI click
@@ -175,6 +176,9 @@ Nothing right now. Add new questions here.
 - [ ] Performance pass: instancing/merging, one shadow light, LOD, freezing static meshes; under 150 draw calls
 - [ ] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown
 - [ ] Railway: check the health check, logs and resource graphs under load
+- [ ] **Landmark art pass** in this order: Old Main, Lion Shrine, Creamery + cone, Beaver Stadium, Pattee Library, Mount Nittany backdrop (budgets in [your guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Nuris reviews each against the art bible
+- [ ] Ball skins 5–8: Old Main bell, beach ball, library book, campus squirrel
+- [ ] Animated props: item boxes, flags, arch, crowd cards
 
 **Rasim**
 - [ ] Snapshot compression (quantized arrays); confirm 60 Hz on Railway
@@ -184,10 +188,7 @@ Nothing right now. Add new questions here.
 - [ ] Pad accessibility settings: auto-gas, sensitivity, dead zone
 
 **Nuris**
-- [ ] **Landmark art pass** in this order: Old Main, Lion Shrine, Creamery + cone, Beaver Stadium, Pattee Library, Mount Nittany backdrop (budgets in [your guide](docs/team/nuris-art-ui.md#m3-happy-valley-art-pass))
-- [ ] Ball skins 5–8: Old Main bell, beach ball, library book, campus squirrel
 - [ ] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones)
-- [ ] Animated props: item boxes, flags, arch, crowd cards
 - [ ] Full sound pass + mix (big screen vs laptops), crowd cheers; captions for key audio cues
 - [ ] Logo, title screen, loading screen with progress, brag card, favicons
 

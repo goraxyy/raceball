@@ -34,7 +34,7 @@ Work through this top to bottom. It takes about an hour. At the end you can run 
 | cloudflared | Everyone | macOS: `brew install cloudflared`. Windows: `winget install --id Cloudflare.cloudflared`. Linux: see Cloudflare's downloads page |
 | Blender **4.x** | Ali, Nuris | https://www.blender.org |
 | gltf-transform CLI | Ali, Nuris | `npm i -g @gltf-transform/cli` |
-| KTX-Software (`toktx`) | Nuris (optional) | Releases on GitHub (KhronosGroup/KTX-Software). Needed only for KTX2 texture compression |
+| KTX-Software (`toktx`) | Ali (optional) | Releases on GitHub (KhronosGroup/KTX-Software). Needed only for KTX2 texture compression |
 | Audacity | Nuris | https://www.audacityteam.org, for trimming and normalizing sounds |
 | Railway CLI (optional) | Ali | `npm i -g @railway/cli`, for logs and manual deploys from the terminal |
 
@@ -92,7 +92,7 @@ cloudflared tunnel --url http://localhost:2567   # the server (WebSockets work t
 apps/web/src/game   Ali    Babylon scene, cameras, VFX hookup
 apps/web/src/net    Rasim  connection, snapshots, interpolation, React hooks
 apps/web/src/ui     Nuris  lobby, HUD, big-screen overlay, results
-apps/web/public/assets  Nuris  optimized models, textures, sounds, particles
+apps/web/public/assets  Ali (models, maps, textures) + Nuris (sounds, particles, UI images)
 apps/pad            Rasim (logic) + Nuris (style.css, markup)
 apps/server         Rasim  Colyseus rooms, 60 Hz loop
 packages/shared     Rasim  protocol.ts, the contract (everyone reviews)

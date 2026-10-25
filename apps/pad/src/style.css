@@ -1,30 +1,1132 @@
-/* Nuris owns the pad's look. This is just a neutral placeholder. */
+/*
+ * RaceBall pad: the look of the phone controller.
+ * Owner: Nuris. Markup for every screen is in apps/pad/screens.html (open /screens.html in dev).
+ *
+ * Style: race-day livery and toy packaging. Cream paper menus with ink outlines and hard
+ * offset shadows, condensed italic type, checkered stripes. The racing screen is two big
+ * color fields (Gulf-style blue for brake, orange for gas) that read in peripheral vision,
+ * because players watch the big screen, not the phone.
+ *
+ * Sizes use container units (cqh, cqw, cqmin), not vw/vh: the UI is rotated by code
+ * on iPhone, and container units follow the rotated box while viewport units don't.
+ */
+
+/* Barlow (SIL Open Font License). Self-host it before demo day, like the Babylon decoders;
+   until then the system font stack below takes over when the network is slow. */
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800;1,900&family=Barlow:wght@600;700;800&display=swap");
+
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+
+  --ink: #17151f;
+  --ink-2: #2b2838;
+  --paper: #f3ead9;
+  --paper-2: #e6d8c0;
+  --paper-3: #d6c4a5;
+  --muted: #6b6273;
+
+  --brake: #7cc3e8; /* Gulf-style blue */
+  --brake-deep: #2f7fb3;
+  --gas: #f5702a; /* Gulf-style orange */
+  --gas-deep: #b9480f;
+  --flag: #ffc81e; /* items, highlights */
+  --go: #1f9e57;
+  --stop: #d7263d;
+  --asphalt: #1c1b24;
+  --asphalt-2: #262532;
+
+  /* set per player by the pad code: style="--player: #56B4E9" (colors in docs/team/nuris-art-ui.md) */
+  --player: #e69f00;
+
+  --line: 3px;
+  --drop: 5px; /* hard offset shadow */
+  --radius: 10px;
+
+  --display:
+    "Barlow Condensed", "Arial Narrow", "Roboto Condensed",
+    "Helvetica Neue Condensed", system-ui, sans-serif;
+  --text: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  font-family: var(--text);
+  font-weight: 600;
+  background: var(--paper);
+  color: var(--ink);
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  /* no zoom, scroll or selection: lockdown.ts handles that, since it's behaviour, not looks */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* #ui is the box the rotation code turns (docs/CONTROLLER.md). #app is today's root. */
+#app,
+#ui {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  overflow: hidden;
+  container-type: size;
+}
+
+h1,
+h2,
+p {
   margin: 0;
 }
 
+/* ------------------------------------------------------------------ screens */
+
 .screen {
-  min-height: 100dvh;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  padding: 1rem;
-  box-sizing: border-box;
+  gap: clamp(10px, 3.5cqmin, 24px);
+  padding: max(18px, env(safe-area-inset-top))
+    max(22px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom))
+    max(22px, env(safe-area-inset-left));
   text-align: center;
+  /* paper with a faint print dot, like a toy box */
+  background:
+    radial-gradient(rgb(23 21 31 / 0.07) 1px, transparent 1.4px) 0 0 / 9px 9px,
+    var(--paper);
 }
 
-.start-button {
-  font-size: 1.5rem;
-  padding: 1rem 2.5rem;
-  border-radius: 999px;
+/* a checkered strip along the top edge of every menu screen */
+.screen:not(.racing, .countdown)::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: clamp(10px, 3.2cqmin, 18px);
+  background: repeating-conic-gradient(var(--ink) 0 25%, var(--paper) 0 50%) 0
+    0 / clamp(10px, 3.2cqmin, 18px) clamp(10px, 3.2cqmin, 18px);
+  border-bottom: var(--line) solid var(--ink);
 }
+
+.screen h1 {
+  font-family: var(--display);
+  font-size: clamp(30px, 10cqmin, 68px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+.screen p {
+  max-width: 36ch;
+  font-size: clamp(15px, 4cqmin, 21px);
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/* a sticker-style label: "ROOM ABCD", "STEP 1 OF 2" */
+.eyebrow {
+  display: inline-block;
+  padding: 3px 10px 2px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: clamp(13px, 3.4cqmin, 18px);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  rotate: -2deg;
+}
+
+/* ------------------------------------------------------------------ buttons */
+/* slanted like a race number board, with a hard shadow that it presses into */
+
+.start-button,
+.btn {
+  appearance: none;
+  position: relative;
+  min-height: 56px;
+  padding: 0.55em 1.6em 0.5em;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: var(--gas);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: clamp(22px, 7cqmin, 38px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transform: skewX(-8deg);
+  box-shadow: var(--drop) var(--drop) 0 var(--ink);
+  cursor: pointer;
+  transition:
+    translate 70ms ease,
+    box-shadow 70ms ease;
+}
+
+.start-button:active,
+.btn:active {
+  translate: var(--drop) var(--drop);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.btn-ghost {
+  min-height: 44px;
+  padding: 0.5em 1.2em 0.45em;
+  font-size: clamp(15px, 4.4cqmin, 22px);
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.btn-ghost:active {
+  translate: 3px 3px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------------ logo + ball */
+
+.logo {
+  font-family: var(--display);
+  font-size: clamp(44px, 16cqmin, 110px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+  /* layered "sticker" shadow */
+  text-shadow:
+    3px 3px 0 var(--paper),
+    6px 6px 0 var(--ink);
+}
+
+.logo span {
+  color: var(--gas);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+}
+
+/* a flat toy ball in the player color, ink outline, one highlight, their shape on it */
+.ball {
+  --size: clamp(64px, 26cqmin, 180px);
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: max(3px, calc(var(--size) * 0.035)) solid var(--ink);
+  background:
+    radial-gradient(
+      circle at 30% 26%,
+      rgb(255 255 255 / 0.9) 0 9%,
+      transparent 9.5%
+    ),
+    radial-gradient(
+      circle at 70% 78%,
+      color-mix(in srgb, var(--player) 70%, var(--ink)) 0 32%,
+      transparent 33%
+    ),
+    var(--player);
+  box-shadow: calc(var(--size) * 0.05) calc(var(--size) * 0.06) 0 var(--ink);
+}
+
+.ball .shape {
+  --shape-size: calc(var(--size) * 0.4);
+  background: var(--paper);
+  filter: drop-shadow(2px 2px 0 var(--ink));
+}
+
+.ball-roll {
+  animation: ball-roll 2.2s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ player shapes */
+/* <span class="shape" data-shape="star"></span>: shape + color, never color alone */
+
+.shape {
+  --shape-size: 1em;
+  display: inline-block;
+  flex: none;
+  width: var(--shape-size);
+  height: var(--shape-size);
+  background: var(--player);
+}
+
+.shape[data-shape="circle"] {
+  border-radius: 50%;
+}
+.shape[data-shape="square"] {
+  border-radius: 8%;
+  transform: scale(0.86);
+}
+.shape[data-shape="triangle"] {
+  clip-path: polygon(50% 6%, 96% 90%, 4% 90%);
+}
+.shape[data-shape="star"] {
+  clip-path: polygon(
+    50% 2%,
+    62% 36%,
+    98% 37%,
+    69% 59%,
+    80% 95%,
+    50% 74%,
+    20% 95%,
+    31% 59%,
+    2% 37%,
+    38% 36%
+  );
+}
+.shape[data-shape="diamond"] {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.shape[data-shape="cross"] {
+  clip-path: polygon(
+    35% 0,
+    65% 0,
+    65% 35%,
+    100% 35%,
+    100% 65%,
+    65% 65%,
+    65% 100%,
+    35% 100%,
+    35% 65%,
+    0 65%,
+    0 35%,
+    35% 35%
+  );
+}
+.shape[data-shape="pentagon"] {
+  clip-path: polygon(50% 2%, 98% 38%, 79% 96%, 21% 96%, 2% 38%);
+}
+.shape[data-shape="hexagon"] {
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+}
+
+/* ------------------------------------------------------------------ start */
+
+.start .logo {
+  margin-bottom: 1cqmin;
+}
+
+.hint-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hint-list li {
+  padding: 5px 10px 4px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--paper);
+  font-size: clamp(12px, 3.3cqmin, 15px);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.hint-list li:nth-child(odd) {
+  rotate: -1.5deg;
+}
+.hint-list li:nth-child(even) {
+  rotate: 1.5deg;
+}
+
+/* ------------------------------------------------------------------ permission help + connection lost */
+
+.permission-help h1,
+.connection-lost h1 {
+  color: var(--stop);
+}
+
+/* a spinning checkered wheel */
+.spinner {
+  width: clamp(48px, 15cqmin, 88px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: var(--line) solid var(--ink);
+  background: repeating-conic-gradient(
+    var(--ink) 0 30deg,
+    var(--paper) 0 60deg
+  );
+  box-shadow: 4px 4px 0 var(--ink);
+  animation: spin 1.1s linear infinite;
+}
+
+/* ------------------------------------------------------------------ picker (phone-only players) */
+
+.picker {
+  justify-content: flex-start;
+  padding-top: calc(max(18px, env(safe-area-inset-top)) + 3cqmin);
+  overflow-y: auto;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 420px);
+  text-align: left;
+  font-family: var(--display);
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.field input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 14px;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font: 800 22px var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: 4px 4px 0 var(--ink);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.field input:focus {
+  outline: none;
+  background: #fffbe9;
+  box-shadow: 4px 4px 0 var(--gas);
+}
+
+.ball-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: min(100%, 420px);
+}
+
+.ball-option {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 4px 8px;
+  border: var(--line) solid var(--ink);
+  border-radius: 8px;
+  background: var(--paper-2);
+  font-family: var(--display);
+  font-size: 15px;
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.ball-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ball-option .ball {
+  --size: 44px;
+}
+
+.ball-option:has(input:checked) {
+  background: var(--flag);
+  translate: -2px -2px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.ball-option:has(input:focus-visible) {
+  outline: 3px dashed var(--ink);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ calibrate */
+
+.steps {
+  display: flex;
+  gap: 10px;
+}
+
+.step {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: var(--line) solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  font-family: var(--display);
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 900;
+}
+
+.step.is-active {
+  background: var(--gas);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.step.is-done {
+  background: var(--go);
+  color: #fff;
+}
+
+/* a phone drawn sideways, held like a wheel, thumbs on the two zones */
+.wheel {
+  position: relative;
+  width: clamp(110px, 34cqmin, 240px);
+  aspect-ratio: 2.1 / 1;
+  margin-block: 3cqmin;
+  display: grid;
+  place-items: center;
+}
+
+.wheel-phone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 4px solid var(--ink);
+  border-radius: 14% / 30%;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--brake) 50%, var(--gas) 50%);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+/* a level line, so "level" and "turn" are easy to see */
+.wheel-phone::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 50%;
+  height: 4px;
+  translate: 0 -50%;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+.calibrate[data-step="1"] .wheel-phone {
+  animation: hold-level 2.4s ease-in-out infinite;
+}
+
+.calibrate[data-step="2"] .wheel-phone {
+  animation: turn-right 1.8s ease-in-out infinite;
+}
+
+.meter {
+  width: min(70cqw, 360px);
+  height: 18px;
+  border: var(--line) solid var(--ink);
+  border-radius: 4px;
+  background: var(--paper);
+  overflow: hidden;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* style="--progress: 0.4" from the pad code, 0 to 1 */
+.meter-fill {
+  height: 100%;
+  width: calc(var(--progress, 0) * 100%);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--gas) 0 10px,
+    var(--flag) 10px 20px
+  );
+  transition: width 120ms linear;
+}
+
+/* ------------------------------------------------------------------ ready */
+
+.ready .ball {
+  --size: clamp(84px, 36cqmin, 210px);
+}
+
+.player-name {
+  font-family: var(--display);
+  font-size: clamp(30px, 10cqmin, 60px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+/* "You're the blue tile, top left": a sticker in the player's color */
+.tile-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px 6px;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: var(--player);
+  color: var(--ink);
+  font-size: clamp(14px, 4cqmin, 19px);
+  font-weight: 800;
+  box-shadow: 3px 3px 0 var(--ink);
+  rotate: -1.5deg;
+}
+
+.tile-hint .shape {
+  background: var(--paper);
+}
+
+.ready-btn.is-ready {
+  background: var(--go);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ countdown (phone-only players) */
+/* <section class="screen countdown" data-count="3"><div class="count">3</div></section> */
+
+.countdown .count {
+  font-family: var(--display);
+  font-size: 70cqh;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.8;
+  color: var(--paper);
+  -webkit-text-stroke: max(4px, 1.2cqh) var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 2cqh 2cqh 0 var(--ink);
+  animation: count-pop 1s ease-out both;
+}
+
+.countdown[data-count="3"] {
+  background: var(--stop);
+}
+.countdown[data-count="2"] {
+  background: var(--gas);
+}
+.countdown[data-count="1"] {
+  background: var(--flag);
+}
+.countdown[data-count="go"] {
+  background: var(--go);
+}
+
+/* ------------------------------------------------------------------ racing */
+/*
+ * Landscape, held like a wheel: left half brake, right half gas. Each half is one big
+ * color field with chevrons, bright while a thumb is on it, so players can feel sure of
+ * their input in peripheral vision. Status, steering and item sit in the middle column,
+ * between the thumbs.
+ */
+
+.racing {
+  padding: 0;
+  gap: 0;
+  display: block;
+  background: var(--asphalt);
+}
+
+.zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: max(9cqh, 16px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  touch-action: none;
+  transition: filter 60ms linear;
+}
+
+/* the color field: darkened until pressed */
+.zone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--zone);
+  filter: brightness(0.42) saturate(0.85);
+  transition: filter 60ms linear;
+}
+
+/* chevrons pointing outward: back for brake, forward for gas */
+.zone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  -webkit-mask: var(--chevrons) 0 0 / 22cqh 22cqh repeat;
+  mask: var(--chevrons) 0 0 / 22cqh 22cqh repeat;
+  background: var(--ink);
+}
+
+.zone-left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: max(5cqw, 22px, env(safe-area-inset-left));
+  --zone: var(--brake);
+  --chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M26 6 12 20l14 14' fill='none' stroke='%23000' stroke-width='7'/%3E%3C/svg%3E");
+}
+
+.zone-right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: max(5cqw, 22px, env(safe-area-inset-right));
+  --zone: var(--gas);
+  --chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='m14 6 14 14-14 14' fill='none' stroke='%23000' stroke-width='7'/%3E%3C/svg%3E");
+  border-left: var(--line) solid var(--ink);
+}
+
+.zone-label {
+  position: relative;
+  z-index: 1;
+  font-family: var(--display);
+  font-size: clamp(28px, 15cqh, 70px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.85;
+  text-transform: uppercase;
+  color: var(--zone);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 4px 4px 0 var(--ink);
+  transition:
+    scale 60ms ease,
+    color 60ms ease;
+}
+
+/* the pad code adds .is-down while a thumb is on the zone */
+.zone.is-down::before {
+  filter: none;
+}
+
+.zone.is-down::after {
+  opacity: 0.22;
+  animation: chevrons-run 0.5s linear infinite;
+}
+
+.zone-left.is-down::after {
+  animation-direction: reverse;
+}
+
+.zone.is-down .zone-label {
+  color: var(--paper);
+  scale: 1.06;
+}
+
+/* auto-gas (accessibility): gas is always on, so the right zone says so */
+.racing.auto-gas .zone-right::before {
+  filter: brightness(0.8);
+}
+.racing.auto-gas .zone-right .zone-label::after {
+  content: " auto";
+  font-size: 0.45em;
+  letter-spacing: 0.1em;
+}
+
+/* the middle column: status, steering, item */
+.racing .hud {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left: 50%;
+  translate: -50% 0;
+  width: min(44cqw, 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3.5cqh;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.status {
+  display: flex;
+  align-items: stretch;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  overflow: hidden;
+  white-space: nowrap;
+  transform: skewX(-8deg);
+}
+
+/* the player's color and shape, like a race number plate */
+.status .shape {
+  --shape-size: clamp(22px, 9cqh, 40px);
+  align-self: center;
+  margin: 0 10px;
+  background: var(--ink);
+}
+
+.status-place {
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 10px;
+  background: var(--player);
+  border-right: var(--line) solid var(--ink);
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.status-place b {
+  font-size: clamp(34px, 15cqh, 64px);
+}
+
+.status-place small {
+  font-size: clamp(14px, 6cqh, 26px);
+  align-self: flex-start;
+  margin-top: 0.35em;
+}
+
+.status-lap {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-family: var(--display);
+  font-size: clamp(18px, 8cqh, 34px);
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.final-lap .status-lap {
+  background: var(--flag);
+}
+
+/* place changed: data-change="up" or "down" on .status for one animation */
+.status[data-change="up"] .status-place {
+  animation: place-up 600ms ease-out;
+}
+.status[data-change="down"] .status-place {
+  animation: place-down 600ms ease-out;
+}
+
+/*
+ * Steering gauge: shows the steer value the pad is sending, so players can see that
+ * tilting works. style="--steer: 0.3" on .steer, from -1 (full left) to 1 (full right).
+ */
+.steer {
+  position: relative;
+  width: 100%;
+  height: clamp(18px, 7cqh, 30px);
+  border: var(--line) solid var(--ink);
+  border-radius: 999px;
+  background:
+    linear-gradient(var(--ink), var(--ink)) 50% 50% / 3px 70% no-repeat,
+    repeating-linear-gradient(
+        90deg,
+        transparent 0 calc(12.5% - 1px),
+        rgb(23 21 31 / 0.35) calc(12.5% - 1px) 12.5%
+      )
+      0 50% / 100% 40% no-repeat,
+    var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.steer-dot {
+  position: absolute;
+  top: 50%;
+  left: calc(50% + var(--steer, 0) * 50%);
+  width: clamp(26px, 10cqh, 42px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: var(--line) solid var(--ink);
+  border-radius: 50%;
+  background: var(--player);
+  transition: left 40ms linear;
+}
+
+.item-btn {
+  pointer-events: auto;
+  width: clamp(92px, 40cqh, 170px);
+  aspect-ratio: 1;
+  margin-top: auto;
+  margin-bottom: auto;
+  display: grid;
+  place-items: center;
+  border: var(--line) dashed var(--paper-3);
+  border-radius: 50%;
+  background: var(--asphalt-2);
+  color: var(--paper-3);
+  font-family: var(--display);
+  font-size: clamp(16px, 7cqh, 28px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.95;
+  text-transform: uppercase;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.item-btn:disabled {
+  opacity: 0.7;
+}
+
+/* data-item="boost" | "roar" | "spill" | "snowday" while an item is held */
+.item-btn[data-item]:not([data-item=""]) {
+  border: var(--line) solid var(--ink);
+  background: var(--item-color, var(--flag));
+  color: var(--ink);
+  box-shadow:
+    0 0 0 5px var(--flag),
+    0 0 0 8px var(--ink),
+    6px 6px 0 8px var(--ink);
+  animation: item-wiggle 1.4s ease-in-out infinite;
+}
+
+.item-btn[data-item="boost"] {
+  --item-color: #9ad0ff;
+}
+.item-btn[data-item="roar"] {
+  --item-color: #ffb03b;
+}
+.item-btn[data-item="spill"] {
+  --item-color: #fff1d2;
+}
+.item-btn[data-item="snowday"] {
+  --item-color: #ffffff;
+}
+
+.item-btn:active {
+  scale: 0.94;
+}
+
+.shake-hint {
+  display: block;
+  margin-top: 0.2em;
+  font-size: 0.55em;
+  letter-spacing: 0.12em;
+}
+
+.wrong-way {
+  position: absolute;
+  left: 50%;
+  bottom: 8cqh;
+  translate: -50% 0;
+  padding: 6px 18px 4px;
+  border: var(--line) solid var(--ink);
+  border-radius: 4px;
+  background: var(--stop);
+  color: #fff;
+  font-family: var(--display);
+  font-size: clamp(22px, 10cqh, 44px);
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 var(--ink);
+  pointer-events: none;
+  animation: blink 0.6s steps(2, jump-none) infinite;
+  z-index: 3;
+}
+
+.wrong-way[hidden] {
+  display: none;
+}
+
+/*
+ * Event cues: phones have no vibration, so every event gets a sound + a visual.
+ * The pad code sets data-cue="bump" (or item, boost, lap, finallap, finish, edge) on .racing,
+ * then removes it on animationend. Restart a cue by removing it, forcing a reflow, and adding it again.
+ */
+.cue {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.racing[data-cue] .cue {
+  animation: cue-flash 420ms ease-out;
+}
+
+.racing[data-cue="bump"] .cue {
+  --cue: var(--stop);
+  animation: cue-flash 320ms ease-out;
+}
+.racing[data-cue="bump"] {
+  animation: shake 300ms ease-out;
+}
+.racing[data-cue="item"] .cue {
+  --cue: var(--flag);
+}
+.racing[data-cue="boost"] .cue {
+  --cue: var(--brake);
+  animation: cue-flash 600ms ease-out;
+}
+.racing[data-cue="lap"] .cue,
+.racing[data-cue="finallap"] .cue {
+  --cue: var(--go);
+  animation: cue-flash 700ms ease-out;
+}
+.racing[data-cue="finish"] .cue {
+  --cue: var(--paper);
+  animation: cue-flash 1s ease-out;
+}
+.racing[data-cue="edge"] .cue {
+  --cue: var(--stop);
+  animation: cue-edge 300ms ease-out;
+}
+
+/* a big word over the pad for lap and finish cues: <div class="cue-text">Final lap!</div> */
+.cue-text {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  translate: -50% -50%;
+  padding: 0.05em 0.35em 0;
+  background: var(--flag);
+  border: var(--line) solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  font-family: var(--display);
+  font-size: clamp(34px, 20cqh, 90px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  animation: cue-pop 1.1s ease-out forwards;
+}
+
+/* ------------------------------------------------------------------ results */
+
+.results .place {
+  position: relative;
+  font-family: var(--display);
+  font-size: clamp(90px, 34cqmin, 220px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.8;
+  color: var(--player);
+  -webkit-text-stroke: max(3px, 0.025em) var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0.05em 0.05em 0 var(--ink);
+}
+
+.results .place small {
+  font-size: 0.38em;
+  vertical-align: top;
+  margin-left: 0.04em;
+}
+
+/* a winner gets a checkered flag behind the number */
+.results[data-place="1"] .results-main {
+  padding: 3cqmin 5cqmin;
+  background: repeating-conic-gradient(var(--ink) 0 25%, var(--paper) 0 50%) 0
+    0 / 6cqmin 6cqmin;
+  border: var(--line) solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  rotate: -3deg;
+}
+
+.results[data-place="1"] .place {
+  color: var(--flag);
+}
+
+.stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.stat {
+  min-width: 96px;
+  padding: 8px 14px 6px;
+  display: grid;
+  gap: 2px;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.stat b {
+  font-family: var(--display);
+  font-size: clamp(24px, 8cqmin, 38px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.stat span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* the brag title is a sticker slapped on at an angle */
+.brag-title {
+  padding: 6px 14px 4px;
+  border: var(--line) solid var(--ink);
+  background: var(--player);
+  font-family: var(--display);
+  font-size: clamp(20px, 6cqmin, 32px);
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 var(--ink);
+  rotate: -3deg;
+}
+
+/* short screens (landscape phones): put results and ready side by side */
+@container (max-height: 420px) and (min-aspect-ratio: 4 / 3) {
+  .results,
+  .ready {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    column-gap: 7cqw;
+  }
+
+  .results .place {
+    font-size: 44cqh;
+  }
+
+  .results .results-side,
+  .ready .ready-side {
+    display: grid;
+    gap: 14px;
+    justify-items: center;
+  }
+}
+
+/* ------------------------------------------------------------------ debug overlay (Rasim) */
 
 .debug-overlay {
   position: fixed;
@@ -40,4 +1142,184 @@ body {
   background: rgb(0 0 0 / 0.7);
   pointer-events: none;
   z-index: 1000;
+}
+
+/* ------------------------------------------------------------------ animations */
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes ball-roll {
+  0%,
+  100% {
+    translate: -4% 0;
+    rotate: -8deg;
+  }
+  50% {
+    translate: 4% 0;
+    rotate: 8deg;
+  }
+}
+
+@keyframes hold-level {
+  0%,
+  100% {
+    rotate: -2deg;
+  }
+  50% {
+    rotate: 2deg;
+  }
+}
+
+@keyframes turn-right {
+  0%,
+  15% {
+    rotate: 0deg;
+  }
+  55%,
+  80% {
+    rotate: 25deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+
+@keyframes chevrons-run {
+  to {
+    -webkit-mask-position: 22cqh 0;
+    mask-position: 22cqh 0;
+  }
+}
+
+@keyframes item-wiggle {
+  0%,
+  70%,
+  100% {
+    rotate: 0deg;
+  }
+  76% {
+    rotate: -9deg;
+  }
+  84% {
+    rotate: 8deg;
+  }
+  92% {
+    rotate: -4deg;
+  }
+}
+
+@keyframes place-up {
+  0% {
+    background: var(--go);
+    scale: 1.25;
+  }
+}
+
+@keyframes place-down {
+  0% {
+    background: var(--stop);
+    scale: 0.85;
+  }
+}
+
+@keyframes count-pop {
+  0% {
+    scale: 1.6;
+    opacity: 0;
+  }
+  20% {
+    scale: 0.95;
+    opacity: 1;
+  }
+  30% {
+    scale: 1;
+  }
+}
+
+@keyframes cue-flash {
+  from {
+    box-shadow: inset 0 0 0 9999px
+      color-mix(in srgb, var(--cue, #fff) 45%, transparent);
+  }
+  to {
+    box-shadow: inset 0 0 0 9999px transparent;
+  }
+}
+
+@keyframes cue-edge {
+  from {
+    box-shadow: inset 0 0 0 14px var(--cue);
+  }
+  to {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+
+@keyframes cue-pop {
+  0% {
+    scale: 0.4;
+    rotate: -10deg;
+    opacity: 0;
+  }
+  15% {
+    scale: 1.08;
+    rotate: -4deg;
+    opacity: 1;
+  }
+  25% {
+    scale: 1;
+    rotate: -4deg;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    rotate: -4deg;
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: -6px 2px;
+  }
+  50% {
+    translate: 5px -2px;
+  }
+  75% {
+    translate: -3px 1px;
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* players who turned on reduced motion get flashes but no shaking, wiggling or rolling */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+  }
+
+  .racing[data-cue="bump"],
+  .ball-roll,
+  .calibrate .wheel-phone,
+  .item-btn[data-item]:not([data-item=""]),
+  .zone.is-down::after,
+  .wrong-way {
+    animation: none !important;
+  }
 }

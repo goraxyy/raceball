@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pad Screens</title>
+    <!--
+      Dev-only gallery of every pad screen, drawn with the real src/style.css.
+      It is also the markup contract: the pad code should build each screen with
+      exactly the markup shown under it (classes, data-* attributes, --player).
+      Open http://localhost:5174/screens.html while `pnpm dev` runs.
+    -->
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      html,
+      body {
+        height: auto;
+        overflow: auto;
+        touch-action: auto;
+        user-select: auto;
+        -webkit-user-select: auto;
+      }
+      body {
+        padding: 24px 16px 64px;
+        background: var(--paper-2);
+      }
+      .gallery {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: grid;
+        gap: 44px;
+      }
+      .gallery > header h1 {
+        font: italic 900 44px/0.9 var(--display);
+        text-transform: uppercase;
+        margin: 0 0 10px;
+      }
+      .gallery > header p {
+        color: var(--muted);
+        margin: 0;
+        max-width: 70ch;
+        line-height: 1.5;
+      }
+      .item {
+        display: grid;
+        gap: 12px;
+      }
+      .item h2 {
+        font: italic 900 26px/1 var(--display);
+        text-transform: uppercase;
+        margin: 0;
+      }
+      .item h2 small {
+        font: 600 14px var(--text);
+        text-transform: none;
+        color: var(--muted);
+      }
+      .frames {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      /* a phone screen: landscape 844x390, portrait 390x844 (iPhone 14), scaled to fit */
+      .frame {
+        --w: 844;
+        --h: 390;
+        position: relative;
+        container-type: size; /* stands in for #ui */
+        width: calc(var(--w) * 1px);
+        height: calc(var(--h) * 1px);
+        border-radius: 36px;
+        overflow: hidden;
+        outline: 8px solid var(--ink);
+        outline-offset: 0;
+        box-shadow: 14px 14px 0 rgb(23 21 31 / 0.25);
+      }
+      .frame.portrait {
+        --w: 390;
+        --h: 844;
+        zoom: 0.6;
+      }
+      @media (max-width: 900px) {
+        .frame {
+          zoom: 0.62;
+        }
+        .frame.portrait {
+          zoom: 0.45;
+        }
+      }
+      @media (max-width: 560px) {
+        .frame {
+          zoom: 0.4;
+        }
+        .frame.portrait {
+          zoom: 0.35;
+        }
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .controls button {
+        font: 800 14px var(--text);
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 2px solid var(--ink);
+        background: var(--paper);
+        color: var(--ink);
+        box-shadow: 2px 2px 0 var(--ink);
+        cursor: pointer;
+      }
+      .controls label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+      }
+      details {
+        background: var(--paper);
+        border: 2px solid var(--ink);
+        border-radius: 8px;
+        padding: 10px 14px;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 800;
+      }
+      pre {
+        margin: 10px 0 0;
+        overflow: auto;
+        font:
+          12px/1.45 ui-monospace,
+          Consolas,
+          monospace;
+        color: var(--ink-2);
+        white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="gallery">
+      <header>
+        <h1>RaceBall pad screens</h1>
+        <p>
+          Every screen of the phone controller, drawn with the real
+          <code>src/style.css</code>. The markup under each screen is the
+          contract for the pad code. Set the player's color with
+          <code>style="--player: …"</code> on the screen, and their shape with
+          <code>data-shape</code>. On the racing screen, press the zones and use
+          the buttons to try the event cues.
+        </p>
+      </header>
+
+      <!-- ============================================================ start -->
+      <section class="item">
+        <h2>
+          Start
+          <small>.screen.start (portrait, before the phone is turned)</small>
+        </h2>
+        <div class="frames">
+          <div class="frame portrait" data-contract>
+            <section class="screen start">
+              <div class="logo">Race<span>Ball</span></div>
+              <div class="ball ball-roll">
+                <span class="shape" data-shape="star"></span>
+              </div>
+              <button class="start-button" type="button">Tap to start</button>
+              <ul class="hint-list">
+                <li>Low Power Mode off</li>
+                <li>Silent switch off</li>
+                <li>iPhone: Portrait Lock on</li>
+              </ul>
+            </section>
+          </div>
+          <div class="frame">
+            <section class="screen start">
+              <div class="logo">Race<span>Ball</span></div>
+              <button class="start-button" type="button">Tap to start</button>
+              <ul class="hint-list">
+                <li>Low Power Mode off</li>
+                <li>Silent switch off</li>
+                <li>iPhone: Portrait Lock on</li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ permission help -->
+      <section class="item">
+        <h2>Motion access off <small>.screen.permission-help</small></h2>
+        <div class="frames">
+          <div class="frame" data-contract>
+            <section class="screen permission-help">
+              <h1>Motion access is off</h1>
+              <p>
+                RaceBall needs motion to steer. On iPhone, close Safari
+                completely, reopen this page and tap Allow. On Android, allow
+                "Motion sensors" in the site settings.
+              </p>
+              <button class="start-button" type="button">Try again</button>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ picker -->
+      <section class="item">
+        <h2>Name + ball <small>.screen.picker (phone-only players)</small></h2>
+        <div class="frames">
+          <div class="frame portrait" data-contract>
+            <section class="screen picker" style="--player: #56b4e9">
+              <span class="eyebrow">Room ABCD</span>
+              <h1>Pick your ball</h1>
+              <label class="field">
+                Name
+                <input
+                  type="text"
+                  maxlength="12"
+                  value="Nuris"
+                  autocomplete="off"
+                />
+              </label>
+              <div class="ball-grid" role="radiogroup">
+                <label class="ball-option" style="--player: #e69f00">
+                  <input type="radio" name="ball" value="lion" checked />
+                  <span class="ball"
+                    ><span class="shape" data-shape="circle"></span
+                  ></span>
+                  Lion
+                </label>
+                <label class="ball-option" style="--player: #56b4e9">
+                  <input type="radio" name="ball" value="scoop" />
+                  <span class="ball"
+                    ><span class="shape" data-shape="square"></span
+                  ></span>
+                  Scoop
+                </label>
+                <label class="ball-option" style="--player: #009e73">
+                  <input type="radio" name="ball" value="football" />
+                  <span class="ball"
+                    ><span class="shape" data-shape="triangle"></span
+                  ></span>
+                  Football
+                </label>
+                <label class="ball-option" style="--player: #f0e442">
+                  <input type="radio" name="ball" value="snowball" />
+                  <span class="ball"
+                    ><span class="shape" data-shape="star"></span
+                  ></span>
+                  Snowball
+                </label>
+                <label class="ball-option" style="--player: #0072b2">
+                  <input type="radio" name="ball" value="bell" />
+                  <span class="ball"
+                    ><span class="shape" data-shape="diamond"></span
+                  ></span>
+                  Bell
+                </label>
+                <label class="ball-option" style="--player: #d55e00">
+                  <input type="radio" name="ball" value="beach" />
+                  <span class="ball"
+                    ><span class="shape" data-shape="cross"></span
+                  ></span>
+                  Beach
+                </label>
+                <label class="ball-option" style="--player: #cc79a7">
+                  <input type="radio" name="ball" value="book" />
+                  <span class="ball"
+                    ><span class="shape" data-shape="pentagon"></span
+                  ></span>
+                  Book
+                </label>
+                <label class="ball-option" style="--player: #ffffff">
+                  <input type="radio" name="ball" value="squirrel" />
+                  <span class="ball"
+                    ><span class="shape" data-shape="hexagon"></span
+                  ></span>
+                  Squirrel
+                </label>
+              </div>
+              <button class="btn" type="button">Join race</button>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ calibrate -->
+      <section class="item">
+        <h2>Calibrate <small>.screen.calibrate[data-step="1" | "2"]</small></h2>
+        <div class="frames">
+          <div class="frame" data-contract>
+            <section class="screen calibrate" data-step="1">
+              <div class="steps">
+                <span class="step is-active">1</span><span class="step">2</span>
+              </div>
+              <div class="wheel"><div class="wheel-phone"></div></div>
+              <h1>Hold it like a wheel</h1>
+              <p>Keep it level for a second.</p>
+              <div class="meter">
+                <div class="meter-fill" style="--progress: 0.45"></div>
+              </div>
+              <button class="btn btn-ghost flip-btn" type="button">
+                Text upside down? Flip
+              </button>
+            </section>
+          </div>
+          <div class="frame">
+            <section class="screen calibrate" data-step="2">
+              <div class="steps">
+                <span class="step is-done">1</span
+                ><span class="step is-active">2</span>
+              </div>
+              <div class="wheel"><div class="wheel-phone"></div></div>
+              <h1>Now turn right</h1>
+              <p>Like steering into a corner.</p>
+              <div class="meter">
+                <div class="meter-fill" style="--progress: 0.8"></div>
+              </div>
+              <button class="btn btn-ghost flip-btn" type="button">
+                Text upside down? Flip
+              </button>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ ready -->
+      <section class="item">
+        <h2>
+          Ready
+          <small>.screen.ready (add .is-ready to the button once tapped)</small>
+        </h2>
+        <div class="frames">
+          <div class="frame" data-contract>
+            <section class="screen ready" style="--player: #56b4e9">
+              <div class="ball ball-roll">
+                <span class="shape" data-shape="square"></span>
+              </div>
+              <div class="ready-side">
+                <span class="player-name">Nuris</span>
+                <span class="tile-hint"
+                  ><span class="shape" data-shape="square"></span>You're the
+                  blue tile, top left</span
+                >
+                <button class="btn ready-btn" type="button">Ready</button>
+                <button class="btn btn-ghost" type="button">Recalibrate</button>
+              </div>
+            </section>
+          </div>
+          <div class="frame">
+            <section class="screen ready" style="--player: #d55e00">
+              <div class="ball">
+                <span class="shape" data-shape="cross"></span>
+              </div>
+              <div class="ready-side">
+                <span class="player-name">Ali</span>
+                <button class="btn ready-btn is-ready" type="button">
+                  Ready!
+                </button>
+                <p>Waiting for the host to start</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ racing -->
+      <section class="item">
+        <h2>
+          Racing <small>.screen.racing (hold left = brake, right = gas)</small>
+        </h2>
+        <div class="controls" id="raceControls">
+          <button data-cue="bump">Bump</button>
+          <button data-cue="item">Item picked up</button>
+          <button data-cue="boost">Boost</button>
+          <button data-cue="lap" data-text="Lap 2">Lap</button>
+          <button data-cue="finallap" data-text="Final lap!">Final lap</button>
+          <button data-cue="edge">Near an edge</button>
+          <button data-cue="finish" data-text="Finish!">Finish</button>
+          <button id="cycleItem">Cycle item</button>
+          <button id="toggleWrong">Wrong way</button>
+          <button data-change="up">Gain a place</button>
+          <button data-change="down">Lose a place</button>
+          <label
+            >Steer
+            <input
+              id="steer"
+              type="range"
+              min="-1"
+              max="1"
+              step="0.01"
+              value="0.25"
+          /></label>
+        </div>
+        <div class="frames">
+          <div class="frame" data-contract id="raceFrame">
+            <section class="screen racing" style="--player: #56b4e9">
+              <div class="zone zone-left">
+                <span class="zone-label">Brake</span>
+              </div>
+              <div class="zone zone-right">
+                <span class="zone-label">Gas</span>
+              </div>
+              <div class="hud">
+                <header class="status">
+                  <span class="status-place"><b>2</b><small>nd</small></span>
+                  <span class="shape" data-shape="square"></span>
+                  <span class="status-lap">Lap 1/3</span>
+                </header>
+                <div class="steer" style="--steer: 0.25">
+                  <span class="steer-dot"></span>
+                </div>
+                <button class="item-btn" type="button" data-item="boost">
+                  <span>Boost<span class="shake-hint">shake!</span></span>
+                </button>
+              </div>
+              <div class="wrong-way" hidden>Wrong way</div>
+              <div class="cue"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ countdown -->
+      <section class="item">
+        <h2>
+          Countdown
+          <small
+            >.screen.countdown[data-count="3" | "2" | "1" | "go"] (phone-only
+            players, who have no laptop)</small
+          >
+        </h2>
+        <div class="frames">
+          <div class="frame" data-contract id="countFrame">
+            <section class="screen countdown" data-count="3">
+              <div class="count">3</div>
+            </section>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="playCount">Play 3, 2, 1, GO</button>
+        </div>
+      </section>
+
+      <!-- ============================================================ results -->
+      <section class="item">
+        <h2>Results <small>.screen.results[data-place]</small></h2>
+        <div class="frames">
+          <div class="frame" data-contract>
+            <section
+              class="screen results"
+              data-place="1"
+              style="--player: #e69f00"
+            >
+              <div class="results-main">
+                <div class="place">1<small>st</small></div>
+              </div>
+              <div class="results-side">
+                <span class="brag-title">Shrine Jumper</span>
+                <div class="stats">
+                  <div class="stat"><b>0:58.4</b><span>Best lap</span></div>
+                  <div class="stat"><b>31</b><span>Top km/h</span></div>
+                  <div class="stat"><b>7</b><span>Bumps</span></div>
+                </div>
+                <button class="btn" type="button">Rematch</button>
+              </div>
+            </section>
+          </div>
+          <div class="frame">
+            <section
+              class="screen results"
+              data-place="4"
+              style="--player: #cc79a7"
+            >
+              <div class="results-main">
+                <div class="place">4<small>th</small></div>
+              </div>
+              <div class="results-side">
+                <span class="brag-title">Creamery Victim</span>
+                <div class="stats">
+                  <div class="stat"><b>1:06.9</b><span>Best lap</span></div>
+                  <div class="stat"><b>27</b><span>Top km/h</span></div>
+                  <div class="stat"><b>12</b><span>Bumps</span></div>
+                </div>
+                <button class="btn" type="button">Rematch</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ connection lost -->
+      <section class="item">
+        <h2>Connection lost <small>.screen.connection-lost</small></h2>
+        <div class="frames">
+          <div class="frame" data-contract>
+            <section class="screen connection-lost">
+              <div class="spinner"></div>
+              <h1>Reconnecting…</h1>
+              <p>Hold on, you'll rejoin your spot in the race.</p>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      // Show each screen's markup under it, straight from the DOM, so it never drifts.
+      for (const frame of document.querySelectorAll("[data-contract]")) {
+        const html = frame.innerHTML
+          .trim()
+          .replace(/\n {12}/g, "\n")
+          .replace(/ data-contract/g, "");
+        const details = document.createElement("details");
+        details.innerHTML = "<summary>Markup</summary><pre></pre>";
+        details.querySelector("pre").textContent = html;
+        frame.closest(".item").append(details);
+      }
+
+      // Racing demo: zones, cues, item, wrong way.
+      const race = document.querySelector("#raceFrame .racing");
+      for (const zone of race.querySelectorAll(".zone")) {
+        zone.addEventListener("pointerdown", () =>
+          zone.classList.add("is-down"),
+        );
+        for (const ev of ["pointerup", "pointercancel", "pointerleave"])
+          zone.addEventListener(ev, () => zone.classList.remove("is-down"));
+      }
+
+      function cue(name, text) {
+        race.removeAttribute("data-cue");
+        void race.offsetWidth; // reflow, so the same cue can replay
+        race.dataset.cue = name;
+        if (text) {
+          const el = document.createElement("div");
+          el.className = "cue-text";
+          el.textContent = text;
+          el.addEventListener("animationend", () => el.remove());
+          race.append(el);
+        }
+        race.classList.toggle(
+          "final-lap",
+          name === "finallap" || race.classList.contains("final-lap"),
+        );
+        if (name === "finallap")
+          race.querySelector(".status-lap").textContent = "Lap 3/3";
+      }
+      race.addEventListener("animationend", (e) => {
+        if (e.target.classList.contains("cue") || e.target === race)
+          race.removeAttribute("data-cue");
+      });
+      for (const b of document.querySelectorAll("#raceControls [data-cue]"))
+        b.addEventListener("click", () => cue(b.dataset.cue, b.dataset.text));
+
+      const items = ["boost", "roar", "spill", "snowday", ""];
+      const labels = {
+        boost: "Boost",
+        roar: "Roar",
+        spill: "Spill",
+        snowday: "Snow day",
+        "": "No item",
+      };
+      const itemBtn = race.querySelector(".item-btn");
+      document.querySelector("#cycleItem").addEventListener("click", () => {
+        const next =
+          items[(items.indexOf(itemBtn.dataset.item) + 1) % items.length];
+        itemBtn.dataset.item = next;
+        itemBtn.disabled = !next;
+        itemBtn.innerHTML = next
+          ? `<span>${labels[next]}<span class="shake-hint">shake!</span></span>`
+          : `<span>${labels[next]}</span>`;
+        if (next) cue("item");
+      });
+      document.querySelector("#toggleWrong").addEventListener("click", () => {
+        const w = race.querySelector(".wrong-way");
+        w.hidden = !w.hidden;
+      });
+
+      const steerEl = race.querySelector(".steer");
+      document.querySelector("#steer").addEventListener("input", (e) => {
+        steerEl.style.setProperty("--steer", e.target.value);
+      });
+
+      const status = race.querySelector(".status");
+      const placeB = status.querySelector(".status-place b");
+      const placeSmall = status.querySelector(".status-place small");
+      const suffix = (n) => ({ 1: "st", 2: "nd", 3: "rd" })[n] ?? "th";
+      for (const b of document.querySelectorAll("[data-change]")) {
+        b.addEventListener("click", () => {
+          const up = b.dataset.change === "up";
+          const n = Math.min(
+            8,
+            Math.max(1, Number(placeB.textContent) + (up ? -1 : 1)),
+          );
+          placeB.textContent = n;
+          placeSmall.textContent = suffix(n);
+          status.removeAttribute("data-change");
+          void status.offsetWidth;
+          status.dataset.change = b.dataset.change;
+        });
+      }
+
+      const count = document.querySelector("#countFrame .countdown");
+      document.querySelector("#playCount").addEventListener("click", () => {
+        ["3", "2", "1", "go"].forEach((c, i) =>
+          setTimeout(() => {
+            count.dataset.count = c;
+            const el = count.querySelector(".count");
+            el.textContent = c === "go" ? "Go!" : c;
+            el.style.animation = "none";
+            void el.offsetWidth;
+            el.style.animation = "";
+          }, i * 1000),
+        );
+      });
+    </script>
+  </body>
+</html>

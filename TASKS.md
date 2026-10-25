@@ -185,9 +185,8 @@ Nothing right now. Add new questions here.
 **Done when:** the map looks like *our* Penn State, the items work, it sounds finished, there's no dev UI, and it runs at 60 fps on the demo laptops.
 
 **Ali**
-- [ ] Items: Blue & White Boost, Lion Roar (shockwave), Creamery Spill (puddle); item boxes; odds by place
+- [x] Items: Blue & White Boost, Lion Roar (shockwave), Creamery Spill (puddle), Snow Day; item boxes; odds by place (`items.ts` and `race.ts`, protocol v4; placeholder box and puddle meshes in `apps/web/src/game/items.ts` until Nuris's animated item box lands; [notes](docs/team/ali-game.md#items-itemsts))
 - [x] Section mechanics: library-step bounces, Lion Shrine bank + jump, Creamery cone ramp + puddles, stadium tunnel, snow/ice surfaces, College Ave boost pads (geometry in the greybox; surface grip, snow drag and boost pads in `race.ts`)
-- [ ] Event-to-effect table (`fx.ts`): particles, sounds and camera shake for every event
 - [ ] Performance pass: instancing/merging, one shadow light, LOD, freezing static meshes; under 150 draw calls
 - [ ] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown
 - [ ] Railway: check the health check, logs and resource graphs under load

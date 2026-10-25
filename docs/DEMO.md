@@ -20,7 +20,7 @@ HackPSU judging is **at our table**. Judges walk up, we have a few minutes, and 
 
 | Device | Role | Notes |
 |---|---|---|
-| **Laptop A** (the stronger one) | `/host`: lobby + QR, then a **split screen** with a first-person view per player | It renders the most (a view per player), so use the laptop with the better GPU. Plug it in |
+| **Laptop A** (the stronger one) | `/host`: lobby + QR, then a **split screen** with a first-person view per phone-only player (and bot) | It renders the most (a view per phone-only player), so use the laptop with the better GPU. Plug it in |
 | **Laptop B** | `/play`: player 1's personal chase camera + HUD | Shows the "laptop player" mode. Between races it can show the architecture diagram for questions |
 | **Phone 1** | Paired to Laptop B | |
 | **Phones 2–4** | Phone-only players, joined from Laptop A's QR | Each watches their own view in Laptop A's split screen |

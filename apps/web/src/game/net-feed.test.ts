@@ -122,6 +122,17 @@ describe("NetFeed", () => {
     expect(feed.phoneOnly).toEqual(["p2"]);
   });
 
+  it("gives the big screen's views to players without a laptop: phone-only players and bots", () => {
+    const room = new FakeRoom();
+    const feed = new NetFeed(room);
+    room.patch({
+      laptop: player({ color: 0 }),
+      phone: player({ color: 1, phoneOnly: true }),
+      bot: player({ color: 2, bot: true }),
+    });
+    expect(feed.noLaptop).toEqual(["phone", "bot"]);
+  });
+
   it("copes with a room whose first state hasn't arrived yet", () => {
     // right after joining, room.state.toJSON() can still be {} with no players
     const room = new FakeRoom();
@@ -129,6 +140,7 @@ describe("NetFeed", () => {
     const feed = new NetFeed(room);
     expect(feed.look("p1")).toBeUndefined();
     expect(feed.phoneOnly).toEqual([]);
+    expect(feed.noLaptop).toEqual([]);
     room.patch({ p1: player({ ball: "earth", color: 0 }) }, "p1");
     expect(feed.look("p1")).toEqual({ ball: "earth", color: 0 });
   });

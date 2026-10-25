@@ -12,7 +12,7 @@ import { MAX_PLAYERS } from "@raceball/shared";
 import type { BallPose } from "./balls";
 import { DriverCamera } from "./cameras";
 
-/** Split-screen views on the big screen: one per player */
+/** Split-screen views on the big screen: one per player without a laptop */
 export const MAX_TILES = MAX_PLAYERS;
 /** Overview framing: the camera backs off this much per metre of pack spread, plus a margin, m */
 const PACK_ZOOM = 1.2;
@@ -31,8 +31,11 @@ export interface TileRect {
 
 /** Who gets a view on the split screen */
 export interface BigScreenPlayers {
-  /** Every player in join order: each gets a split-screen view */
-  readonly all: readonly string[];
+  /**
+   * Players without a laptop of their own (phone-only players and bots), in join order: each gets a split-screen
+   * view. A laptop player watches their own laptop, so the big screen doesn't spend a view on them
+   */
+  readonly noLaptop: readonly string[];
 }
 
 /** Where the overview looks, and how far back it sits to keep every ball in view. Null with no balls */
@@ -62,11 +65,11 @@ interface Tile {
 }
 
 /**
- * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player (up to
- * MAX_TILES), each drawn into the frame the page lays out on top of the canvas (`setRects`). It never switches to a
- * global view during the race: a slow screen draws less instead (quality.ts, run by game.ts, which hears about every
- * change to the views through `onPassesChanged`). The overview, framing the pack, only fills the screen while no
- * player has a view yet.
+ * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player without a
+ * laptop (up to MAX_TILES), each drawn into the frame the page lays out on top of the canvas (`setRects`). It never
+ * switches to a global view during the race: a slow screen draws less instead (quality.ts, run by game.ts, which hears
+ * about every change to the views through `onPassesChanged`). The overview, framing the pack, only fills the screen
+ * while no player has a view: before the balls arrive, or when everyone races on a laptop.
  */
 export class BigScreen {
   /** Players with a tile now, in order. The page draws a frame for each and reports its rect */
@@ -116,7 +119,9 @@ export class BigScreen {
   ): boolean {
     this.frame(poses, dt);
     let changed = false;
-    const want = players.all.filter((id) => poses.has(id)).slice(0, MAX_TILES);
+    const want = players.noLaptop
+      .filter((id) => poses.has(id))
+      .slice(0, MAX_TILES);
     if (want.join() !== this.tileIds.join()) {
       this.setTiles(want);
       changed = true;

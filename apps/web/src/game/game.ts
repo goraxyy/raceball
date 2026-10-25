@@ -16,9 +16,10 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
+import { COUNTDOWN_MS, type GameEvent } from "@raceball/shared";
 import { BallViews, type BallFeed } from "./balls";
 import { BigScreen, type TileRect } from "./big-screen";
-import { ChaseCamera } from "./cameras";
+import { ChaseCamera, eventShake, swoopProgress } from "./cameras";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
 
@@ -113,10 +114,15 @@ export function createGame(
   let disposed = false;
   let container: AssetContainer | undefined;
   let publishAfter = 0;
+  let countdown = 0; // s into the countdown, for the grid swoop
   const abort = new AbortController();
   void loadSky().catch((error: unknown) => {
     if (!disposed) console.warn("Sky HDRI failed to load", error);
   });
+  /** Every game event this screen hears, from the local race or the server. Nuris's fx.ts table goes here too */
+  const onEvent = (event: GameEvent) => {
+    chase.shake(eventShake(event, feed?.ownId));
+  };
   const applyCamera = () => {
     scene.activeCamera = status.overview ? overview : chase.camera;
     if (status.overview) overview.attachControl(true);
@@ -163,6 +169,7 @@ export function createGame(
     void loadLocal().catch(fail);
   } else if (options.session) {
     feed = net = new NetFeed(options.session);
+    net.onEvent = onEvent;
     void loadMap()
       .then((assets) => {
         container = assets;
@@ -271,6 +278,7 @@ export function createGame(
     )
       return;
     local = feed = sessionResult.value;
+    local.onEvent = onEvent;
     container = visualResult.value;
     if (container) showMap(container);
     status.state = "ready";
@@ -286,7 +294,16 @@ export function createGame(
       const poses = feed.sample(performance.now());
       balls.sync(poses, (id) => feed?.look?.(id));
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
-      if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
+      const phase = local?.phase ?? net?.phase;
+      // local race time starts with the countdown; online it's counted from the state patch that began it
+      if (phase !== "countdown") countdown = 0;
+      else if (local) countdown = local.stats.elapsed;
+      else countdown += dt;
+      const swoop =
+        phase === "countdown"
+          ? swoopProgress(countdown, COUNTDOWN_MS / 1000)
+          : undefined;
+      if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt, swoop);
       if (big && net) {
         const fps = scene.getEngine().getFps();
         if (big.update(poses, net, dt, fps)) {

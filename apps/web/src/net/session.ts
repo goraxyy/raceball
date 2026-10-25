@@ -37,8 +37,12 @@ export class NetSession {
   pairToken?: string;
   /** How old our player's latest input was at the server, ms (laptops, once the phone sends input) */
   inputAge?: number;
-  /** +1 on every state patch and welcome, so the hooks can tell when `state` changed */
+  /** +1 on every state patch, welcome, drop and reconnect, so the hooks can tell when something changed */
   version = 0;
+  /** Connection lost; the SDK is reconnecting into the same slot */
+  dropped = false;
+  /** The room is gone (left, or reconnection failed) */
+  closed = false;
   private listeners = new Set<() => void>();
   private pinger: ReturnType<typeof setInterval>;
   readonly room: Room;
@@ -62,7 +66,19 @@ export class NetSession {
       this.emit();
     });
     room.onStateChange(() => this.emit());
-    room.onLeave(() => clearInterval(this.pinger));
+    room.onDrop(() => {
+      this.dropped = true;
+      this.emit();
+    });
+    room.onReconnect(() => {
+      this.dropped = false;
+      this.emit();
+    });
+    room.onLeave(() => {
+      clearInterval(this.pinger);
+      this.closed = true;
+      this.emit();
+    });
 
     const ping = () => room.send("ping", performance.now());
     ping();

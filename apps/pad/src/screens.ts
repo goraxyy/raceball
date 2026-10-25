@@ -93,6 +93,42 @@ export const calibrateHtml = () => `
     </button>
   </section>`;
 
+/** While the SDK reconnects a dropped connection */
+export const connectionLostHtml = () => `
+  <section class="screen connection-lost">
+    <div class="spinner"></div>
+    <h1>Reconnecting…</h1>
+    <p>Hold on, you'll rejoin your spot in the race.</p>
+  </section>`;
+
+const titleCase = (s: string) => s[0].toUpperCase() + s.slice(1);
+
+/** Phone-only players pick a name and planet. Taken planets are disabled */
+export const pickerHtml = (
+  room: string,
+  look: Look,
+  name: string,
+  taken: Set<string>,
+) => `
+  <section class="screen picker" style="--player: ${look.color}">
+    <span class="eyebrow">Room ${escape(room)}</span>
+    <h1>Pick your planet</h1>
+    <label class="field">
+      Name
+      <input type="text" maxlength="12" value="${escape(name)}" autocomplete="off" />
+    </label>
+    <div class="ball-grid" role="radiogroup">
+      ${PLANETS.map(
+        (p) => `<label class="ball-option">
+        <input type="radio" name="ball" value="${p}"${p === look.planet ? " checked" : ""}${taken.has(p) ? " disabled" : ""} />
+        <span class="ball" data-planet="${p}"></span>
+        ${titleCase(p)}
+      </label>`,
+      ).join("")}
+    </div>
+    <button class="btn" type="button">Join race</button>
+  </section>`;
+
 export const readyHtml = (look: Look) => `
   <section class="screen ready" style="--player: ${look.color}">
     <div class="ball ball-roll" data-planet="${look.planet}"></div>

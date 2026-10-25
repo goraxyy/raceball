@@ -1,8 +1,10 @@
 import { requestMotionPermission, startMotion } from "./motion";
+import { unlockAudio } from "./audio";
 import { keepScreenOn } from "./wake-lock";
 
 /** Everything browsers only allow inside a tap. Returns false if motion was denied. */
 export async function startFromTap(): Promise<boolean> {
+  unlockAudio(); // first, while we're still inside the tap
   if ((await requestMotionPermission()) === "denied") return false;
   startMotion();
 

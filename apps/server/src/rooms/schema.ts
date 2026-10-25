@@ -46,6 +46,18 @@ export const ItemBox = schema(
 );
 export type ItemBox = SchemaType<typeof ItemBox>;
 
+export const Puddle = schema(
+  {
+    id: t.string().default(""),
+    x: t.float32().default(0),
+    y: t.float32().default(0),
+    z: t.float32().default(0),
+    radius: t.float32().default(0),
+  },
+  "Puddle",
+);
+export type Puddle = SchemaType<typeof Puddle>;
+
 export const RaceState = schema(
   {
     phase: t.string<Phase>().default("lobby"),
@@ -56,6 +68,7 @@ export const RaceState = schema(
     /** By playerId */
     players: t.map(PlayerState),
     itemBoxes: t.array(ItemBox),
+    puddles: t.array(Puddle),
   },
   "RaceState",
 );

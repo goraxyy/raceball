@@ -223,7 +223,7 @@ for i,s in enumerate([25,40,ends[7]-35,ends[7]-20]):
 for i,side in enumerate([-4,-2,0,2,4]):
     s=starts[1]+35
     marker(f"item_pollock_{i}","item",s,side,1)
-    box("prop_item",xyz(s,side,1),(1.1,1.1,1.1),blue)
+    # no static box: the game draws item boxes itself, so they can hide when hit
 for section in [0,3,5,6]:
     marker("cam_"+SECTIONS[section],"camera",starts[section]+20,side=-25,up=20,section=SECTIONS[section])
 # The route's centerline for game-core (ranking, bots) and the big-screen TrackMap:

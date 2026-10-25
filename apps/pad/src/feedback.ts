@@ -31,6 +31,14 @@ function placeChange(racing: HTMLElement, dir: "up" | "down") {
   status.dataset.change = dir;
 }
 
+/** The item button shows the held item (styled per item in style.css) and is live only while holding one */
+function setItemButton(racing: HTMLElement, item: string) {
+  const btn = racing.querySelector<HTMLButtonElement>(".item-btn");
+  if (!btn) return;
+  btn.dataset.item = item;
+  btn.disabled = !item;
+}
+
 /** React to an event about our player (the server only sends us those) */
 export function showEvent(evt: GameEvent, me: string, laps: number) {
   const racing = document.querySelector<HTMLElement>(".screen.racing");
@@ -41,7 +49,13 @@ export function showEvent(evt: GameEvent, me: string, laps: number) {
       break;
     case "item":
       play("itemPickup");
-      if (racing) cue(racing, "item");
+      if (racing) {
+        cue(racing, "item");
+        setItemButton(racing, evt.item);
+      }
+      break;
+    case "fire":
+      if (racing) setItemButton(racing, "");
       break;
     case "lap": {
       const final = evt.lap >= laps;

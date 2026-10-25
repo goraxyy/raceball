@@ -151,7 +151,7 @@ def scoop(flavour, palette, gloss, col, seed):
     # the ice cream
     bm = bmesh.new()
     colors = {}
-    paint(kit.blob(bm, (0, 0, 0.2), 0.42, squash=0.88, subdivisions=3), color, colors)
+    paint(kit.blob(bm, (0, 0, 0.2), 0.42, squash=0.88, subdivisions=2), color, colors)
     for i in range(11):  # the ruffled rim where the scoop sits in the cone
         a = 2 * math.pi * i / 11
         paint(kit.blob(bm, (0.36 * math.cos(a), 0.36 * math.sin(a), 0.02), 0.12, squash=0.8, subdivisions=1), color,
@@ -188,11 +188,11 @@ def paw_bumper(palette, gloss, light, col):
     bm = bmesh.new()
     colors = {}
     r = PAW_RADIUS
-    paint(kit.cylinder(bm, (0, 0, 0.12), r + 0.05, 0.24, segments=28, bevel=0.05), "navy", colors)
-    paint(kit.cylinder(bm, (0, 0, 0.36), r + 0.02, 0.2, segments=28, bevel=0.08), "white", colors)  # the rubber
-    paint(kit.cylinder(bm, (0, 0, 0.76), r - 0.18, 0.62, segments=28, bevel=0.03), "white", colors)
-    paint(kit.cylinder(bm, (0, 0, 1.12), r - 0.04, 0.16, segments=28, bevel=0.05), "navy", colors)
-    paint(kit.blob(bm, (0, 0, 1.2), r - 0.14, squash=0.18, subdivisions=3), "navy", colors)
+    paint(kit.cylinder(bm, (0, 0, 0.12), r + 0.05, 0.24, segments=20, bevel=0.05), "navy", colors)
+    paint(kit.cylinder(bm, (0, 0, 0.36), r + 0.02, 0.2, segments=20, bevel=0.08), "white", colors)  # the rubber
+    paint(kit.cylinder(bm, (0, 0, 0.76), r - 0.18, 0.62, segments=20, bevel=0.03), "white", colors)
+    paint(kit.cylinder(bm, (0, 0, 1.12), r - 0.04, 0.16, segments=20, bevel=0.05), "navy", colors)
+    paint(kit.blob(bm, (0, 0, 1.2), r - 0.14, squash=0.18, subdivisions=2), "navy", colors)
     # the paw print, toes forward (map +z, Blender -Y): a main pad and four beans
     pad = kit.blob(bm, (0, 0.14, 1.35), 0.3, squash=0.3, subdivisions=2)
     verts = list({v for f in pad for v in f.verts})
@@ -203,7 +203,7 @@ def paw_bumper(palette, gloss, light, col):
     body = finish("paw_body", bm, colors, gloss, col, top)
     smooth(body)
     band = bmesh.new()
-    kit.cylinder(band, (0, 0, 0.74), r - 0.14, 0.3, segments=28, bevel=0.03)
+    kit.cylinder(band, (0, 0, 0.74), r - 0.14, 0.3, segments=20, bevel=0.03)
     band_ob = finish("paw_light", band, {}, light, col, top)
     smooth(band_ob)
     return top

@@ -94,7 +94,12 @@ function showCalibrate() {
       step1.className = "step is-done";
       step2.className = "step is-active";
       title.textContent = CALIBRATE_TEXT[2].title;
-      hint.textContent = CALIBRATE_TEXT[2].hint;
+    }
+    if (cal.step === 2) {
+      const text = cal.wrongWay
+        ? CALIBRATE_TEXT[2].wrongWay
+        : CALIBRATE_TEXT[2].hint;
+      if (hint.textContent !== text) hint.textContent = text;
     }
     meter.style.setProperty("--progress", cal.progress.toFixed(3));
   });

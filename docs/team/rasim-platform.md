@@ -116,7 +116,7 @@ Both projects live in **Nuris's** Vercel account (moved from yours after it hit 
    { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
    ```
 
-6. Every push to `main` now deploys, and every PR gets preview URLs. Post them in the PR so teammates can test on phones.
+6. Only `main` deploys: both `vercel.json` files turn off branch and PR previews (`git.deploymentEnabled`), because the free plan allows 100 deploys a day. To test a branch on a phone, run it locally (see WORKFLOW.md) or merge it.
 
 ### 5. Pad: start screen and debug overlay
 

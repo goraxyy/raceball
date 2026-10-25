@@ -154,6 +154,8 @@ Done: nine effects built by `tools/fx/build_fx.mjs` from the atlas in `tools/fx/
 - **Mix:** the big screen is louder and has the music. Laptops play quieter, and mostly their own ball.
 - **Captions:** every sound that carries information gets a short on-screen caption on the big screen ("Final lap!", "Lion Roar!"). Keep the list in ASSETS.md.
 
+Done: one sound bank (`apps/web/src/audio/sounds.ts`) and a mixer (`mixer.ts`) with buses, a big-screen and a laptop mix, music ducking, the lobby → race crossfade and the final-lap lift. The Kenney shortlist is processed by `tools/audio/build_sfx.py`, and the crowd cheer, the "oooh" and the Lion Roar are our own (`tools/audio/gen_sfx.py`). `<Captions>` puts the key cues on the big screen as stickers. Try it all at `/ui` > sound. How code plays it: [ASSETS.md > Sound pass](../ASSETS.md#sound-pass-the-bank-the-mix-and-captions).
+
 ### Branding
 - **Logo:** RaceBall wordmark + ball mark, original art in the palette colors.
 - **Title screen, loading screen (with a progress bar), brag card:** a results card per player with best lap, top speed and bumps.

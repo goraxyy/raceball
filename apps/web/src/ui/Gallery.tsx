@@ -15,6 +15,7 @@ import { HudPreview } from "./HudPreview";
 import { MusicPreview } from "./MusicPreview";
 import { RacePreview } from "./RacePreview";
 import { ResultsPreview } from "./ResultsPreview";
+import { SoundPreview } from "./SoundPreview";
 
 const FAKE: LobbyPlayer[] = [
   {
@@ -80,6 +81,7 @@ const VIEWS = [
   "results",
   "brag",
   "music",
+  "sound",
 ] as const;
 type View = (typeof VIEWS)[number];
 
@@ -187,6 +189,7 @@ export default function Gallery() {
       {view === "results" && <ResultsPreview />}
       {view === "brag" && <BragPreview />}
       {view === "music" && <MusicPreview />}
+      {view === "sound" && <SoundPreview />}
       {view === "loading" && (
         <LoadingScreen progress={progress} label="Loading Happy Valley" />
       )}

@@ -330,59 +330,16 @@ Starting tuning values (`tuning.ts`):
 
 ### 3. Track loader (`track.ts`)
 
-```ts
-import type { PlatformIO } from "@gltf-transform/core";
-import { mat4, vec3, quat } from "gl-matrix";
+**Done.** `loadTrack(world, glb, io)` reads `happy_valley_col.glb` (`io`: `new NodeIO()` on the server, `new WebIO()` in the browser), and `createRace(glb, io, { laps })` builds a race on it.
 
-/** io: new NodeIO() on the server, new WebIO() in the browser (local mode) */
-export async function loadTrack(world: RAPIER.World, glb: Uint8Array, io: PlatformIO): Promise<TrackData> {
-  const doc = await io.readBinary(glb);
-  const track: TrackData = { spawns: [], checkpoints: [], respawns: [], items: [], boosts: [], surfaces: [], cameras: [] };
-
-  for (const node of doc.getRoot().listNodes()) {
-    const extras = node.getExtras() as Record<string, unknown>;
-    const m = node.getWorldMatrix() as unknown as mat4;   // column-major 4×4
-    const pos = mat4.getTranslation(vec3.create(), m);
-    const rot = mat4.getRotation(quat.create(), m);
-    const scale = mat4.getScaling(vec3.create(), m);
-
-    switch (extras.rb) {
-      case "spawn": track.spawns.push({ slot: Number(extras.slot), pos, rot }); continue;
-      case "checkpoint": {
-        const c = world.createCollider(
-          RAPIER.ColliderDesc.cuboid(scale[0], scale[1], scale[2])
-            .setTranslation(pos[0], pos[1], pos[2])
-            .setRotation({ x: rot[0], y: rot[1], z: rot[2], w: rot[3] })
-            .setSensor(true)
-            .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
-        );
-        track.checkpoints.push({ index: Number(extras.index), section: String(extras.section ?? ""), handle: c.handle, pos });
-        continue;
-      }
-      // "respawn", "item", "boost", "camera": same idea, store pos/rot/props
-      // "surface": build a sensor from the mesh (below) and store its grip
-    }
-
-    const mesh = node.getMesh();
-    if (!mesh) continue;
-    for (const prim of mesh.listPrimitives()) {
-      const local = prim.getAttribute("POSITION")!.getArray() as Float32Array;
-      const indices = new Uint32Array(prim.getIndices()!.getArray()!);
-      const verts = new Float32Array(local.length);
-      const p = vec3.create();
-      for (let i = 0; i < local.length; i += 3) {             // apply the node's world matrix
-        vec3.transformMat4(p, [local[i], local[i + 1], local[i + 2]], m);
-        verts.set(p, i);
-      }
-      world.createCollider(RAPIER.ColliderDesc.trimesh(verts, indices));
-    }
-  }
-  track.checkpoints.sort((a, b) => a.index - b.index);
-  return track;
-}
-```
-
-Write a Vitest test that loads the real `_col.glb` and checks it has 8 spawns, an unbroken checkpoint sequence, and at least one respawn per checkpoint.
+- **Markers** (nodes with an `rb` custom property; see the [marker table](../ASSETS.md#blender-is-our-level-editor)) come back in `TrackData`, in world space:
+  - `spawns` sorted by slot, `checkpoints` sorted by index
+  - `respawns`, `items`, `boosts`, `surfaces`, `cameras`
+  - Headings come from each marker's rotation.
+- **Checkpoint gates and boost pads** become sensor boxes sized by the Empty's scale. **Surfaces** become a sensor from the mesh's convex hull. Each one keeps its Rapier collider handle, for the lap and boost logic.
+- **Every other mesh** becomes a solid trimesh with the node's world matrix applied, built with Rapier's `FIX_INTERNAL_EDGES` so balls don't bump on the seams between triangles. Optional `friction` (default 1) and `restitution` (default 0) custom properties on a `*_col` object change how it plays, e.g. bouncier library steps.
+- **`checkTrack(track)`** lists what makes a track unraceable: not exactly slots 1–8, a gap in the checkpoint indices, fewer than 2 checkpoints, or a checkpoint without a respawn. `createRace` itself only refuses a track with no spawns, so a half-built greybox still loads in local mode.
+- **Tests** (`src/track.test.ts`) build a synthetic track in memory with gltf-transform. The test "happy_valley_col.glb is raceable" switches on by itself once you export the greybox to `packages/game-core/tracks/`, and runs `checkTrack` on it.
 
 ### 4. Respawn
 

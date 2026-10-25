@@ -37,10 +37,12 @@ The whole map lives in **one Blender file** (`happy_valley.blend`, kept in the D
 | `cp_00`, `cp_01`, … | `rb = "checkpoint"`, `index = 0…`. The Empty's scale = the gate size | Server: laps + ranking |
 | `respawn_03`, … | `rb = "respawn"`, `checkpoint = 3` | Server: where fallen balls return |
 | `item_*` | `rb = "item"` | Server: item box positions |
-| `boost_*` | `rb = "boost"`, `power = 1.0` | Server: boost pads |
-| `surface_*` (a mesh, not an Empty) | `rb = "surface"`, `grip = 0.2`, `kind = "icecream" / "snow" / "ice"` | Server: puddles, snow and ice change grip while the ball is inside |
+| `boost_*` | `rb = "boost"`, `power = 1.0`. The Empty's scale = the pad size | Server: boost pads |
+| `surface_*` (a mesh, not an Empty) | `rb = "surface"`, `grip = 0.2`, `kind = "icecream" / "snow" / "ice"`. The volume is the mesh's convex hull | Server: puddles, snow and ice change grip while the ball is inside |
+| `*_col` collision meshes | Optional: `friction` (default 1), `restitution` (default 0, higher = bouncier) | Server: solid track geometry |
 | `cam_*` | `rb = "camera"`, `section = "creamery"` | Big screen: overview camera positions |
 
+- **Which way a marker faces:** spawns, respawns and boost pads face their Empty's **−Y axis** in Blender (local +Z after the +Y-up export). In the Front view (numpad 1), an unrotated Empty faces you.
 - Put custom properties in the **Object Properties** pane, *not* Object Data Properties. On export, tick **Include → Custom Properties**.
 - Use three collections: `visual`, `collision` (simple meshes named `*_col`) and `markers`. Export twice with **Limit to: Visible Objects**:
   - `visual` only → `apps/web/public/assets/maps/happy_valley.glb`, for the screens

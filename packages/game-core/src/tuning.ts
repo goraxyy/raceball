@@ -30,6 +30,7 @@ export const tuning = {
 
   // Respawn
   fallY: -10, // below this height a ball respawns
+  offTrackSeconds: 0.8, // on the grass beside the road this long (over a rail, off a jump) respawns the ball
   stuckSeconds: 5, // holding gas this long while barely moving respawns the ball
   stuckSpeed: 1, // m/s; slower than this counts as barely moving
 
@@ -69,6 +70,19 @@ export const tuning = {
   spillGrip: 0.2, // grip inside a puddle (like the Creamery's own puddles)
   snowDaySpeedMul: 0.7, // top speed multiplier for everyone ahead of a Snow Day
   snowDaySeconds: 3,
+
+  // Interactables (interactables.ts): no button, you drive into them
+  scoopRadius: 1, // m, a Creamery Scoop's pickup volume
+  scoopRespawn: 6, // s a collected scoop stays gone
+  scoopMax: 10, // scoops a racer can hold
+  scoopTopSpeed: 0.012, // top speed multiplier per scoop held: +12% with all 10
+  scoopBumpStrength: 0.6, // a bump this hard (0 … 1) knocks scoops off both balls
+  scoopBumpLoss: 2,
+  scoopRoarLoss: 3, // scoops a Lion Roar knocks off everyone it reaches (a respawn loses half)
+  pawRadius: 1.1, // m, a Lion Paw bumper
+  pawHeight: 1.4, // m
+  pawKick: 13, // m/s: a ball leaves a paw at least this fast, straight out from it
+  pawLift: 1.5, // m/s of hop
 
   // Keyboard adapter (local mode only)
   keySteerRate: 4, // steer units per second while A/D is held

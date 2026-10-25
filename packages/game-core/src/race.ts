@@ -20,12 +20,18 @@ import {
   type TrackData,
   type Vec3,
 } from "./track";
+import { createGround, type GroundDef } from "./ground";
+import type { InteractablesDef } from "./interactables";
 import { tuning, type Tuning } from "./tuning";
 
 export interface RaceConfig {
   laps: number;
   /** 0 … 1, like Math.random (the default). Tests pass a fixed one to pick items */
   random?: () => number;
+  /** The grass around the track (HAPPY_VALLEY_GROUND on the real map): landing on it respawns you. None by default */
+  ground?: GroundDef;
+  /** Creamery Scoops and Lion Paw bumpers (HAPPY_VALLEY_INTERACTABLES on the real map). None by default */
+  interactables?: InteractablesDef;
 }
 
 export interface Standing {
@@ -36,6 +42,7 @@ export interface Standing {
   finishedAt: number | null; // race time in ms, null while still racing
   progress: number; // m along the race from the start line (negative on the grid)
   item: ItemId | null; // the item the player holds, fired with input.item
+  scoops: number; // Creamery Scoops held, each adding a little top speed
 }
 
 /** An item box: hidden for itemBoxRespawn after a ball hits it */
@@ -44,6 +51,9 @@ export interface ItemBoxState {
   pos: Vec3;
   active: boolean;
 }
+
+/** A Creamery Scoop: gone for scoopRespawn after a ball rolls through it */
+export type ScoopState = ItemBoxState;
 
 /** A Creamery Spill puddle on the road */
 export interface PuddleState {
@@ -64,6 +74,7 @@ export interface Race {
   standings(): Standing[]; // id, place, lap, checkpoint, finishedAt, progress, item
   itemBoxes(): ItemBoxState[]; // for the synced state (screens draw the boxes)
   puddles(): PuddleState[]; // Creamery Spill puddles, for screens to draw
+  scoops(): ScoopState[]; // Creamery Scoops, for the synced state (screens draw them)
   readonly phase: Phase;
   readonly laps: number;
   /** The route's centerline as [x, z] points from the finish line, for the big-screen map; [] without a route */
@@ -110,10 +121,12 @@ interface Racer extends PlayerSim {
   finishedAt: number | null; // race time in ms
   routeS: number; // where the ball is along the track path, in the path's own meters
   stuckFor: number; // seconds of gas while barely moving
+  grassSince: number | null; // simMs when the ball left the road onto the grass, null while on the road
   surfaces: Set<Surface>; // surface volumes the ball is inside
   boostLeft: number; // seconds of raised top speed left after a boost pad or item
   slowLeft: number; // seconds of Snow Day slowdown left
   item: ItemId | null;
+  scoops: number; // Creamery Scoops held
 }
 
 interface Box {
@@ -143,10 +156,14 @@ class TrackRace implements Race {
   private readonly padByCollider = new Map<number, BoostPad>();
   private readonly boxes: Box[] = [];
   private readonly boxByCollider = new Map<number, Box>();
+  private readonly scoopList: Box[] = [];
+  private readonly scoopByCollider = new Map<number, Box>();
+  private readonly pawByCollider = new Map<number, Vec3>(); // Lion Paw bumper → its base center
   private puddleList: Puddle[] = [];
   private puddleCount = 0;
   private readonly random: () => number;
   private readonly byCollider = new Map<number, Racer>();
+  private readonly groundColliders: Set<number>;
   private players = new Map<string, Racer>();
   private events: GameEvent[] = [];
   private countdownLeftMs = 0;
@@ -179,6 +196,9 @@ class TrackRace implements Race {
     for (const s of track.surfaces) this.surfaceByCollider.set(s.collider, s);
     for (const b of track.boosts) this.padByCollider.set(b.collider, b);
     this.random = cfg.random ?? Math.random;
+    this.groundColliders = new Set(
+      cfg.ground ? createGround(world, cfg.ground) : [],
+    );
     const half = t.itemBoxSize;
     track.items.forEach(({ pos }, i) => {
       const c = world.createCollider(
@@ -196,6 +216,32 @@ class TrackRace implements Race {
       this.boxes.push(box);
       this.boxByCollider.set(c.handle, box);
     });
+    cfg.interactables?.scoops.forEach((pos, i) => {
+      const c = world.createCollider(
+        RAPIER.ColliderDesc.ball(t.scoopRadius)
+          .setTranslation(...pos)
+          .setSensor(true)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+      );
+      const scoop: Box = {
+        id: `scoop${i}`,
+        pos,
+        collider: c.handle,
+        hiddenUntil: 0,
+      };
+      this.scoopList.push(scoop);
+      this.scoopByCollider.set(c.handle, scoop);
+    });
+    for (const pos of cfg.interactables?.paws ?? []) {
+      // a solid post: the contact bounces the ball, then kick() makes sure it leaves fast
+      const c = world.createCollider(
+        RAPIER.ColliderDesc.cylinder(t.pawHeight / 2, t.pawRadius)
+          .setTranslation(pos[0], pos[1] + t.pawHeight / 2, pos[2])
+          .setRestitution(0.8)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+      );
+      this.pawByCollider.set(c.handle, pos);
+    }
 
     const gates = track.checkpoints;
     const route = track.path;
@@ -249,10 +295,12 @@ class TrackRace implements Race {
         ? project(this.track.path, spawn.pos[0], spawn.pos[2])
         : 0,
       stuckFor: 0,
+      grassSince: null,
       surfaces: new Set(),
       boostLeft: 0,
       slowLeft: 0,
       item: null,
+      scoops: 0,
     };
     this.players.set(id, racer);
     this.byCollider.set(racer.collider, racer);
@@ -322,8 +370,16 @@ class TrackRace implements Race {
         return;
       }
       if (!started) return;
+      if (this.groundColliders.has(other)) {
+        p.grassSince ??= this.simMs; // off the road: back to the track in a moment, as from a void
+        return;
+      }
       const pad = this.padByCollider.get(other);
       if (pad) return this.boost(p, pad);
+      const scoop = this.scoopByCollider.get(other);
+      if (scoop) return this.collectScoop(p, scoop, drives(p));
+      const paw = this.pawByCollider.get(other);
+      if (paw) return this.kick(p, paw);
       const box = this.boxByCollider.get(other);
       if (box) return this.hitBox(p, box, drives(p));
       const gate = this.gateOrder.get(other);
@@ -341,6 +397,11 @@ class TrackRace implements Race {
       const pos = p.body.translation();
       if (route) p.routeS = project(route, pos.x, pos.z, p.routeS);
       if (pos.y < this.t.fallY) this.respawn(p);
+      else if (
+        p.grassSince !== null &&
+        this.simMs - p.grassSince >= this.t.offTrackSeconds * 1000
+      )
+        this.respawn(p);
       else if (drives(p) && this.isStuck(p, dt)) this.respawn(p);
     }
 
@@ -403,6 +464,7 @@ class TrackRace implements Race {
         finishedAt: p.finishedAt,
         progress,
         item: p.item,
+        scoops: p.scoops,
       }));
   }
 
@@ -411,6 +473,14 @@ class TrackRace implements Race {
       id: b.id,
       pos: b.pos,
       active: this.simMs >= b.hiddenUntil,
+    }));
+  }
+
+  scoops(): ScoopState[] {
+    return this.scoopList.map((s) => ({
+      id: s.id,
+      pos: s.pos,
+      active: this.simMs >= s.hiddenUntil,
     }));
   }
 
@@ -483,7 +553,8 @@ class TrackRace implements Race {
 
   /**
    * Surfaces set the ball's grip (the lowest one it's inside wins: ice 0.1, ice cream 0.2,
-   * snow 0.6), and snow also drags like a light brake. A recent boost raises the top speed.
+   * snow 0.6), and snow also drags like a light brake. A recent boost raises the top speed, and so
+   * does every Creamery Scoop held.
    */
   private applySurfaces(p: Racer, dt: number): void {
     let grip = 1;
@@ -495,7 +566,8 @@ class TrackRace implements Race {
     p.surfaceGrip = grip;
     p.maxSpeedMul =
       (p.boostLeft > 0 ? this.t.boostMaxSpeedMul : 1) *
-      (p.slowLeft > 0 ? this.t.snowDaySpeedMul : 1);
+      (p.slowLeft > 0 ? this.t.snowDaySpeedMul : 1) *
+      (1 + this.t.scoopTopSpeed * p.scoops);
     p.boostLeft = Math.max(0, p.boostLeft - dt);
     p.slowLeft = Math.max(0, p.slowLeft - dt);
     if (snow) {
@@ -513,6 +585,55 @@ class TrackRace implements Race {
       true,
     );
     p.boostLeft = this.t.boostSeconds;
+    this.events.push({ type: "pad", player: p.id, pos: pad.pos });
+  }
+
+  /** A scoop disappears for scoopRespawn whoever rolls through it; it counts up to scoopMax held */
+  private collectScoop(p: Racer, scoop: Box, racing: boolean): void {
+    if (!racing || this.simMs < scoop.hiddenUntil) return;
+    scoop.hiddenUntil = this.simMs + this.t.scoopRespawn * 1000;
+    p.scoops = Math.min(this.t.scoopMax, p.scoops + 1);
+    this.events.push({
+      type: "scoop",
+      player: p.id,
+      count: p.scoops,
+      pos: scoop.pos,
+    });
+  }
+
+  /** Knocks up to n scoops off a racer */
+  private dropScoops(p: Racer, n: number): void {
+    const lost = Math.min(p.scoops, n);
+    if (lost <= 0) return;
+    p.scoops -= lost;
+    const at = p.body.translation();
+    this.events.push({
+      type: "drop",
+      player: p.id,
+      lost,
+      pos: [at.x, at.y, at.z],
+    });
+  }
+
+  /**
+   * A Lion Paw kicks a ball straight out from its post: the contact has already bounced it, and the
+   * kick tops its speed away from the post up to pawKick, with a hop
+   */
+  private kick(p: Racer, paw: Vec3): void {
+    const at = p.body.translation();
+    const v = p.body.linvel();
+    const mass = p.body.mass();
+    let dx = at.x - paw[0];
+    let dz = at.z - paw[2];
+    const d = Math.hypot(dx, dz);
+    if (d > 1e-3) [dx, dz] = [dx / d, dz / d];
+    else [dx, dz] = [-Math.sin(p.heading), -Math.cos(p.heading)]; // dead center: back the way it came
+    const k = Math.max(0, this.t.pawKick - (v.x * dx + v.z * dz)) * mass;
+    p.body.applyImpulse(
+      { x: dx * k, y: this.t.pawLift * mass, z: dz * k },
+      true,
+    );
+    this.events.push({ type: "bounce", player: p.id, pos: paw });
   }
 
   /** An active box hides for itemBoxRespawn and gives an item, by place, to a racer whose slot is empty */
@@ -547,6 +668,7 @@ class TrackRace implements Race {
           const d = Math.hypot(dx, dz);
           if (d >= t.roarRadius) continue;
           const k = (1 - d / t.roarRadius) * q.body.mass();
+          this.dropScoops(q, t.scoopRoarLoss);
           // straight away from the roarer; a ball right on top of it goes forward
           const [ux, uz] = d > 1e-3 ? [dx / d, dz / d] : [fwd.x, fwd.z];
           q.body.applyImpulse(
@@ -653,6 +775,11 @@ class TrackRace implements Race {
     this.lastBump.set(key, this.simMs);
     const strength = Math.min(1, force / this.t.bumpBigHit);
     this.events.push({ type: "bump", a: a.id, b: b.id, strength });
+    if (strength >= this.t.scoopBumpStrength) {
+      // a crash knocks scoops off both balls
+      this.dropScoops(a, this.t.scoopBumpLoss);
+      this.dropScoops(b, this.t.scoopBumpLoss);
+    }
   }
 
   /**
@@ -729,6 +856,7 @@ class TrackRace implements Race {
     }
     at ??= this.track.spawns.find((s) => s.slot === p.slot);
     if (!at) throw new Error(`no spawn for slot ${p.slot}`);
+    this.dropScoops(p, Math.ceil(p.scoops / 2)); // where it fell, before the teleport
     p.body.setTranslation(
       { x: at.pos[0], y: at.pos[1] + BALL_RADIUS + 0.1, z: at.pos[2] },
       true,
@@ -737,6 +865,7 @@ class TrackRace implements Race {
     p.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     p.heading = at.heading;
     p.stuckFor = 0;
+    p.grassSince = null;
     p.boostLeft = 0;
     p.drift = 0;
     p.driftTime = 0;

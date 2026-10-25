@@ -199,6 +199,33 @@ export async function readRoute(
   return null;
 }
 
+/** A boost pad as screens draw it: where its marker is, which way it pushes, and its size across and along, m */
+export interface BoostPadMark {
+  pos: Vec3;
+  heading: number;
+  size: [number, number];
+}
+
+/** Just the boost pads' markers from a collision track, without building any physics (screens draw the pads) */
+export async function readBoostPads(
+  glb: Uint8Array,
+  io: PlatformIO,
+): Promise<BoostPadMark[]> {
+  const doc = await io.readBinary(glb);
+  return doc
+    .getRoot()
+    .listNodes()
+    .filter((node) => (node.getExtras() as { rb?: unknown }).rb === "boost")
+    .map((node) => {
+      const [sx, , sz] = node.getWorldScale().map((s) => Math.abs(s)); // half-extents, as for the sensor
+      return {
+        pos: node.getWorldTranslation() as Vec3,
+        heading: headingOf(node.getWorldRotation() as Quat),
+        size: [sx * 2, sz * 2] as [number, number],
+      };
+    });
+}
+
 /** A `route` marker's points: x, z pairs in the node's space, flattened [x0, z0, x1, z1, …] */
 function routeOf(
   node: Node,

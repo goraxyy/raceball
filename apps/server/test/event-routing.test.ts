@@ -20,4 +20,14 @@ test("each event goes to the pads of the players it's about", () => {
   expect(playersIn({ type: "item", player: "p5", item: "boost" })).toEqual([
     "p5",
   ]);
+  // the interactables (v7): each one is about the ball that hit it
+  const at: [number, number, number] = [0, 1, 2];
+  expect(playersIn({ type: "pad", player: "p6", pos: at })).toEqual(["p6"]);
+  expect(playersIn({ type: "scoop", player: "p6", count: 3, pos: at })).toEqual(
+    ["p6"],
+  );
+  expect(playersIn({ type: "drop", player: "p7", lost: 2, pos: at })).toEqual([
+    "p7",
+  ]);
+  expect(playersIn({ type: "bounce", player: "p8", pos: at })).toEqual(["p8"]);
 });

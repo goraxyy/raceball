@@ -1,6 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { NodeIO } from "@gltf-transform/core";
-import { TICK_DT, createRace, type Race } from "@raceball/game-core";
+import {
+  HAPPY_VALLEY_GROUND,
+  HAPPY_VALLEY_INTERACTABLES,
+  TICK_DT,
+  createRace,
+  type ItemBoxState,
+  type Race,
+} from "@raceball/game-core";
+import type { ArraySchema } from "@colyseus/schema";
 import { Room, ServerError, type Client, type Delayed } from "colyseus";
 import {
   COUNTDOWN_MS,
@@ -78,6 +86,24 @@ export function playersIn(evt: GameEvent): string[] {
   }
 }
 
+/** Fixed things that hide and come back (item boxes, scoops): the list goes out once, then only the flags change */
+function syncToggles(list: ItemBoxState[], synced: ArraySchema<ItemBox>) {
+  if (synced.length !== list.length) {
+    synced.clear();
+    for (const b of list) {
+      const box = new ItemBox();
+      box.id = b.id;
+      [box.x, box.y, box.z] = b.pos;
+      box.active = b.active;
+      synced.push(box);
+    }
+    return;
+  }
+  list.forEach((b, i) => {
+    if (synced[i].active !== b.active) synced[i].active = b.active;
+  });
+}
+
 interface Seat {
   role: Role;
   playerId?: string;
@@ -114,9 +140,12 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     this.roomId = await claimRoomCode(this.presence);
     this.race = await createRace(await trackBytes(), new NodeIO(), {
       laps: this.state.laps,
+      ground: HAPPY_VALLEY_GROUND, // off the road onto the grass respawns, as off into the void
+      interactables: HAPPY_VALLEY_INTERACTABLES, // Creamery Scoops and Lion Paw bumpers
     });
     this.state.phase = this.race.phase; // lobby: balls wait on the grid until the host starts
     this.syncItemBoxes();
+    this.syncScoops();
     this.onMessage("hello", (client) => {
       const seat = this.seats.get(client.sessionId);
       if (!seat?.playerId) return;
@@ -279,6 +308,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     if (!stepped) return;
     this.syncPhase();
     this.syncItemBoxes();
+    this.syncScoops();
     this.syncPuddles();
     this.syncStandings();
     const events = this.race.drainEvents();
@@ -309,6 +339,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       if (p.progress !== progress) p.progress = progress;
       const finished = s.finishedAt ?? 0;
       if (p.finishedAt !== finished) p.finishedAt = finished;
+      if (p.scoops !== s.scoops) p.scoops = s.scoops;
     }
   }
 
@@ -348,22 +379,12 @@ export class RaceRoom extends Room<{ state: RaceState }> {
 
   /** Item boxes come from the track; during a race only their active flags change */
   private syncItemBoxes() {
-    const boxes = this.race.itemBoxes();
-    const synced = this.state.itemBoxes;
-    if (synced.length !== boxes.length) {
-      synced.clear();
-      for (const b of boxes) {
-        const box = new ItemBox();
-        box.id = b.id;
-        [box.x, box.y, box.z] = b.pos;
-        box.active = b.active;
-        synced.push(box);
-      }
-      return;
-    }
-    boxes.forEach((b, i) => {
-      if (synced[i].active !== b.active) synced[i].active = b.active;
-    });
+    syncToggles(this.race.itemBoxes(), this.state.itemBoxes);
+  }
+
+  /** Creamery Scoops, like item boxes: fixed spots, only their active flags change */
+  private syncScoops() {
+    syncToggles(this.race.scoops(), this.state.scoops);
   }
 
   /** Creamery Spill puddles come and go; resend the list when it changes */
@@ -446,10 +467,13 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     try {
       const race = await createRace(await trackBytes(), new NodeIO(), {
         laps: this.state.laps,
+        ground: HAPPY_VALLEY_GROUND,
+        interactables: HAPPY_VALLEY_INTERACTABLES,
       });
       this.race.dispose();
       this.race = race;
       this.syncItemBoxes();
+      this.syncScoops();
       this.syncPuddles();
       this.state.players.forEach((p, id) => {
         race.addPlayer(id, p.ball);

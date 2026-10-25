@@ -68,6 +68,15 @@ describe("RaceRoom", () => {
     }
   });
 
+  test("syncs Happy Valley's Creamery Scoops, all active", () => {
+    // tools/track/build_interactables.py puts 23 in six lines round the loop
+    expect(room.state.scoops.length).toBe(23);
+    for (const scoop of room.state.scoops) {
+      expect(scoop.id).toMatch(/^scoop\d+$/);
+      expect(scoop.active).toBe(true);
+    }
+  });
+
   test("rejects an old client", async () => {
     expect(
       await rejectCode({ role: "viewer", protocol: PROTOCOL_VERSION - 1 }),

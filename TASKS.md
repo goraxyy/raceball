@@ -189,7 +189,7 @@ Nothing right now. Add new questions here.
 **Rasim**
 - [ ] Snapshot compression (quantized arrays); confirm 60 Hz on Railway
 - [ ] Rematch flow; session stats (wins, best lap)
-- [ ] Error screens: room not found or full, version mismatch, permission denied, unsupported browser
+- [ ] Error screens: room not found or full, version mismatch, permission denied, unsupported browser (screens built by Nuris and live on the pad; left for Rasim: show `<ErrorScreen>` in `/host` and `/play` from the join errors, and a WebGL 2 check for `unsupported`. [Details](docs/team/rasim-platform.md#m3-hardening))
 - [ ] Self-host Babylon's Meshopt/KTX2 decoders
 - [ ] Pad accessibility settings: auto-gas, sensitivity, dead zone
 

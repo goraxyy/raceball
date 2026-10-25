@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { GameView } from "./game/GameView";
-import { TitleScreen } from "./ui";
+import { ErrorScreen, TitleScreen } from "./ui";
 
 // Dev-only preview of the lobby UI with fake data (Nuris)
 const Gallery = lazy(() => import("./ui/Gallery"));
@@ -37,6 +37,7 @@ export default function App() {
       </main>
     );
   }
+  if (location.pathname !== "/") return <ErrorScreen kind="lost" />;
   return (
     <TitleScreen
       hostHref="/host"

@@ -1,6 +1,6 @@
-import type { GameEvent } from "@raceball/shared";
+import type { GameEvent, ItemId } from "@raceball/shared";
 import { play } from "./audio";
-import { SCOOP_MAX } from "./screens";
+import { ITEM_NAMES, SCOOP_MAX, itemButtonHtml, itemIcon } from "./screens";
 
 // Sound + visual cue on the pad for each race event (no vibration: docs/CONTROLLER.md).
 // The visuals are Nuris's: data-cue on .racing, and a .cue-text banner (apps/pad/screens.html).
@@ -10,15 +10,19 @@ const ordinal = (n: number) => {
   return `${n}${teen ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th")}`;
 };
 
-/** Replay a cue (removing and re-adding data-cue restarts its CSS animation), with optional banner text */
-function cue(racing: HTMLElement, name: string, text?: string) {
+/**
+ * Replay a cue (removing and re-adding data-cue restarts its CSS animation), with optional banner text and a symbol
+ * in front of it (trusted markup from screens.ts)
+ */
+function cue(racing: HTMLElement, name: string, text?: string, icon = "") {
   racing.removeAttribute("data-cue");
   void racing.offsetWidth; // reflow, so the same cue can play twice in a row
   racing.dataset.cue = name;
   if (!text) return;
   const el = document.createElement("div");
   el.className = "cue-text";
-  el.textContent = text;
+  el.innerHTML = icon;
+  el.append(text);
   el.addEventListener("animationend", () => el.remove());
   racing.append(el);
 }
@@ -32,12 +36,16 @@ function placeChange(racing: HTMLElement, dir: "up" | "down") {
   status.dataset.change = dir;
 }
 
-/** The item button shows the held item (styled per item in style.css) and is live only while holding one */
-function setItemButton(racing: HTMLElement, item: string) {
+/**
+ * The item button shows the held item by name (styled per item in style.css) and how to fire it, and is live only
+ * while holding one
+ */
+function setItemButton(racing: HTMLElement, item: ItemId | "") {
   const btn = racing.querySelector<HTMLButtonElement>(".item-btn");
   if (!btn) return;
   btn.dataset.item = item;
   btn.disabled = !item;
+  btn.innerHTML = itemButtonHtml(item);
 }
 
 /** The scoop meter: one pip lit per Creamery Scoop held, popping on a change */
@@ -73,7 +81,8 @@ export function showEvent(evt: GameEvent, me: string, laps: number) {
     case "item":
       play("itemPickup");
       if (racing) {
-        cue(racing, "item");
+        // what you got, big, as it lands: its symbol and its name
+        cue(racing, "item", ITEM_NAMES[evt.item].full, itemIcon(evt.item));
         setItemButton(racing, evt.item);
       }
       break;

@@ -52,7 +52,7 @@
 - [x] **Race length:** 3 laps. **Demo races are 1 lap**, set with a lap selector in the host lobby
 - [x] **Feedback on phones:** sound + visuals only. **No vibration**, and no native iPhone app
 - [x] **Demo format:** table presentation with **2 laptops + 4 phones** ([docs/DEMO.md](docs/DEMO.md))
-- [x] **Accounts:** Ali owns Railway end to end (project, service settings, deploys, logs). Ali also imports the Vercel projects (he owns the repo), using the settings from Rasim
+- [x] **Accounts:** Ali owns Railway end to end (project, service settings, deploys, logs). Rasim owns Vercel (web + pad projects in his account, connected to the `raceball` GitHub org; moved there after Ali's account hit the free build limit)
 - [x] **Schedule:** none. Milestones in order
 
 ## Still open
@@ -167,8 +167,8 @@ Nothing right now. Add new questions here.
 - [x] Big-screen overlay: `TrackMap` (SVG, color + shape markers), `Standings`, `Countdown`, `FollowTile` frames (in `apps/web/src/ui`, live preview at `/ui` > race)
 - [x] Player HUD: `RaceHud` (position, lap, item slot, speed, wrong-way warning) (in `apps/web/src/ui`, preview at `/ui` > hud)
 - [x] VFX v1 as JSON: rolling dust, bump sparks, respawn poof (in `apps/web/public/assets/fx/`, preview at `/ui` > fx; how to fire them: [ASSETS.md](docs/ASSETS.md#vfx-v1-files))
-- [ ] `Results` screen + podium layout (with Ali)
-- [ ] Music: lobby loop + race loop
+- [x] `Results` screen + podium layout (with Ali) (in `apps/web/src/ui`, preview at `/ui` > results; Ali's 3D podium can replace the drawn one via `children`)
+- [x] Music: lobby loop + race loop (original, composed by `tools/audio/gen_music.py`; listen at `/ui` > music; playback notes in [ASSETS.md](docs/ASSETS.md#audio))
 
 ---
 

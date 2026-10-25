@@ -231,7 +231,7 @@ apps/web/public/assets
 
 **Steps:**
 1. Sign in at railway.com with GitHub.
-2. New Project > Deploy from GitHub repo. Authorize Railway for `goraxyy/raceball`, then select it.
+2. New Project > Deploy from GitHub repo. Authorize Railway for `raceball/raceball`, then select it.
 3. **In the service settings:**
    - **Root Directory:** leave it **empty**, so Railway builds from the repo root and sees the whole workspace.
    - **Builder:** taken from `railway.json`. Without it, set the variable `RAILWAY_DOCKERFILE_PATH=apps/server/Dockerfile`, spelled exactly like that.

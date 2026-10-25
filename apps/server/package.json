@@ -13,10 +13,13 @@
   "dependencies": {
     "@colyseus/schema": "^5.0.42",
     "@colyseus/tools": "^0.18.10",
+    "@dimforge/rapier3d-compat": "^0.21.0",
+    "@gltf-transform/core": "^4.5.1",
     "@raceball/game-core": "workspace:*",
     "@raceball/shared": "workspace:*",
     "colyseus": "^0.18.10",
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
     "@colyseus/sdk": "^0.18.6",

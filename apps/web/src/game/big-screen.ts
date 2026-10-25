@@ -14,17 +14,6 @@ import { DriverCamera } from "./cameras";
 
 /** Split-screen views on the big screen: one per player */
 export const MAX_TILES = MAX_PLAYERS;
-/** Below this fps for LOW_FPS_SECONDS, the split screen draws at a lower resolution (it never gives way to the overview) */
-export const MIN_FPS = 30;
-const LOW_FPS_SECONDS = 3;
-/** Right after the tiles change (new render passes, shader compiles) the fps doesn't count, s */
-const FPS_GRACE = 3;
-/** A frame longer than this is a one-off stall (a model loading, a hidden window, a tab switch), not a slow screen, s */
-const HITCH = 0.25;
-/** How long the frame time is averaged over, s */
-const FPS_WINDOW = 0.5;
-/** Hardware scaling levels the split screen steps down through: 1 = full resolution, 2 = half */
-export const RESOLUTION_STEPS = [1, 1.25, 1.5, 2, 2.5] as const;
 /** Overview framing: the camera backs off this much per metre of pack spread, plus a margin, m */
 const PACK_ZOOM = 1.2;
 const PACK_MARGIN = 30;
@@ -44,46 +33,6 @@ export interface TileRect {
 export interface BigScreenPlayers {
   /** Every player in join order: each gets a split-screen view */
   readonly all: readonly string[];
-}
-
-/**
- * Every tile draws the scene again, so this is the safety valve: one slow projector laptop shouldn't make the whole
- * race stutter. When the frame rate (measured from the frame times) stays under MIN_FPS for LOW_FPS_SECONDS, it asks
- * for the next lower resolution (RESOLUTION_STEPS). At the lowest it stays: every player keeps their own view for
- * the whole race. One-off stalls and a hidden page don't count: they say nothing about how fast the screen can draw.
- */
-export class FpsGuard {
-  /** Index into RESOLUTION_STEPS */
-  step = 0;
-  private low = 0;
-  private grace = FPS_GRACE;
-  private frameTime = 1 / 60;
-
-  /** Call every frame while tiles draw: "lower" = draw at RESOLUTION_STEPS[step] from now on */
-  update(dt: number, hidden = false): "keep" | "lower" {
-    if (hidden) {
-      this.restart(); // a hidden page barely draws; judge it afresh once it's back
-      return "keep";
-    }
-    if (dt <= 0 || dt > HITCH) return "keep";
-    this.frameTime += (dt - this.frameTime) * Math.min(1, dt / FPS_WINDOW);
-    if (this.grace > 0) {
-      this.grace -= dt;
-      return "keep";
-    }
-    this.low = 1 / this.frameTime < MIN_FPS ? this.low + dt : 0;
-    if (this.low < LOW_FPS_SECONDS || this.step + 1 >= RESOLUTION_STEPS.length)
-      return "keep";
-    this.step++;
-    this.restart();
-    return "lower";
-  }
-
-  /** The tiles changed: wait out the grace period again before judging */
-  restart(): void {
-    this.grace = FPS_GRACE;
-    this.low = 0;
-  }
 }
 
 /** Where the overview looks, and how far back it sits to keep every ball in view. Null with no balls */
@@ -115,15 +64,17 @@ interface Tile {
 /**
  * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player (up to
  * MAX_TILES), each drawn into the frame the page lays out on top of the canvas (`setRects`). It never switches to a
- * global view during the race: a slow screen draws the views at a lower resolution instead (FpsGuard). The
- * overview, framing the pack, only fills the screen while no player has a view yet.
+ * global view during the race: a slow screen draws less instead (quality.ts, run by game.ts, which hears about every
+ * change to the views through `onPassesChanged`). The overview, framing the pack, only fills the screen while no
+ * player has a view yet.
  */
 export class BigScreen {
   /** Players with a tile now, in order. The page draws a frame for each and reports its rect */
   tileIds: string[] = [];
   private readonly scene: Scene;
   private readonly overview: ArcRotateCamera;
-  private readonly guard = new FpsGuard();
+  /** The views drawn changed (new render passes, shaders compiling): the frame rate needs judging afresh */
+  onPassesChanged?: () => void;
   private readonly tiles = new Map<string, Tile>();
   private rects = new Map<string, TileRect>();
   private maxRadius = Infinity;
@@ -165,10 +116,6 @@ export class BigScreen {
   ): boolean {
     this.frame(poses, dt);
     let changed = false;
-    if (this.tileIds.some((id) => this.tiles.get(id)?.drawn)) {
-      const hidden = typeof document !== "undefined" && document.hidden;
-      if (this.guard.update(dt, hidden) === "lower") this.applyResolution();
-    }
     const want = players.all.filter((id) => poses.has(id)).slice(0, MAX_TILES);
     if (want.join() !== this.tileIds.join()) {
       this.setTiles(want);
@@ -231,23 +178,9 @@ export class BigScreen {
       drawn.push(tile.eye.camera);
     }
     const key = drawn.map((camera) => camera.name).join();
-    if (key !== this.drawnKey) this.guard.restart(); // new render passes: judge the fps afresh
+    if (key !== this.drawnKey) this.onPassesChanged?.();
     this.drawnKey = key;
     this.scene.activeCamera = drawn[0] ?? this.overview;
     this.scene.activeCameras = drawn.length ? drawn : [];
-    this.applyResolution();
-  }
-
-  /** The hardware scaling level the screen draws at: the guard's step for the split screen; the overview is one pass, so full resolution */
-  get resolution(): number {
-    return this.tileIds.length
-      ? RESOLUTION_STEPS[this.guard.step]
-      : RESOLUTION_STEPS[0];
-  }
-
-  private applyResolution(): void {
-    const engine = this.scene.getEngine();
-    if (engine.getHardwareScalingLevel() !== this.resolution)
-      engine.setHardwareScalingLevel(this.resolution);
   }
 }

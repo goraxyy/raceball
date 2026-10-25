@@ -37,6 +37,9 @@ const raceState = () => room?.state?.toJSON() as RaceStateView | undefined;
 export const myPlayer = (): PlayerView | undefined =>
   status.state === "joined" ? raceState()?.players[status.playerId] : undefined;
 
+/** Everyone in the room, by player id (the results board reads it) */
+export const players = () => raceState()?.players ?? {};
+
 /** Race length set by the host */
 export const laps = () => raceState()?.laps ?? DEFAULT_LAPS;
 

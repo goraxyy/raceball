@@ -11,3 +11,11 @@
   box-shadow: 3px 3px 0 #17151f;
   cursor: pointer;
 }
+
+/* the final leaderboard covers the race on every laptop: the host's big screen and each player's */
+.results-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: auto;
+}

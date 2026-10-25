@@ -9,8 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BallPose } from "./balls";
 import {
   BigScreen,
-  FpsGuard,
-  RESOLUTION_STEPS,
   MAX_TILES,
   framePack,
   type BigScreenPlayers,
@@ -43,60 +41,6 @@ class FakeCanvas {
     };
   }
 }
-
-describe("FpsGuard", () => {
-  /** `seconds` of frames at `fps` (frame time 1 / fps); returns the last verdict that wasn't "keep" */
-  const run = (guard: FpsGuard, fps: number, seconds: number) => {
-    let verdict = "keep";
-    for (let t = 0; t < seconds; t += 1 / fps) {
-      const v = guard.update(1 / fps);
-      if (v !== "keep") verdict = v;
-    }
-    return verdict;
-  };
-
-  it("lowers the resolution after 3 s under 30 fps, step by step, and stays at the lowest", () => {
-    const guard = new FpsGuard();
-    expect(run(guard, 10, 3)).toBe("keep"); // grace: shaders compiling
-    expect(run(guard, 20, 2.5)).toBe("keep");
-    expect(run(guard, 20, 0.7)).toBe("lower");
-    expect(RESOLUTION_STEPS[guard.step]).toBe(1.25);
-    expect(run(guard, 20, 6.5)).toBe("lower"); // grace again, then 3 s more
-    expect(RESOLUTION_STEPS[guard.step]).toBe(1.5);
-    for (let i = 0; i < 3; i++) run(guard, 20, 6.5);
-    expect(guard.step).toBe(RESOLUTION_STEPS.length - 1);
-    expect(run(guard, 10, 60)).toBe("keep"); // still too slow: it never gives up the views
-  });
-
-  it("is happy at 30 fps and up", () => {
-    const guard = new FpsGuard();
-    expect(run(guard, 35, 20)).toBe("keep");
-    expect(guard.step).toBe(0);
-  });
-
-  it("starts counting again after good frames, or after the tiles change", () => {
-    const guard = new FpsGuard();
-    run(guard, 60, 3.1);
-    run(guard, 20, 2.5);
-    run(guard, 60, 0.6); // the average climbs back over 30 fps
-    expect(run(guard, 20, 2.5)).toBe("keep");
-    guard.restart();
-    expect(run(guard, 20, 5.5)).toBe("keep"); // 3 s grace + 2.5 s
-    expect(run(guard, 20, 0.7)).toBe("lower");
-  });
-
-  it("doesn't count one-off stalls or a hidden page", () => {
-    const guard = new FpsGuard();
-    run(guard, 60, 3.1);
-    // a model loading mid-race: a few long frames, then smooth again
-    for (let i = 0; i < 20; i++) expect(guard.update(0.6)).toBe("keep");
-    // a hidden window barely draws: about one frame a second
-    for (let i = 0; i < 20; i++) expect(guard.update(1, true)).toBe("keep");
-    for (let i = 0; i < 20; i++) expect(guard.update(0.1, true)).toBe("keep");
-    expect(run(guard, 60, 10)).toBe("keep");
-    expect(guard.step).toBe(0);
-  });
-});
 
 describe("framePack", () => {
   it("centers on the pack and backs off with its spread, within limits", () => {
@@ -201,8 +145,10 @@ describe("BigScreen", () => {
     big.dispose();
   });
 
-  it("never leaves the split screen during a race, however slow the screen: it only draws softer", () => {
+  it("never leaves the split screen during a race, however slow the frames", () => {
     const big = new BigScreen(scene, overview);
+    let passes = 0;
+    big.onPassesChanged = () => passes++;
     const poses = new Map([
       ["a", at(0, 0)],
       ["b", at(5, 0)],
@@ -215,13 +161,13 @@ describe("BigScreen", () => {
         ["b", { left: 640, top: 0, width: 640, height: 720 }],
       ]),
     );
+    expect(passes).toBe(1); // the two views started drawing: the frame rate is judged afresh
     let changed = false;
     for (let t = 0; t < 60; t += 0.1)
       changed = big.update(poses, all, 0.1) || changed; // 10 fps for a minute
     expect(changed).toBe(false);
     expect(big.tileIds).toEqual(["a", "b"]);
     expect(scene.activeCameras).toHaveLength(2);
-    expect(big.resolution).toBe(RESOLUTION_STEPS.at(-1));
     big.dispose();
   });
 
@@ -235,7 +181,6 @@ describe("BigScreen", () => {
     );
     for (let i = 0; i < 60; i++) big.update(poses, all, 1); // one frame a second, like a hidden pane
     expect(big.tileIds).toEqual(["a"]);
-    expect(big.resolution).toBe(1);
     big.dispose();
   });
 });

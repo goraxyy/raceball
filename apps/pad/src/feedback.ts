@@ -1,6 +1,6 @@
 import type { GameEvent, ItemId } from "@raceball/shared";
 import { play } from "./audio";
-import { ITEM_NAMES, SCOOP_MAX, itemButtonHtml } from "./screens";
+import { ITEM_NAMES, SCOOP_MAX, itemButtonHtml, itemIcon } from "./screens";
 
 // Sound + visual cue on the pad for each race event (no vibration: docs/CONTROLLER.md).
 // The visuals are Nuris's: data-cue on .racing, and a .cue-text banner (apps/pad/screens.html).
@@ -10,15 +10,19 @@ const ordinal = (n: number) => {
   return `${n}${teen ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th")}`;
 };
 
-/** Replay a cue (removing and re-adding data-cue restarts its CSS animation), with optional banner text */
-function cue(racing: HTMLElement, name: string, text?: string) {
+/**
+ * Replay a cue (removing and re-adding data-cue restarts its CSS animation), with optional banner text and a symbol
+ * in front of it (trusted markup from screens.ts)
+ */
+function cue(racing: HTMLElement, name: string, text?: string, icon = "") {
   racing.removeAttribute("data-cue");
   void racing.offsetWidth; // reflow, so the same cue can play twice in a row
   racing.dataset.cue = name;
   if (!text) return;
   const el = document.createElement("div");
   el.className = "cue-text";
-  el.textContent = text;
+  el.innerHTML = icon;
+  el.append(text);
   el.addEventListener("animationend", () => el.remove());
   racing.append(el);
 }
@@ -77,7 +81,8 @@ export function showEvent(evt: GameEvent, me: string, laps: number) {
     case "item":
       play("itemPickup");
       if (racing) {
-        cue(racing, "item", ITEM_NAMES[evt.item].full); // what you got, big, as it lands
+        // what you got, big, as it lands: its symbol and its name
+        cue(racing, "item", ITEM_NAMES[evt.item].full, itemIcon(evt.item));
         setItemButton(racing, evt.item);
       }
       break;

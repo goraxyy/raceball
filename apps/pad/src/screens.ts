@@ -173,10 +173,36 @@ export const ITEM_NAMES: Record<ItemId, { full: string; short: string }> = {
   snowday: { full: "Snow Day!", short: "Snow day" },
 };
 
-/** The item button's label: the held item and how to fire it, or "No item" */
+/**
+ * Each item's symbol, drawn like the rest of the pad: chunky shapes with an ink outline, filled in white so they
+ * read on the item's own color. 48 x 48 viewBox
+ */
+const ITEM_ICONS: Record<ItemId, string> = {
+  // a lightning bolt: the Blue & White Boost
+  boost: `<path d="M27 3 9 27h12l-4 18 22-27H26l5-15z" fill="#fff"/>`,
+  // a paw and the roar coming off it: the Lion Roar
+  roar: `<ellipse cx="19" cy="31" rx="9" ry="7.5" fill="#fff"/>
+    <circle cx="9" cy="19" r="3.6" fill="#fff"/><circle cx="15" cy="12" r="3.6" fill="#fff"/>
+    <circle cx="23" cy="12" r="3.6" fill="#fff"/><circle cx="29" cy="19" r="3.6" fill="#fff"/>
+    <path d="M36 14c4 3 4 12 0 16M41 9c7 6 7 20 0 26" fill="none" stroke-linecap="round"/>`,
+  // a scoop melting off its cone: the Creamery Spill
+  spill: `<path d="M14 25l10 20 10-20z" fill="#F2B33D"/>
+    <path d="M11 24c-3-9 4-17 13-17s16 8 13 17c-1 3-4 2-4 6s-3 4-3 0-3-5-6-5-5 2-6 6-3 3-3-1-3-4-4-6z" fill="#fff"/>`,
+  // a snowflake: the Snow Day
+  snowday: `<g fill="none" stroke-linecap="round">
+      <path d="M24 4v40M7 14l34 20M7 34l34-20"/>
+      <path d="M18 7l6 5 6-5M18 41l6-5 6 5M5 21l8 1 1-8M43 27l-8-1-1 8M5 27l8-1 1 8M43 21l-8 1-1-8"/>
+    </g>`,
+};
+
+/** An item's symbol as an inline SVG */
+export const itemIcon = (item: ItemId) =>
+  `<svg class="item-icon" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#17151f" stroke-width="3" stroke-linejoin="round">${ITEM_ICONS[item]}</svg>`;
+
+/** The item button's label: the held item's symbol, its name and how to fire it, or "No item" */
 export const itemButtonHtml = (item: ItemId | "") =>
   item
-    ? `<span>${ITEM_NAMES[item].short}<span class="shake-hint">shake!</span></span>`
+    ? `<span>${itemIcon(item)}${ITEM_NAMES[item].short}<span class="shake-hint">shake!</span></span>`
     : "<span>No item</span>";
 
 /** A race time as race programs print it: 1:04.3, or DNF */

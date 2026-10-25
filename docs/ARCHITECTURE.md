@@ -173,6 +173,27 @@ export type GameEvent =
   | { type: "lap"; player: string; lap: number }
   | { type: "finish"; player: string; place: number }
   | { type: "respawn"; player: string };
+
+/**
+ * Which player slot is yours. Send "hello" (no payload) once your message handlers are
+ * registered, and the server answers with "welcome". Asking avoids losing a message sent
+ * before the client is listening.
+ */
+export interface WelcomeMsg {
+  playerId: string;
+  /** Viewer only: goes in the pairing QR (see padUrl) */
+  pairToken?: string;
+}
+
+/** Close/reject codes the server uses, so clients can show the right error screen */
+export const JoinError = {
+  VersionMismatch: 4001,
+  BadRole: 4002,
+  HostTaken: 4003,
+  RoomFull: 4004,
+  BadPairToken: 4005,
+  AlreadyPaired: 4006,
+} as const;
 ```
 
 Colyseus schema (synced automatically):

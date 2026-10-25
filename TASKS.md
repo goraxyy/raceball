@@ -74,7 +74,7 @@ Nothing right now. Add new questions here.
 
 **All**
 - [ ] Complete [ONBOARDING.md](docs/ONBOARDING.md), including the first PR (your row in "Test devices")
-- [ ] Agree on protocol v1 together and commit it as `packages/shared/src/protocol.ts`
+- [x] Agree on protocol v1 together and commit it as `packages/shared/src/protocol.ts`
 
 **Ali**
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
@@ -111,14 +111,14 @@ Nothing right now. Add new questions here.
 - [ ] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
 
 **Rasim**
-- [ ] `RaceRoom`: roles host/viewer/pad, short room code, join/leave, `PROTOCOL_VERSION` check
+- [x] `RaceRoom`: roles host/viewer/pad, short room code, join/leave, `PROTOCOL_VERSION` check
 - [ ] 60 Hz simulation loop calling `game-core`; `snap` sent to host + viewers (30 Hz first, then 60 Hz)
 - [ ] Pairing: viewer gets a `pairToken`, its QR opens the pad with the token, and the pad is bound to that player
 - [ ] `apps/web/src/net`: client, clock sync, snapshot buffer, interpolation, own-ball extrapolation, `useRaceState` / `usePairing` hooks
-- [ ] Pad steering: device-frame gravity, One Euro filter, dead zone + curve, `steer` from -1 to 1
+- [x] Pad steering: device-frame gravity, One Euro filter, dead zone + curve, `steer` from -1 to 1
 - [ ] Pad 2-step calibration (+ Flip button); hold-to-gas on the right half, brake on the left; input sent at 60 Hz and on change
 - [ ] Rotation fix v1: Android lock; iPhone Portrait Lock onboarding + self-rotated UI; counter-rotation fallback
-- [ ] Wake Lock; block zoom, scroll and selection
+- [x] Wake Lock; block zoom, scroll and selection
 - [ ] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 
 **Nuris**

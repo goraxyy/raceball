@@ -56,7 +56,7 @@ pnpm install
 pnpm dev
 ```
 
-Until Rasim lands the M0 bootstrap PR, there's nothing to run yet. That's expected. After it lands:
+The M0 bootstrap is merged, so `pnpm dev` starts all three apps:
 
 | App | URL |
 |---|---|

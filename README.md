@@ -4,7 +4,9 @@
 
 Built at **HackPSU Fall 2026** for the General Track, *The Mystery Stack*: phone motion, rivalry, group play (4–8 players).
 
-> **Status: planning.** This repo holds the plan and docs only. Code starts at milestone M0 in [TASKS.md](TASKS.md).
+> **Status: M0 in progress.** The monorepo, server, pad and `game-core` are in. What's left is in [TASKS.md](TASKS.md).
+>
+> **Live:** web [raceball-web.vercel.app](https://raceball-web.vercel.app) (local mode at `/play?local=1`), pad [raceball-pad.vercel.app](https://raceball-pad.vercel.app), server `wss://raceball-server-production.up.railway.app` ([health](https://raceball-server-production.up.railway.app/health)).
 >
 > **New to the team? Start with [docs/ONBOARDING.md](docs/ONBOARDING.md).**
 
@@ -95,7 +97,7 @@ flowchart LR
 | What | Where | Cost |
 |---|---|---|
 | Web + pad | Vercel Hobby (free plan, non-commercial use) | **$0** |
-| Game server | Railway, 1 always-on service in US East (Virginia) | One-time **$5 trial credit** covers the event. After that, Hobby is **$5/month** (includes $5 of usage). Delete the project after the event |
+| Game server | Railway, 1 service (target: always on, US East Virginia) | **Free plan for now** ($0, $1 of usage a month; the server sleeps when idle and runs in `sfo`). Switch to **Hobby, $5/month** (includes $5 of usage) before the M1 latency measurement and the event. Delete the project after the event |
 | Alternative server | Fly.io, region `iad` (Ashburn, VA). Card required, no free plan for new accounts | About $2–4/month (third-party estimates) |
 | Dev-only server | Render free plan (sleeps after 15 min idle, small CPU) | $0 |
 | Engine, physics, server framework | Babylon.js (Apache-2.0), Rapier (Apache-2.0), Colyseus (MIT) | $0 |

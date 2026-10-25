@@ -95,7 +95,7 @@ Nothing right now. Add new questions here.
 - [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
 
 **Nuris**
-- [ ] Art bible in `docs/ASSETS.md`: style, palette, the 8 player colors + shapes, Penn State mood board
+- [ ] Art bible in `docs/ASSETS.md`: style, palette, the 8 player colors + shapes, Penn State mood board (done except the mood board: style, palettes, player colors + shapes and the planet balls are in ASSETS.md)
 - [ ] Review the Kenney Particle Pack and audio packs; add particle textures and sounds to the shortlist
 
 ---
@@ -111,7 +111,7 @@ Nothing right now. Add new questions here.
 - [ ] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
 - [ ] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly
 - [ ] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
-- [ ] 4 ball skins (Lion, Creamery scoop, football, snowball), with a player-color ring
+- [ ] 4 planet balls (Earth, Mars, Jupiter, Saturn), each with the player-color orbit ring ([art bible](docs/ASSETS.md#balls-the-eight-planets))
 - [ ] Track dressing kit on one shared palette texture: barriers, fall trees, lamp posts, start/finish arch; HDRI as `.env`
 
 **Rasim**
@@ -174,7 +174,7 @@ Nothing right now. Add new questions here.
 - [ ] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown
 - [ ] Railway: check the health check, logs and resource graphs under load
 - [ ] **Landmark art pass** in this order: Old Main, Lion Shrine, Creamery + cone, Beaver Stadium, Pattee Library, Mount Nittany backdrop (budgets in [your guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Nuris reviews each against the art bible
-- [ ] Ball skins 5–8: Old Main bell, beach ball, library book, campus squirrel
+- [ ] Planet balls 5–8: Mercury, Venus, Uranus, Neptune
 - [ ] Animated props: item boxes, flags, arch, crowd cards
 
 **Rasim**

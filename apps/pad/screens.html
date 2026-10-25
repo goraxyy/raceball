@@ -163,9 +163,7 @@
           <div class="frame portrait" data-contract>
             <section class="screen start">
               <div class="logo">Race<span>Ball</span></div>
-              <div class="ball ball-roll">
-                <span class="shape" data-shape="star"></span>
-              </div>
+              <div class="ball ball-roll" data-planet="saturn"></div>
               <button class="start-button" type="button">Tap to start</button>
               <ul class="hint-list">
                 <li>Low Power Mode off</li>
@@ -208,12 +206,18 @@
 
       <!-- ============================================================ picker -->
       <section class="item">
-        <h2>Name + ball <small>.screen.picker (phone-only players)</small></h2>
+        <h2>
+          Name + planet
+          <small
+            >.screen.picker (phone-only players; planets other players took are
+            disabled)</small
+          >
+        </h2>
         <div class="frames">
           <div class="frame portrait" data-contract>
             <section class="screen picker" style="--player: #56b4e9">
               <span class="eyebrow">Room ABCD</span>
-              <h1>Pick your ball</h1>
+              <h1>Pick your planet</h1>
               <label class="field">
                 Name
                 <input
@@ -224,61 +228,45 @@
                 />
               </label>
               <div class="ball-grid" role="radiogroup">
-                <label class="ball-option" style="--player: #e69f00">
-                  <input type="radio" name="ball" value="lion" checked />
-                  <span class="ball"
-                    ><span class="shape" data-shape="circle"></span
-                  ></span>
-                  Lion
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="mercury" />
+                  <span class="ball" data-planet="mercury"></span>
+                  Mercury
                 </label>
-                <label class="ball-option" style="--player: #56b4e9">
-                  <input type="radio" name="ball" value="scoop" />
-                  <span class="ball"
-                    ><span class="shape" data-shape="square"></span
-                  ></span>
-                  Scoop
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="venus" />
+                  <span class="ball" data-planet="venus"></span>
+                  Venus
                 </label>
-                <label class="ball-option" style="--player: #009e73">
-                  <input type="radio" name="ball" value="football" />
-                  <span class="ball"
-                    ><span class="shape" data-shape="triangle"></span
-                  ></span>
-                  Football
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="earth" checked />
+                  <span class="ball" data-planet="earth"></span>
+                  Earth
                 </label>
-                <label class="ball-option" style="--player: #f0e442">
-                  <input type="radio" name="ball" value="snowball" />
-                  <span class="ball"
-                    ><span class="shape" data-shape="star"></span
-                  ></span>
-                  Snowball
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="mars" disabled />
+                  <span class="ball" data-planet="mars"></span>
+                  Mars
                 </label>
-                <label class="ball-option" style="--player: #0072b2">
-                  <input type="radio" name="ball" value="bell" />
-                  <span class="ball"
-                    ><span class="shape" data-shape="diamond"></span
-                  ></span>
-                  Bell
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="jupiter" />
+                  <span class="ball" data-planet="jupiter"></span>
+                  Jupiter
                 </label>
-                <label class="ball-option" style="--player: #d55e00">
-                  <input type="radio" name="ball" value="beach" />
-                  <span class="ball"
-                    ><span class="shape" data-shape="cross"></span
-                  ></span>
-                  Beach
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="saturn" disabled />
+                  <span class="ball" data-planet="saturn"></span>
+                  Saturn
                 </label>
-                <label class="ball-option" style="--player: #cc79a7">
-                  <input type="radio" name="ball" value="book" />
-                  <span class="ball"
-                    ><span class="shape" data-shape="pentagon"></span
-                  ></span>
-                  Book
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="uranus" />
+                  <span class="ball" data-planet="uranus"></span>
+                  Uranus
                 </label>
-                <label class="ball-option" style="--player: #ffffff">
-                  <input type="radio" name="ball" value="squirrel" />
-                  <span class="ball"
-                    ><span class="shape" data-shape="hexagon"></span
-                  ></span>
-                  Squirrel
+                <label class="ball-option">
+                  <input type="radio" name="ball" value="neptune" />
+                  <span class="ball" data-planet="neptune"></span>
+                  Neptune
                 </label>
               </div>
               <button class="btn" type="button">Join race</button>
@@ -336,9 +324,7 @@
         <div class="frames">
           <div class="frame" data-contract>
             <section class="screen ready" style="--player: #56b4e9">
-              <div class="ball ball-roll">
-                <span class="shape" data-shape="square"></span>
-              </div>
+              <div class="ball ball-roll" data-planet="earth"></div>
               <div class="ready-side">
                 <span class="player-name">Nuris</span>
                 <span class="tile-hint"
@@ -352,9 +338,7 @@
           </div>
           <div class="frame">
             <section class="screen ready" style="--player: #d55e00">
-              <div class="ball">
-                <span class="shape" data-shape="cross"></span>
-              </div>
+              <div class="ball" data-planet="mars"></div>
               <div class="ready-side">
                 <span class="player-name">Ali</span>
                 <button class="btn ready-btn is-ready" type="button">

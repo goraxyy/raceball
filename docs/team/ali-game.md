@@ -357,6 +357,7 @@ The manual steps below are what the script automates.
 - **Markers** (nodes with an `rb` custom property; see the [marker table](../ASSETS.md#blender-is-our-level-editor)) come back in `TrackData`, in world space:
   - `spawns` sorted by slot, `checkpoints` sorted by index
   - `respawns`, `items`, `boosts`, `surfaces`, `cameras`
+  - `path`: the `route` marker's centerline, a closed loop of [x, z] points from the finish line, the racing way. `path.ts` measures along it (`project`, `pointAt`), and the race exposes the points as `race.path` for the big-screen `TrackMap`. `tools/track/build_happy_valley.py` writes it, about every 4 m.
   - Headings come from each marker's rotation.
 - **Checkpoint gates and boost pads** become sensor boxes sized by the Empty's scale. **Surfaces** become a sensor from the mesh's convex hull. Each one keeps its Rapier collider handle, for the lap and boost logic.
 - **Every other mesh** becomes a solid trimesh with the node's world matrix applied, built with Rapier's `FIX_INTERNAL_EDGES` so balls don't bump on the seams between triangles. Optional `friction` (default 1) and `restitution` (default 0) custom properties on a `*_col` object change how it plays, e.g. bouncier library steps.

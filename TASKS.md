@@ -150,7 +150,8 @@ Nothing right now. Add new questions here.
 - [ ] `botInput()` for Rasim's bots
 - [ ] Own-ball extrapolation in the player view (with Rasim)
 - [ ] Big screen: overview camera + **up to 4 follow-cam tiles** for phone-only players, with an automatic fallback to name tags below 50 fps
-- [ ] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`
+- [x] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`
+  - `race.path`: the route's centerline as [x, z] points from the finish line (274 points, 1,096 m), from the new `route` marker. Positions are the snapshot's balls, so screens can sample them at 10 Hz. Rasim: send `race.path` to screens once, e.g. when they join
 
 **Rasim**
 - [ ] Lobby flow end to end: create, join, pair, calibrate, assets loaded, ready, host starts. `/host` and `/play` use Nuris's components from `apps/web/src/ui` (`HostLobby`, `ViewerJoin`, `PairingQR`, `LoadingScreen`)

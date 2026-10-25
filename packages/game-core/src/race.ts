@@ -5,7 +5,14 @@ import { addBall, applyControls, BALL_RADIUS, type PlayerSim } from "./ball";
 import { NEUTRAL_INPUT } from "./input";
 import { pointAt, project } from "./path";
 import { createWorld, initPhysics, TICK_DT } from "./physics";
-import { createFlatTrack, loadTrack, type TrackData, type Vec3 } from "./track";
+import {
+  createFlatTrack,
+  loadTrack,
+  type BoostPad,
+  type Surface,
+  type TrackData,
+  type Vec3,
+} from "./track";
 import { tuning, type Tuning } from "./tuning";
 
 export interface RaceConfig {
@@ -77,6 +84,8 @@ interface Racer extends PlayerSim {
   finishedAt: number | null; // race time in ms
   routeS: number; // where the ball is along the track path, in the path's own meters
   stuckFor: number; // seconds of gas while barely moving
+  surfaces: Set<Surface>; // surface volumes the ball is inside
+  boostLeft: number; // seconds of raised top speed left after a boost pad
 }
 
 class TrackRace implements Race {
@@ -88,6 +97,8 @@ class TrackRace implements Race {
   private readonly t: Tuning;
   private readonly queue = new RAPIER.EventQueue(true);
   private readonly gateOrder = new Map<number, number>(); // collider handle → position in track.checkpoints
+  private readonly surfaceByCollider = new Map<number, Surface>();
+  private readonly padByCollider = new Map<number, BoostPad>();
   private readonly byCollider = new Map<number, Racer>();
   private players = new Map<string, Racer>();
   private events: GameEvent[] = [];
@@ -118,6 +129,8 @@ class TrackRace implements Race {
     this.laps = cfg.laps;
     this.path = track.path?.points ?? [];
     track.checkpoints.forEach((c, i) => this.gateOrder.set(c.collider, i));
+    for (const s of track.surfaces) this.surfaceByCollider.set(s.collider, s);
+    for (const b of track.boosts) this.padByCollider.set(b.collider, b);
 
     const gates = track.checkpoints;
     const route = track.path;
@@ -168,6 +181,8 @@ class TrackRace implements Race {
         ? project(this.track.path, spawn.pos[0], spawn.pos[2])
         : 0,
       stuckFor: 0,
+      surfaces: new Set(),
+      boostLeft: 0,
     };
     this.players.set(id, racer);
     this.byCollider.set(racer.collider, racer);
@@ -209,6 +224,7 @@ class TrackRace implements Race {
     if (racing) this.raceMs += dt * 1000;
     this.simMs += dt * 1000;
     for (const p of this.players.values()) {
+      this.applySurfaces(p, dt);
       applyControls(
         p,
         drives(p) ? p.input : NEUTRAL_INPUT,
@@ -220,11 +236,21 @@ class TrackRace implements Race {
     }
     this.world.step(this.queue);
     this.queue.drainCollisionEvents((h1, h2, started) => {
-      if (!started) return;
-      const gate = this.gateOrder.get(h1) ?? this.gateOrder.get(h2);
       const p = this.byCollider.get(h1) ?? this.byCollider.get(h2);
+      if (!p) return;
+      const other = p.collider === h1 ? h2 : h1;
+      const surface = this.surfaceByCollider.get(other);
+      if (surface) {
+        if (started) p.surfaces.add(surface);
+        else p.surfaces.delete(surface);
+        return;
+      }
+      if (!started) return;
+      const pad = this.padByCollider.get(other);
+      if (pad) return this.boost(p, pad);
+      const gate = this.gateOrder.get(other);
       // only the next gate counts, so shortcuts and driving backwards don't
-      if (gate !== undefined && p && gate === p.next && drives(p))
+      if (gate !== undefined && gate === p.next && drives(p))
         this.passGate(p, gate);
     });
     this.queue.drainContactForceEvents((e) => {
@@ -360,6 +386,37 @@ class TrackRace implements Race {
   }
 
   /**
+   * Surfaces set the ball's grip (the lowest one it's inside wins: ice 0.1, ice cream 0.2,
+   * snow 0.6), and snow also drags like a light brake. A recent boost raises the top speed.
+   */
+  private applySurfaces(p: Racer, dt: number): void {
+    let grip = 1;
+    let snow = false;
+    for (const s of p.surfaces) {
+      grip = Math.min(grip, s.grip);
+      if (s.kind === "snow") snow = true;
+    }
+    p.surfaceGrip = grip;
+    p.maxSpeedMul = p.boostLeft > 0 ? this.t.boostMaxSpeedMul : 1;
+    p.boostLeft = Math.max(0, p.boostLeft - dt);
+    if (snow) {
+      const v = p.body.linvel();
+      const k = (1 - Math.exp(-this.t.snowDrag * dt)) * p.body.mass();
+      p.body.applyImpulse({ x: -v.x * k, y: 0, z: -v.z * k }, true);
+    }
+  }
+
+  /** A boost pad adds speed along its own facing, and raises the top speed for boostSeconds. */
+  private boost(p: Racer, pad: BoostPad): void {
+    const j = this.t.boostPadSpeed * pad.power * p.body.mass();
+    p.body.applyImpulse(
+      { x: Math.sin(pad.heading) * j, y: 0, z: Math.cos(pad.heading) * j },
+      true,
+    );
+    p.boostLeft = this.t.boostSeconds;
+  }
+
+  /**
    * Meters along the race from the start line. Within a lap it's the distance along the route
    * past the last gate crossed, clamped to the next gate, so a shortcut or reversing never gains
    * anything. On the grid it's minus the distance left to the line.
@@ -486,6 +543,8 @@ class TrackRace implements Race {
     p.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     p.heading = at.heading;
     p.stuckFor = 0;
+    p.boostLeft = 0;
+    p.surfaces.clear(); // the teleport leaves them; their exit events may never arrive
     if (this.track.path)
       p.routeS = project(this.track.path, at.pos[0], at.pos[2]);
     this.events.push({ type: "respawn", player: p.id });

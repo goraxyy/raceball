@@ -90,6 +90,8 @@ function mesh(doc: Document, buffer: Buffer, pos: number[], idx: number[]) {
  * ends at x = ±40.
  * - wall: a solid wall across the road at x = 12, between gates 1 and 2
  * - swapGates: gates 1 and 2 trade places, so a ball crosses them out of order
+ * - surface: a surface volume over the road from x = -4 to 24, covering the grid
+ * A power-2 boost pad across the road at x = 20 faces +X.
  */
 async function syntheticTrack(
   opts: {
@@ -97,6 +99,7 @@ async function syntheticTrack(
     wall?: boolean;
     swapGates?: boolean;
     route?: boolean;
+    surface?: { kind: string; grip: number };
   } = {},
 ): Promise<Uint8Array> {
   const doc = new Document();
@@ -153,8 +156,12 @@ async function syntheticTrack(
   }
   add("item_1", { rb: "item" }, (n) => n.setTranslation([12, 0, 4]));
   add("boost_1", { rb: "boost", power: 2 }, (n) =>
-    n.setTranslation([20, 0, 0]),
+    n.setTranslation([20, 0, 0]).setScale([3, 1, 1]).setRotation(FACE_PLUS_X),
   );
+  if (opts.surface)
+    add("surface_road", { rb: "surface", ...opts.surface }, (n) =>
+      n.setTranslation([10, 0, 0]).setMesh(solidBox(doc, buffer, [14, 1, 4])),
+    );
   add("surface_1", { rb: "surface", grip: 0.2, kind: "icecream" }, (n) =>
     n.setTranslation([0, 0, 10]).setMesh(boxMesh(doc, buffer, 1)),
   );
@@ -199,7 +206,7 @@ describe("loadTrack", () => {
     expect(track.boosts[0]).toMatchObject({
       pos: [20, -1, 0],
       power: 2,
-      heading: 0,
+      heading: expect.closeTo(Math.PI / 2),
     });
     expect(track.surfaces).toMatchObject([{ kind: "icecream", grip: 0.2 }]);
     expect(world.getCollider(track.surfaces[0].collider).isSensor()).toBe(true);
@@ -354,6 +361,86 @@ describe("respawn on a loaded track", () => {
   it("never respawns a ball that isn't trying to drive", async () => {
     const r = await drive({ wall: true });
     expect(untilRespawn(r, NEUTRAL_INPUT, 10)).toBeNull();
+  });
+});
+
+describe("section mechanics", () => {
+  const races: Race[] = [];
+  afterEach(() => {
+    for (const r of races.splice(0)) r.dispose();
+  });
+
+  async function onTrack(opts: Parameters<typeof syntheticTrack>[0] = {}) {
+    const r = await createRace(await syntheticTrack(opts), new NodeIO(), {
+      laps: 1,
+    });
+    races.push(r);
+    r.addPlayer("me", "lion"); // slot 1, at (-3, -1, -1.5) facing +X
+    r.start(0, 1);
+    return r;
+  }
+
+  function run(r: Race, seconds: number, input: InputMsg) {
+    for (let i = 0; i < Math.round(seconds / TICK_DT); i++) {
+      r.setInput("me", input);
+      r.step(TICK_DT);
+    }
+    return r.snapshot(0, 0).balls[0];
+  }
+
+  const GAS: InputMsg = { ...NEUTRAL_INPUT, gas: 1 };
+  const flatSpeed = (v: number[]) => Math.hypot(v[0], v[2]);
+  /** Angle between where the ball faces and where it's actually going */
+  const slip = (b: { v: number[]; h: number }) =>
+    Math.abs(
+      Math.atan2(
+        Math.sin(Math.atan2(b.v[0], b.v[2]) - b.h),
+        Math.cos(Math.atan2(b.v[0], b.v[2]) - b.h),
+      ),
+    );
+
+  it("a boost pad pushes the ball along its facing, past top speed", async () => {
+    const r = await onTrack();
+    let before = 0;
+    let after = 0;
+    for (let i = 0; i < 3 / TICK_DT; i++) {
+      r.setInput("me", GAS);
+      r.step(TICK_DT);
+      const b = r.snapshot(0, 0).balls[0];
+      // the pad's box spans x = 19..21, so the ball touches it from x = 18.5
+      if (b.p[0] < 17) before = Math.max(before, flatSpeed(b.v));
+      else if (b.p[0] > 21 && b.p[0] < 40)
+        after = Math.max(after, flatSpeed(b.v));
+    }
+    expect(before).toBeLessThan(tuning.maxSpeed * 1.05);
+    // power 2: +16 m/s along +X, the way the ball is going
+    expect(after).toBeGreaterThan(before + tuning.boostPadSpeed);
+  });
+
+  it("ice cuts grip, so the ball slides wide in a turn", async () => {
+    const turn = async (opts: Parameters<typeof syntheticTrack>[0]) => {
+      const r = await onTrack(opts);
+      run(r, 0.8, GAS); // up to speed, still on the patch and short of the pad
+      return slip(run(r, 0.4, { ...GAS, steer: 1 }));
+    };
+    const road = await turn({});
+    const ice = await turn({ surface: { kind: "ice", grip: 0.1 } });
+    // measured: about 0.22 rad of slip on the road, 0.48 on ice
+    expect(ice).toBeGreaterThan(road * 1.6);
+    expect(ice - road).toBeGreaterThan(0.15);
+  });
+
+  it("snow drags the ball, and ice cream doesn't", async () => {
+    const speedAfter = async (opts: Parameters<typeof syntheticTrack>[0]) =>
+      flatSpeed(run(await onTrack(opts), 1, GAS).v);
+    const road = await speedAfter({});
+    const snow = await speedAfter({ surface: { kind: "snow", grip: 0.6 } });
+    const iceCream = await speedAfter({
+      surface: { kind: "icecream", grip: 0.2 },
+    });
+    // measured after 1 s of gas: about 18 m/s on the road, 14.3 on snow
+    expect(snow).toBeLessThan(road - 2);
+    expect(iceCream).toBeCloseTo(road, 0);
   });
 });
 

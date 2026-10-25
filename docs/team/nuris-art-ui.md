@@ -128,6 +128,8 @@ Built in `apps/web/src/ui/RaceHud.tsx`: the place plate and lap top left (the la
 3. Put the textures in `fx/`, and make the texture names in the JSON match the files.
 4. Tell Ali the file name and which event it belongs to (e.g. `fx_bump_sparks.json` → `bump`). He adds it to his effects table.
 
+Built: `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof` and `fx_respawn_stars` share one drawn atlas, `fx_atlas.png`. Instead of hand-copying from the Playground, `tools/fx/build_fx.mjs` builds them with the same Babylon API and writes the JSON, and `tools/fx/gen_fx_textures.py` draws the atlas. `/ui` > fx previews them. The event table for Ali is in [ASSETS.md > VFX v1](../ASSETS.md#vfx-v1-files).
+
 ### Results screen + podium
 `Results` props: `podium[]` (top 3), `rows[]` (everyone: time, best lap, bumps). The podium can be a 3D scene that Ali stages, with your UI on top. Coordinate the layout with him.
 

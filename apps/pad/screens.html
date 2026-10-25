@@ -22,16 +22,18 @@
       }
       body {
         padding: 24px 16px 64px;
+        background: var(--paper-2);
       }
       .gallery {
         max-width: 1100px;
         margin: 0 auto;
         display: grid;
-        gap: 40px;
+        gap: 44px;
       }
       .gallery > header h1 {
-        font-size: 32px;
-        margin: 0 0 6px;
+        font: italic 900 44px/0.9 var(--display);
+        text-transform: uppercase;
+        margin: 0 0 10px;
       }
       .gallery > header p {
         color: var(--muted);
@@ -44,12 +46,14 @@
         gap: 12px;
       }
       .item h2 {
-        font-size: 18px;
+        font: italic 900 26px/1 var(--display);
+        text-transform: uppercase;
         margin: 0;
       }
       .item h2 small {
+        font: 600 14px var(--text);
+        text-transform: none;
         color: var(--muted);
-        font-weight: 500;
       }
       .frames {
         display: flex;
@@ -67,9 +71,9 @@
         height: calc(var(--h) * 1px);
         border-radius: 36px;
         overflow: hidden;
-        outline: 8px solid #05070f;
+        outline: 8px solid var(--ink);
         outline-offset: 0;
-        box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
+        box-shadow: 14px 14px 0 rgb(23 21 31 / 0.25);
       }
       .frame.portrait {
         --w: 390;
@@ -98,24 +102,30 @@
         gap: 8px;
       }
       .controls button {
-        font: 700 14px var(--font);
+        font: 800 14px var(--text);
         padding: 8px 12px;
-        border-radius: 10px;
-        border: 1px solid var(--line);
-        background: var(--surface);
+        border-radius: 6px;
+        border: 2px solid var(--ink);
+        background: var(--paper);
         color: var(--ink);
+        box-shadow: 2px 2px 0 var(--ink);
         cursor: pointer;
       }
+      .controls label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+      }
       details {
-        background: var(--bg-2);
-        border: 1px solid var(--line);
-        border-radius: 12px;
+        background: var(--paper);
+        border: 2px solid var(--ink);
+        border-radius: 8px;
         padding: 10px 14px;
       }
       summary {
         cursor: pointer;
-        font-weight: 700;
-        color: var(--muted);
+        font-weight: 800;
       }
       pre {
         margin: 10px 0 0;
@@ -124,7 +134,7 @@
           12px/1.45 ui-monospace,
           Consolas,
           monospace;
-        color: #d7dcf5;
+        color: var(--ink-2);
         white-space: pre;
       }
     </style>
@@ -372,6 +382,18 @@
           <button data-cue="finish" data-text="Finish!">Finish</button>
           <button id="cycleItem">Cycle item</button>
           <button id="toggleWrong">Wrong way</button>
+          <button data-change="up">Gain a place</button>
+          <button data-change="down">Lose a place</button>
+          <label
+            >Steer
+            <input
+              id="steer"
+              type="range"
+              min="-1"
+              max="1"
+              step="0.01"
+              value="0.25"
+          /></label>
         </div>
         <div class="frames">
           <div class="frame" data-contract id="raceFrame">
@@ -382,18 +404,44 @@
               <div class="zone zone-right">
                 <span class="zone-label">Gas</span>
               </div>
-              <header class="status">
-                <span class="shape" data-shape="square"></span>
-                <span class="status-place"><b>2</b><small>nd</small></span>
-                <span class="status-lap">Lap 1/3</span>
-              </header>
-              <button class="item-btn" type="button" data-item="boost">
-                <span>Boost<span class="shake-hint">shake</span></span>
-              </button>
+              <div class="hud">
+                <header class="status">
+                  <span class="status-place"><b>2</b><small>nd</small></span>
+                  <span class="shape" data-shape="square"></span>
+                  <span class="status-lap">Lap 1/3</span>
+                </header>
+                <div class="steer" style="--steer: 0.25">
+                  <span class="steer-dot"></span>
+                </div>
+                <button class="item-btn" type="button" data-item="boost">
+                  <span>Boost<span class="shake-hint">shake!</span></span>
+                </button>
+              </div>
               <div class="wrong-way" hidden>Wrong way</div>
               <div class="cue"></div>
             </section>
           </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ countdown -->
+      <section class="item">
+        <h2>
+          Countdown
+          <small
+            >.screen.countdown[data-count="3" | "2" | "1" | "go"] (phone-only
+            players, who have no laptop)</small
+          >
+        </h2>
+        <div class="frames">
+          <div class="frame" data-contract id="countFrame">
+            <section class="screen countdown" data-count="3">
+              <div class="count">3</div>
+            </section>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="playCount">Play 3, 2, 1, GO</button>
         </div>
       </section>
 
@@ -522,13 +570,51 @@
         itemBtn.dataset.item = next;
         itemBtn.disabled = !next;
         itemBtn.innerHTML = next
-          ? `<span>${labels[next]}<span class="shake-hint">shake</span></span>`
+          ? `<span>${labels[next]}<span class="shake-hint">shake!</span></span>`
           : `<span>${labels[next]}</span>`;
         if (next) cue("item");
       });
       document.querySelector("#toggleWrong").addEventListener("click", () => {
         const w = race.querySelector(".wrong-way");
         w.hidden = !w.hidden;
+      });
+
+      const steerEl = race.querySelector(".steer");
+      document.querySelector("#steer").addEventListener("input", (e) => {
+        steerEl.style.setProperty("--steer", e.target.value);
+      });
+
+      const status = race.querySelector(".status");
+      const placeB = status.querySelector(".status-place b");
+      const placeSmall = status.querySelector(".status-place small");
+      const suffix = (n) => ({ 1: "st", 2: "nd", 3: "rd" })[n] ?? "th";
+      for (const b of document.querySelectorAll("[data-change]")) {
+        b.addEventListener("click", () => {
+          const up = b.dataset.change === "up";
+          const n = Math.min(
+            8,
+            Math.max(1, Number(placeB.textContent) + (up ? -1 : 1)),
+          );
+          placeB.textContent = n;
+          placeSmall.textContent = suffix(n);
+          status.removeAttribute("data-change");
+          void status.offsetWidth;
+          status.dataset.change = b.dataset.change;
+        });
+      }
+
+      const count = document.querySelector("#countFrame .countdown");
+      document.querySelector("#playCount").addEventListener("click", () => {
+        ["3", "2", "1", "go"].forEach((c, i) =>
+          setTimeout(() => {
+            count.dataset.count = c;
+            const el = count.querySelector(".count");
+            el.textContent = c === "go" ? "Go!" : c;
+            el.style.animation = "none";
+            void el.offsetWidth;
+            el.style.animation = "";
+          }, i * 1000),
+        );
       });
     </script>
   </body>

@@ -43,6 +43,19 @@ export function PlanetBall({
   );
 }
 
+/** The RaceBall lockup (ball mark + wordmark) from tools/brand/gen_brand.py. dark: for dark backgrounds */
+export function Logo({ dark }: { dark?: boolean }) {
+  return (
+    <img
+      className="logo-img"
+      src={dark ? "/assets/ui/ui_logo_dark.svg" : "/assets/ui/ui_logo.svg"}
+      alt="RaceBall"
+      width={1024}
+      height={136}
+    />
+  );
+}
+
 /** A small status sticker: on (done) or off (waiting) */
 export function Chip({ on, children }: { on: boolean; children: string }) {
   return <span className={on ? "chip is-on" : "chip"}>{children}</span>;

@@ -1,6 +1,8 @@
 // Lobby UI (Nuris). Components only take props; the net hooks in src/net feed them.
 import "./ui.css";
 
+export { BragCard } from "./BragCard";
+export type { BragCardProps } from "./BragCard";
 export { Countdown } from "./Countdown";
 export type { CountdownProps } from "./Countdown";
 export { FollowTile } from "./FollowTile";
@@ -18,6 +20,8 @@ export { RaceHud } from "./RaceHud";
 export { Results, formatTime } from "./Results";
 export type { ResultRow, ResultsProps } from "./Results";
 export type { RaceHudProps } from "./RaceHud";
+export { TitleScreen } from "./TitleScreen";
+export type { TitleScreenProps } from "./TitleScreen";
 export { ViewerJoin } from "./ViewerJoin";
 export type { ViewerJoinProps } from "./ViewerJoin";
 export type { LobbyPlayer } from "./types";

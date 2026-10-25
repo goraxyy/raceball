@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { MAX_PLAYERS, PLANETS } from "@raceball/shared";
 import {
   HostLobby,
+  TitleScreen,
   LoadingScreen,
   PairingQR,
   ViewerJoin,
   type LobbyPlayer,
 } from ".";
+import { BragPreview } from "./BragPreview";
 import { FxPreview } from "./FxPreview";
 import { HudPreview } from "./HudPreview";
 import { MusicPreview } from "./MusicPreview";
@@ -66,6 +68,7 @@ const FAKE: LobbyPlayer[] = [
 ];
 const PAD_URL = "https://raceball-pad.vercel.app/?room=ABCD";
 const VIEWS = [
+  "title",
   "host",
   "join",
   "pairing",
@@ -75,12 +78,13 @@ const VIEWS = [
   "hud",
   "fx",
   "results",
+  "brag",
   "music",
 ] as const;
 type View = (typeof VIEWS)[number];
 
 export default function Gallery() {
-  const [view, setView] = useState<View>("host");
+  const [view, setView] = useState<View>("title");
   const [players, setPlayers] = useState(FAKE);
   const [laps, setLaps] = useState(3);
   const [progress, setProgress] = useState(0.35);
@@ -141,6 +145,13 @@ export default function Gallery() {
           </button>
         )}
       </nav>
+      {view === "title" && (
+        <TitleScreen
+          hostHref="#host"
+          joinHref="#join"
+          practiceHref="/play?local=1"
+        />
+      )}
       {view === "host" && (
         <HostLobby
           code="ABCD"
@@ -174,6 +185,7 @@ export default function Gallery() {
       {view === "hud" && <HudPreview />}
       {view === "fx" && <FxPreview />}
       {view === "results" && <ResultsPreview />}
+      {view === "brag" && <BragPreview />}
       {view === "music" && <MusicPreview />}
       {view === "loading" && (
         <LoadingScreen progress={progress} label="Loading Happy Valley" />

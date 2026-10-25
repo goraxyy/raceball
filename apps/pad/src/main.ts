@@ -1,4 +1,5 @@
 import "./style.css";
+import { ERROR_COPY, type ErrorKind } from "@raceball/shared";
 import { Calibrator, loadCalibration, saveCalibration } from "./calibrate";
 import {
   connect,
@@ -14,7 +15,7 @@ import {
   CALIBRATE_TEXT,
   calibrateHtml,
   lookOf,
-  permissionHelpHtml,
+  errorHtml,
   racingHtml,
   readyHtml,
   startHtml,
@@ -62,8 +63,24 @@ function showStart() {
 }
 
 function showPermissionHelp() {
-  const screen = show(permissionHelpHtml());
-  screen.querySelector("button")!.addEventListener("click", showStart);
+  showError("permission");
+}
+
+// ---------------------------------------------------------------- errors
+
+/** An error screen. Its one button retries: back to start, copy the link, or reload. */
+function showError(kind: ErrorKind, room?: string, code?: number) {
+  const screen = show(errorHtml(kind, room, code));
+  const button = screen.querySelector("button")!;
+  button.addEventListener("click", async () => {
+    if (kind === "permission") return showStart();
+    if (kind === "unsupported") {
+      await navigator.clipboard?.writeText(location.href).catch(() => {});
+      button.textContent = "Copied";
+      return;
+    }
+    location.reload();
+  });
 }
 
 // ---------------------------------------------------------------- calibrate
@@ -118,7 +135,7 @@ const STATUS_TEXT = (s: ConnectionStatus) => {
         ? `In race ${s.room}. Watch the big screen!`
         : `Paired with your laptop in race ${s.room}.`;
     case "error":
-      return s.message;
+      return ERROR_COPY[s.kind].title;
   }
 };
 
@@ -134,6 +151,7 @@ function showReady() {
 
 /** Connection changes: refresh the ready screen's text and the player's look */
 function onStatus(s: ConnectionStatus) {
+  if (s.state === "error") return showError(s.kind, s.room, s.code);
   const screen = app.querySelector<HTMLElement>(".screen.ready");
   if (!screen) return;
   const look = lookOf(myPlayer());
@@ -163,7 +181,9 @@ function showRacing() {
 
 lockDownGestures();
 keepUpright(app);
-showStart();
+// no motion API at all (an in-app browser, or a desktop): say so before asking for anything
+if (typeof DeviceMotionEvent === "undefined") showError("unsupported");
+else showStart();
 if (debugEnabled) {
   mountDebugOverlay();
   void loadEruda();

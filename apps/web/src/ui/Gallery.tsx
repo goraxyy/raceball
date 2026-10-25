@@ -1,7 +1,8 @@
 // Dev-only preview of every lobby component with fake data. Open /ui while `pnpm dev` runs.
 import { useEffect, useState } from "react";
-import { MAX_PLAYERS, PLANETS } from "@raceball/shared";
+import { MAX_PLAYERS, PLANETS, type ErrorKind } from "@raceball/shared";
 import {
+  ErrorScreen,
   HostLobby,
   TitleScreen,
   LoadingScreen,
@@ -82,7 +83,18 @@ const VIEWS = [
   "brag",
   "music",
   "sound",
+  "errors",
 ] as const;
+const ERROR_KINDS: ErrorKind[] = [
+  "notFound",
+  "full",
+  "version",
+  "unsupported",
+  "pairExpired",
+  "alreadyPaired",
+  "disconnected",
+  "lost",
+];
 type View = (typeof VIEWS)[number];
 
 export default function Gallery() {
@@ -90,6 +102,7 @@ export default function Gallery() {
   const [players, setPlayers] = useState(FAKE);
   const [laps, setLaps] = useState(3);
   const [progress, setProgress] = useState(0.35);
+  const [errorKind, setErrorKind] = useState<ErrorKind>("notFound");
 
   useEffect(() => {
     if (view !== "loading") return;
@@ -190,6 +203,38 @@ export default function Gallery() {
       {view === "brag" && <BragPreview />}
       {view === "music" && <MusicPreview />}
       {view === "sound" && <SoundPreview />}
+      {view === "errors" && (
+        <ErrorScreen
+          key={errorKind}
+          kind={errorKind}
+          room={errorKind === "lost" ? undefined : "ABCD"}
+          code={
+            {
+              notFound: 522,
+              full: 4004,
+              version: 4001,
+              pairExpired: 4005,
+              alreadyPaired: 4006,
+              disconnected: 1006,
+            }[errorKind as string]
+          }
+          onAction={() => alert(`Action for ${errorKind}`)}
+        />
+      )}
+      {view === "errors" && (
+        <div className="hud-controls">
+          {ERROR_KINDS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className={k === errorKind ? "is-on" : ""}
+              onClick={() => setErrorKind(k)}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+      )}
       {view === "loading" && (
         <LoadingScreen progress={progress} label="Loading Happy Valley" />
       )}

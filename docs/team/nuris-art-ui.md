@@ -169,6 +169,11 @@ Built:
 - **Brag card:** `BragCard` (props `row` (a `ResultRow`), `total`, `laps`, optional `topSpeed` in km/h and `date`) is one player's race as a phone-sized card: place, planet, time, best lap, top speed, bumps and their brag title. The winner's card is flag yellow. Show each laptop player their own card after the results. It's sized for a phone screenshot; a pad version can follow the same layout.
 - **Rerun after a change:** `pip install fonttools brotli`, then `python3 tools/brand/gen_brand.py && node tools/brand/render_icons.mjs`.
 
+### Error screens (with Rasim)
+Each error is a trackside road sign on a post, so even a failure looks like part of race day. Room not found is a yellow "?" diamond, the full grid is a board with all 8 player colors lit, an update is a blue refresh disc, motion off is a prohibition sign over a phone, the dropped connection is a struck-out Wi-Fi diamond, and a wrong address is a green U-turn board. Each one has a code plate (room + code, for whoever's debugging), a plain headline and one button that fixes it. The sign drops in on its post and wobbles to a stop.
+
+One source for both apps: `packages/shared/src/errors.ts` (copy, signs, `errorKindFor`) and `.error-screen` in `theme.css`. The laptop uses `<ErrorScreen>`, and the pad uses `errorHtml`. It sits side by side when there's room and stacks on a phone held upright. Preview: `/ui` > errors and the pad's `screens.html`. Wiring `/host` and `/play` is Rasim's ([Rasim's guide](rasim-platform.md#m3-hardening)).
+
 ---
 
 ## Before you commit an asset

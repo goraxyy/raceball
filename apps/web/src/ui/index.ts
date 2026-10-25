@@ -7,6 +7,8 @@ export { Captions } from "./Captions";
 export type { CaptionsProps } from "./Captions";
 export { Countdown } from "./Countdown";
 export type { CountdownProps } from "./Countdown";
+export { ErrorScreen } from "./ErrorScreen";
+export type { ErrorScreenProps } from "./ErrorScreen";
 export { FollowTile } from "./FollowTile";
 export type { FollowTileProps } from "./FollowTile";
 export { Standings } from "./Standings";

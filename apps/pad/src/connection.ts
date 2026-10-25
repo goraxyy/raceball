@@ -1,10 +1,14 @@
 import { Client, type Room } from "@colyseus/sdk";
+import { startInputLoop } from "./input-loop";
 import {
+  Clock,
   JoinError,
   PROTOCOL_VERSION,
   SERVER_PORT,
   readPadParams,
   type JoinOptions,
+  type NetStatMsg,
+  type PongMsg,
   type WelcomeMsg,
 } from "@raceball/shared";
 
@@ -16,6 +20,13 @@ export type ConnectionStatus =
 
 export let status: ConnectionStatus = { state: "offline" };
 export let room: Room | undefined;
+
+/** Round trip and server clock, from pings */
+export const clock = new Clock();
+/** How old our latest input was at the server, ms (from the server's netstat) */
+export let inputAge: number | undefined;
+
+const PING_MS = 1000;
 
 const ERRORS: Record<number, string> = {
   [JoinError.VersionMismatch]: "RaceBall was updated. Refresh this page.",
@@ -64,5 +75,16 @@ export async function connect(onChange: (s: ConnectionStatus) => void) {
       message: `Disconnected (${closeCode}). Scan the QR code again.`,
     }),
   );
+  room.onMessage("pong", (msg: PongMsg) =>
+    clock.onPong(msg, performance.now()),
+  );
+  room.onMessage("netstat", (msg: NetStatMsg) => (inputAge = msg.inputAge));
+  const joined = room;
+  const ping = () => joined.send("ping", performance.now());
+  ping();
+  const pinger = setInterval(ping, PING_MS);
+  room.onLeave(() => clearInterval(pinger));
+
   room.send("hello"); // handlers are registered, so ask which player we are
+  startInputLoop(room);
 }

@@ -29,6 +29,8 @@ export class SnapshotBuffer {
   interval = 1000 / 30;
   /** Average snapshot arrival jitter, ms */
   jitter = 0;
+  /** Snapshots accepted so far */
+  received = 0;
   private snaps: SnapMsg[] = [];
   private lastArrival?: number;
   private shownOwn?: BallPose;
@@ -56,6 +58,7 @@ export class SnapshotBuffer {
     }
     this.lastArrival = arrivedAt;
     this.snaps.push(snap);
+    this.received++;
     if (this.snaps.length > MAX_SNAPS) this.snaps.shift();
   }
 

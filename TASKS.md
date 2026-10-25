@@ -124,7 +124,7 @@ Nothing right now. Add new questions here.
 - [ ] Pad 2-step calibration (+ Flip button); hold-to-gas on the right half, brake on the left; input sent at 60 Hz and on change
 - [ ] Rotation fix v1: Android lock; iPhone Portrait Lock onboarding + self-rotated UI; counter-rotation fallback
 - [x] Wake Lock; block zoom, scroll and selection
-- [ ] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
+- [x] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 
 **Nuris**
 - [ ] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen`

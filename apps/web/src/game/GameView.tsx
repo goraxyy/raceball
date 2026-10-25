@@ -4,10 +4,20 @@ import { PLANETS } from "@raceball/shared";
 import "@babylonjs/loaders/glTF";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
 import { installInspectorToggle } from "./inspector";
+import type { SnapshotSource } from "./net-feed";
 import "./local.css";
 
-/** Owns the Babylon engine for one canvas. React UI (HUD, lobby) sits on top of it as DOM. */
-export function GameView({ mode }: { mode: GameMode }) {
+/**
+ * Owns the Babylon engine for one canvas. React UI (HUD, lobby) sits on top of it as DOM.
+ * Viewer and host modes draw the balls of `session`, a room from Rasim's net library.
+ */
+export function GameView({
+  mode,
+  session,
+}: {
+  mode: GameMode;
+  session?: SnapshotSource;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [status, setStatus] = useState<GameStatus | null>(null);
@@ -23,7 +33,10 @@ export function GameView({ mode }: { mode: GameMode }) {
     const game = createGame(scene, mode, {
       map: params.get("map") === "flat" ? "flat" : "happy_valley",
       ball: (PLANETS as readonly string[]).includes(ball) ? ball : undefined,
-      overview: params.get("view") === "overview",
+      overview: params.has("view")
+        ? params.get("view") === "overview"
+        : undefined,
+      session,
       onStatus: (next) => {
         if (active) setStatus(next);
       },
@@ -45,7 +58,7 @@ export function GameView({ mode }: { mode: GameMode }) {
       scene.dispose();
       engine.dispose();
     };
-  }, [mode]);
+  }, [mode, session]);
 
   // fixed to the viewport, so page styles (body padding) never shrink the 3D view
   return (
@@ -63,6 +76,17 @@ export function GameView({ mode }: { mode: GameMode }) {
           outline: "none",
         }}
       />
+      {mode !== "local" && status && status.state !== "ready" && (
+        <p
+          className="game-status"
+          role={status.state === "error" ? "alert" : "status"}
+          data-state={status.state}
+        >
+          {status.state === "error"
+            ? `The map could not load: ${status.message}. Reload to retry.`
+            : status.message}
+        </p>
+      )}
       {mode === "local" && status && (
         <>
           <aside className="local-hud" aria-label="Local playtest">

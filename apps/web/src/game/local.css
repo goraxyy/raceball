@@ -147,3 +147,23 @@
     font-size: 11px;
   }
 }
+
+/* viewer and host: loading and error line until the map is in */
+.game-status {
+  position: fixed;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 14px 22px;
+  border-radius: 12px;
+  background: #10233deb;
+  color: #f2f6ff;
+  font:
+    600 14px/1.5 system-ui,
+    sans-serif;
+  text-align: center;
+}

@@ -1,11 +1,12 @@
 import { lazy, Suspense } from "react";
 import { GameView } from "./game/GameView";
+import { HostScreen, PlayerScreen } from "./game/Online";
 import { TitleScreen } from "./ui";
 
 // Dev-only preview of the lobby UI with fake data (Nuris)
 const Gallery = lazy(() => import("./ui/Gallery"));
 
-// / is the title screen. /play?local=1 runs game-core in the browser (Ali).
+// / is the title screen. /play?local=1 runs game-core in the browser (Ali); /play and /host join a server room.
 export default function App() {
   if (import.meta.env.DEV && location.pathname === "/ui") {
     return (
@@ -18,25 +19,9 @@ export default function App() {
   if (location.pathname === "/play" && params.get("local") === "1") {
     return <GameView mode="local" />;
   }
-  if (location.pathname === "/host" || location.pathname === "/play") {
-    // Rasim wires these to HostLobby / ViewerJoin with the net hooks (M2)
-    return (
-      <main>
-        <h1>RaceBall</h1>
-        <p>
-          {location.pathname} isn't wired up yet.{" "}
-          <a href="/play?local=1">Practice solo</a> (drive with W A S D)
-          {import.meta.env.DEV && (
-            <>
-              {" "}
-              or preview the UI at <a href="/ui">/ui</a>
-            </>
-          )}
-          .
-        </p>
-      </main>
-    );
-  }
+  // M1 vertical slice; Rasim's M2 lobby flow (HostLobby, ready, start) replaces these screens
+  if (location.pathname === "/play") return <PlayerScreen />;
+  if (location.pathname === "/host") return <HostScreen />;
   return (
     <TitleScreen
       hostHref="/host"

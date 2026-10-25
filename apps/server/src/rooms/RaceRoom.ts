@@ -1,17 +1,24 @@
 import { randomBytes } from "node:crypto";
 import { NodeIO } from "@gltf-transform/core";
 import { TICK_DT, createRace, type Race } from "@raceball/game-core";
-import { Room, ServerError, type Client } from "colyseus";
+import { Room, ServerError, type Client, type Delayed } from "colyseus";
 import {
+  COUNTDOWN_MS,
   JoinError,
   MAX_PLAYERS,
+  RESULTS_MS,
+  canStart,
   PLANETS,
   PROTOCOL_VERSION,
   type InputMsg,
   type JoinOptions,
   type NetStatMsg,
   type PongMsg,
+  type RaceStateView,
+  type RemoveBotMsg,
   type Role,
+  type StartMsg,
+  type StatusMsg,
   type WelcomeMsg,
 } from "@raceball/shared";
 import { claimRoomCode, releaseRoomCode } from "./room-code";
@@ -31,6 +38,8 @@ const TICK_MS = TICK_DT * 1000;
 const SNAP_EVERY = 1;
 /** After a stall (GC, slow host), catch up at most this many steps instead of spiralling */
 const MAX_CATCH_UP = 5;
+/** Race lengths the host may pick */
+const LAP_CHOICES = [1, 3];
 
 interface Seat {
   role: Role;
@@ -56,15 +65,18 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   /** Time not yet simulated, ms */
   private acc = 0;
   private tickCount = 0;
+  private nextBot = 1;
+  /** True while rematch builds a fresh race; the loop waits */
+  private rebuilding = false;
+  /** Sends the room back to the lobby a while after the results */
+  private resultsTimer?: Delayed;
 
   async onCreate() {
     this.roomId = await claimRoomCode(this.presence);
     this.race = await createRace(await trackBytes(), new NodeIO(), {
       laps: this.state.laps,
     });
-    // M1 vertical slice: drive freely from the start. The M2 lobby flow starts it from the host instead
-    this.race.start(0, this.state.laps);
-    this.state.phase = this.race.phase;
+    this.state.phase = this.race.phase; // lobby: balls wait on the grid until the host starts
     this.onMessage("hello", (client) => {
       const seat = this.seats.get(client.sessionId);
       if (!seat?.playerId) return;
@@ -82,6 +94,23 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       const last = this.padInputs.get(seat.playerId);
       if (last && msg.seq <= last.msg.seq) return; // latest wins
       this.padInputs.set(seat.playerId, { msg, at: Date.now() });
+    });
+    this.onMessage("status", (client, msg: StatusMsg) =>
+      this.setStatus(client, msg),
+    );
+    this.onMessage("start", (client, msg: StartMsg) => {
+      if (this.isHost(client)) this.startRace(msg?.laps);
+    });
+    this.onMessage("addBot", (client) => {
+      if (this.isHost(client)) this.addBot();
+    });
+    this.onMessage("removeBot", (client, msg: RemoveBotMsg) => {
+      if (this.isHost(client) && this.state.players.get(msg?.id)?.bot)
+        this.removePlayer(msg.id);
+    });
+    this.onMessage("rematch", (client) => {
+      if (this.isHost(client) && this.state.phase !== "lobby")
+        void this.rematch();
     });
     this.clock.setInterval(() => this.sendNetStats(), NETSTAT_MS);
     // Check twice per step: coarse OS timers (15.6 ms on Windows) would otherwise skip snapshots
@@ -169,12 +198,18 @@ export class RaceRoom extends Room<{ state: RaceState }> {
 
   /** Fixed 1/60 s steps however unevenly the timer fires, then one snapshot to the screens */
   private tick(elapsedMs: number) {
+    if (this.rebuilding) return;
     this.acc = Math.min(this.acc + elapsedMs, MAX_CATCH_UP * TICK_MS);
     let stepped = false;
     while (this.acc >= TICK_MS) {
       const now = Date.now();
-      this.state.players.forEach((_, id) => {
-        this.race.setInput(id, inputForStep(this.padInputs.get(id), now));
+      this.state.players.forEach((p, id) => {
+        this.race.setInput(
+          id,
+          p.bot
+            ? this.race.botInput(id)
+            : inputForStep(this.padInputs.get(id), now),
+        );
       });
       this.race.step(TICK_DT);
       this.acc -= TICK_MS;
@@ -182,6 +217,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       stepped = true;
     }
     if (!stepped) return;
+    this.syncPhase();
     const events = this.race.drainEvents();
     // Screens get every event for VFX; routing them to the right pads comes in M2
     for (const evt of events) this.sendToScreens("evt", evt);
@@ -190,6 +226,85 @@ export class RaceRoom extends Room<{ state: RaceState }> {
         "snap",
         this.race.snapshot(this.tickCount, Date.now()),
       );
+    }
+  }
+
+  /** Copy game-core's phase into the synced state, and act on the changes */
+  private syncPhase() {
+    const prev = this.state.phase;
+    const phase = this.race.phase;
+    if (phase === prev) return;
+    this.state.phase = phase;
+    if (phase === "racing") this.state.countdownEndsAt = 0;
+    if (phase === "results") {
+      this.resultsTimer?.clear();
+      this.resultsTimer = this.clock.setTimeout(
+        () => void this.rematch(),
+        RESULTS_MS,
+      );
+    }
+  }
+
+  private isHost(client: Client) {
+    return client.sessionId === this.hostSessionId;
+  }
+
+  /** Lobby → countdown, once every player is ready (the same rule as the host's Start button) */
+  private startRace(laps: unknown) {
+    if (!LAP_CHOICES.includes(laps as number)) return;
+    if (!canStart(this.state.toJSON() as RaceStateView)) return;
+    this.state.laps = laps as number;
+    this.race.start(COUNTDOWN_MS, this.state.laps);
+    this.state.countdownEndsAt = Date.now() + COUNTDOWN_MS;
+    this.state.phase = this.race.phase;
+  }
+
+  /** A pad reports calibrated/ready; a laptop reports assetsLoaded/ready. Only for their own player */
+  private setStatus(client: Client, msg: StatusMsg) {
+    const seat = this.seats.get(client.sessionId);
+    const player = seat?.playerId && this.state.players.get(seat.playerId);
+    if (!seat || !player || typeof msg !== "object" || !msg) return;
+    if (seat.role === "pad" && typeof msg.calibrated === "boolean")
+      player.calibrated = msg.calibrated;
+    if (seat.role === "viewer" && typeof msg.assetsLoaded === "boolean")
+      player.assetsLoaded = msg.assetsLoaded;
+    if (typeof msg.ready === "boolean") player.ready = msg.ready;
+  }
+
+  /** A server-side bot that drives with game-core's botInput. Always ready */
+  private addBot() {
+    if (this.state.phase !== "lobby") return;
+    if (this.state.players.size >= MAX_PLAYERS) return;
+    const n = this.nextBot++;
+    const id = this.createPlayer(`b${n}`, `Bot ${n}`, "", false);
+    const bot = this.state.players.get(id)!;
+    bot.bot = true;
+    bot.paired = bot.calibrated = bot.assetsLoaded = bot.ready = true;
+  }
+
+  /** Back to the lobby with the same players on a fresh race. Everyone taps Ready again */
+  private async rematch() {
+    if (this.rebuilding) return;
+    this.rebuilding = true;
+    this.resultsTimer?.clear();
+    this.resultsTimer = undefined;
+    try {
+      const race = await createRace(await trackBytes(), new NodeIO(), {
+        laps: this.state.laps,
+      });
+      this.race.dispose();
+      this.race = race;
+      this.state.players.forEach((p, id) => {
+        race.addPlayer(id, p.ball || PLANETS[p.color]);
+        p.ready = p.bot;
+        p.lap = p.checkpoint = p.place = p.finishedAt = 0;
+      });
+      this.padInputs.clear();
+      this.acc = 0;
+      this.state.countdownEndsAt = 0;
+      this.state.phase = race.phase;
+    } finally {
+      this.rebuilding = false;
     }
   }
 
@@ -202,12 +317,24 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   }
 
   private addPlayer(opts: JoinOptions, phoneOnly: boolean): string {
-    const playerId = `p${this.nextPlayer++}`;
+    return this.createPlayer(
+      `p${this.nextPlayer++}`,
+      opts.name ?? "",
+      opts.ball ?? "",
+      phoneOnly,
+    );
+  }
+
+  private createPlayer(
+    playerId: string,
+    name: string,
+    ball: string,
+    phoneOnly: boolean,
+  ): string {
     const slot = this.freeSlot();
     const player = new PlayerState();
-    player.name =
-      (opts.name ?? "").trim().slice(0, MAX_NAME) || `Player ${slot + 1}`;
-    player.ball = opts.ball ?? "";
+    player.name = name.trim().slice(0, MAX_NAME) || `Player ${slot + 1}`;
+    player.ball = ball;
     player.color = slot;
     player.shape = slot;
     player.phoneOnly = phoneOnly;

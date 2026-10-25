@@ -1,6 +1,6 @@
 // Protocol v1: the contract between game-core, server, screens and pads.
 // To change it: bump PROTOCOL_VERSION and update docs/ARCHITECTURE.md (see docs/WORKFLOW.md).
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -99,4 +99,28 @@ export interface PongMsg {
 export interface NetStatMsg {
   /** How old this player's latest input is at the server, ms. 200+ means it's treated as neutral */
   inputAge: number;
+}
+
+/** Race lengths the host can pick: 1 for the demo, 3 by default */
+export type Laps = 1 | 3;
+
+/** host → server: "start". Allowed in the lobby once every player is readyToRace() */
+export interface StartMsg {
+  laps: Laps;
+}
+
+/** host → server: "removeBot". ("addBot" and "rematch" have no payload) */
+export interface RemoveBotMsg {
+  id: string;
+}
+
+/**
+ * pad or laptop → server: "status", for its own player. Send only what changed.
+ * calibrated: the pad finished calibrating. assetsLoaded: the laptop finished preloading.
+ * ready: the player tapped Ready (pad or laptop).
+ */
+export interface StatusMsg {
+  calibrated?: boolean;
+  assetsLoaded?: boolean;
+  ready?: boolean;
 }

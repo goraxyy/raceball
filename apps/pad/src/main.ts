@@ -5,9 +5,12 @@ import {
   connect,
   laps,
   myPlayer,
+  phase,
+  sendStatus,
   status,
   type ConnectionStatus,
 } from "./connection";
+import type { Phase } from "@raceball/shared";
 import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
 import { lockDownGestures } from "./lockdown";
 import { flip, keepUpright } from "./orientation";
@@ -38,11 +41,16 @@ function show(html: string): HTMLElement {
 
 /** Run `fn` every frame until the screen changes */
 function everyFrame(fn: () => void) {
+  let stopped = false;
   let id = requestAnimationFrame(function tick() {
     fn();
-    id = requestAnimationFrame(tick);
+    // fn may have shown the next screen (which stopped us): don't schedule another frame
+    if (!stopped) id = requestAnimationFrame(tick);
   });
-  stopScreen = () => cancelAnimationFrame(id);
+  stopScreen = () => {
+    stopped = true;
+    cancelAnimationFrame(id);
+  };
 }
 
 // ---------------------------------------------------------------- start
@@ -51,10 +59,11 @@ function showStart() {
   const screen = show(startHtml());
   screen.querySelector("button")!.addEventListener("click", async () => {
     if (!(await startFromTap())) return showPermissionHelp();
-    void connect(onStatus);
+    void connect(onStatus, onPhase);
     const saved = loadCalibration();
     if (saved) {
       steering.calib = saved;
+      sendStatus({ calibrated: true });
       showReady();
     } else {
       showCalibrate();
@@ -87,6 +96,7 @@ function showError(kind: ErrorKind, room?: string, code?: number) {
 
 function showCalibrate() {
   steering.calib = null;
+  sendStatus({ calibrated: false, ready: false });
   const screen = show(calibrateHtml());
   const [step1, step2] = screen.querySelectorAll<HTMLElement>(".step");
   const title = screen.querySelector("h1")!;
@@ -104,6 +114,7 @@ function showCalibrate() {
     if (done) {
       steering.calib = done;
       saveCalibration(done);
+      sendStatus({ calibrated: true });
       return showReady();
     }
     if (screen.dataset.step !== String(cal.step)) {
@@ -139,14 +150,35 @@ const STATUS_TEXT = (s: ConnectionStatus) => {
   }
 };
 
+/** Tapped Ready, waiting for the host to start */
+let waitingForStart = false;
+
 function showReady() {
+  waitingForStart = false;
   const screen = show(readyHtml(lookOf(myPlayer())));
   const [readyBtn, recalibrateBtn] =
     screen.querySelectorAll<HTMLButtonElement>("button");
-  // Ready is sent to the server with the lobby flow (M2); for now it goes straight to racing
-  readyBtn.addEventListener("click", showRacing);
+  readyBtn.addEventListener("click", () => {
+    // No race (sensor testing): drive straight away
+    if (status.state !== "joined") return showRacing();
+    sendStatus({ ready: true });
+    waitingForStart = true;
+    readyBtn.classList.add("is-ready");
+    readyBtn.textContent = "Ready!";
+    onStatus(status);
+    const p = phase();
+    if (p === "countdown" || p === "racing") showRacing(); // joined mid-race
+  });
   recalibrateBtn.addEventListener("click", showCalibrate);
   onStatus(status);
+}
+
+/** The room moved on: race when it starts, back to Ready after a rematch */
+function onPhase(p: Phase) {
+  const on = (cls: string) => !!app.querySelector(`.screen.${cls}`);
+  if ((p === "countdown" || p === "racing") && on("ready") && waitingForStart)
+    showRacing();
+  if (p === "lobby" && on("racing")) showReady();
 }
 
 /** Connection changes: refresh the ready screen's text and the player's look */
@@ -158,7 +190,10 @@ function onStatus(s: ConnectionStatus) {
   screen.style.setProperty("--player", look.color);
   screen.querySelector(".player-name")!.textContent = look.name;
   screen.querySelector(".ball")!.setAttribute("data-planet", look.planet);
-  screen.querySelector(".ready-status")!.textContent = STATUS_TEXT(s);
+  screen.querySelector(".ready-status")!.textContent =
+    waitingForStart && s.state === "joined"
+      ? "Waiting for the host to start"
+      : STATUS_TEXT(s);
 }
 
 // ---------------------------------------------------------------- racing

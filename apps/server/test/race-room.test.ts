@@ -1,5 +1,6 @@
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import {
+  COUNTDOWN_MS,
   JoinError,
   MAX_PLAYERS,
   PROTOCOL_VERSION,
@@ -285,17 +286,24 @@ describe("simulation loop", () => {
     expect(ticks).toEqual([...ticks].sort((a, b) => a - b));
   });
 
-  test("the race runs (M1 free drive) and the phase is synced", () => {
-    expect(room.state.phase).toBe("racing");
+  test("rooms start in the lobby", () => {
+    expect(room.state.phase).toBe("lobby");
   });
 
   test("a pad holding gas drives its ball; an idle ball stays put", async () => {
     const host = await join({ role: "host" });
     const driver = await join({ role: "viewer", name: "Driver" });
     const { playerId: driverId, pairToken } = await welcome(driver);
-    const idle = await join({ role: "viewer", name: "Idle" });
+    const idle = await join({ role: "pad", name: "Idle" }); // phone-only, never touches gas
     const { playerId: idleId } = await welcome(idle);
     const pad = await join({ role: "pad", pairToken });
+    driver.send("status", { assetsLoaded: true });
+    for (const c of [pad, idle])
+      c.send("status", { calibrated: true, ready: true });
+    await sleep(100);
+    host.send("start", { laps: 1 });
+    await sleep(COUNTDOWN_MS + 200);
+    expect(room.state.phase).toBe("racing");
     const snaps = collect(host);
     await sleep(300); // settle on the grid
     const start = snaps.at(-1)!;
@@ -335,5 +343,123 @@ describe("simulation loop", () => {
     await laptop.leave();
     await sleep(100);
     expect(snaps.at(-1)!.balls.map((b) => b.id)).not.toContain(playerId);
+  });
+});
+
+describe("host controls", () => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  /** A laptop + paired phone, fully ready to race */
+  const readyLaptopPlayer = async () => {
+    const laptop = await join({ role: "viewer" });
+    const { playerId, pairToken } = await welcome(laptop);
+    const pad = await join({ role: "pad", pairToken });
+    laptop.send("status", { assetsLoaded: true });
+    pad.send("status", { calibrated: true, ready: true });
+    await sleep(50);
+    return { laptop, pad, playerId };
+  };
+
+  test("only the host can start, and only when everyone is ready", async () => {
+    const host = await join({ role: "host" });
+    const { laptop, pad } = await readyLaptopPlayer();
+    const notReady = await join({ role: "pad", name: "Late" }); // phone-only, not calibrated
+    laptop.send("start", { laps: 1 });
+    pad.send("start", { laps: 1 });
+    host.send("start", { laps: 1 });
+    await sleep(100);
+    expect(room.state.phase).toBe("lobby");
+
+    notReady.send("status", { calibrated: true, ready: true });
+    await sleep(50);
+    host.send("start", { laps: 1 });
+    await sleep(100);
+    expect(room.state.phase).toBe("countdown");
+    expect(room.state.laps).toBe(1);
+    expect(room.state.countdownEndsAt).toBeGreaterThan(Date.now());
+  });
+
+  test("laps must be 1 or 3", async () => {
+    const host = await join({ role: "host" });
+    await readyLaptopPlayer();
+    host.send("start", { laps: 7 });
+    await sleep(100);
+    expect(room.state.phase).toBe("lobby");
+  });
+
+  test("countdown turns into racing after 3 s", async () => {
+    const host = await join({ role: "host" });
+    await readyLaptopPlayer();
+    host.send("start", { laps: 3 });
+    await sleep(COUNTDOWN_MS + 300);
+    expect(room.state.phase).toBe("racing");
+    expect(room.state.countdownEndsAt).toBe(0);
+  });
+
+  test("a status message only sets the sender's own kind of flag", async () => {
+    const laptop = await join({ role: "viewer" });
+    const { playerId, pairToken } = await welcome(laptop);
+    const pad = await join({ role: "pad", pairToken });
+    laptop.send("status", { calibrated: true }); // laptops can't calibrate
+    pad.send("status", { assetsLoaded: true }); // pads don't load the 3D assets
+    await sleep(100);
+    const p = room.state.players.get(playerId)!;
+    expect(p.calibrated).toBe(false);
+    expect(p.assetsLoaded).toBe(false);
+  });
+
+  test("bots: host adds them in the lobby, they're always ready, only bots can be removed", async () => {
+    const host = await join({ role: "host" });
+    const { laptop, playerId } = await readyLaptopPlayer();
+    laptop.send("addBot"); // not the host
+    host.send("addBot");
+    host.send("addBot");
+    await sleep(100);
+    const bots = [...room.state.players.entries()].filter(([, p]) => p.bot);
+    expect(bots).toHaveLength(2);
+    expect(bots.every(([, p]) => p.ready && p.name.startsWith("Bot"))).toBe(
+      true,
+    );
+
+    host.send("removeBot", { id: playerId }); // a human: ignored
+    host.send("removeBot", { id: bots[0][0] });
+    await sleep(100);
+    expect(room.state.players.has(playerId)).toBe(true);
+    expect(room.state.players.has(bots[0][0])).toBe(false);
+  });
+
+  test("bots drive once the race starts", async () => {
+    const host = await join({ role: "host" });
+    host.send("addBot");
+    await sleep(100);
+    const [botId] = [...room.state.players.keys()];
+    const snaps: { balls: { id: string; p: number[] }[] }[] = [];
+    host.onMessage("snap", (s) => snaps.push(s));
+    host.send("start", { laps: 1 });
+    await sleep(COUNTDOWN_MS + 200);
+    const a = snaps.at(-1)!.balls.find((b) => b.id === botId)!.p;
+    await sleep(1000);
+    const b = snaps.at(-1)!.balls.find((b) => b.id === botId)!.p;
+    expect(Math.hypot(b[0] - a[0], b[2] - a[2])).toBeGreaterThan(1);
+  });
+
+  test("rematch goes back to the lobby; humans tap Ready again, bots stay ready", async () => {
+    const host = await join({ role: "host" });
+    const { playerId } = await readyLaptopPlayer();
+    host.send("addBot");
+    await sleep(50);
+    host.send("rematch"); // nothing to rematch in the lobby
+    host.send("start", { laps: 1 });
+    await sleep(200);
+    expect(room.state.phase).toBe("countdown");
+
+    host.send("rematch");
+    await sleep(500);
+    expect(room.state.phase).toBe("lobby");
+    const players = [...room.state.players.values()];
+    expect(players).toHaveLength(2);
+    expect(room.state.players.get(playerId)!.ready).toBe(false);
+    expect(players.find((p) => p.bot)!.ready).toBe(true);
+    expect(room.state.players.get(playerId)!.calibrated).toBe(true); // no need to recalibrate
   });
 });

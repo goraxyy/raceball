@@ -123,7 +123,7 @@ Nothing right now. Add new questions here.
 
 **Rasim**
 - [x] `RaceRoom`: roles host/viewer/pad, short room code, join/leave, `PROTOCOL_VERSION` check
-- [ ] 60 Hz simulation loop calling `game-core`; `snap` sent to host + viewers (30 Hz first, then 60 Hz)
+- [x] 60 Hz simulation loop calling `game-core`; `snap` sent to host + viewers (30 Hz first, then 60 Hz)
 - [x] Pairing: viewer gets a `pairToken`, its QR opens the pad with the token, and the pad is bound to that player
 - [x] `apps/web/src/net`: client, clock sync, snapshot buffer, interpolation, own-ball extrapolation, `useRaceState` / `usePairing` hooks
 - [x] Pad steering: device-frame gravity, One Euro filter, dead zone + curve, `steer` from -1 to 1

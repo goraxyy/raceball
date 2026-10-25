@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { Document, NodeIO, type Buffer, type Node } from "@gltf-transform/core";
 import { afterEach, describe, expect, it } from "vitest";
-import { NEUTRAL_INPUT, TICK_DT, type Race } from "./index";
+import type { InputMsg } from "@raceball/shared";
+import { NEUTRAL_INPUT, TICK_DT, tuning, type Race } from "./index";
 import { createWorld, initPhysics } from "./physics";
 import { createRace } from "./race";
 import { checkTrack, loadTrack, type TrackData } from "./track";
@@ -43,6 +44,23 @@ function boxMesh(doc: Document, buffer: Buffer, h: number) {
   return mesh(doc, buffer, pos, [0, 1, 2, 1, 3, 2, 4, 6, 5, 5, 6, 7]);
 }
 
+/** A closed box with outward-facing triangles, for solid walls. */
+function solidBox(doc: Document, buffer: Buffer, [hx, hy, hz]: number[]) {
+  const pos: number[] = [];
+  for (const x of [-hx, hx])
+    for (const y of [-hy, hy]) for (const z of [-hz, hz]) pos.push(x, y, z);
+  // vertex i = x * 4 + y * 2 + z; two triangles per face, counter-clockwise from outside
+  return mesh(
+    doc,
+    buffer,
+    pos,
+    [
+      0, 1, 3, 0, 3, 2, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 2, 3, 7, 2, 7, 6, 0,
+      2, 6, 0, 6, 4, 1, 5, 7, 1, 7, 3,
+    ],
+  );
+}
+
 function mesh(doc: Document, buffer: Buffer, pos: number[], idx: number[]) {
   const position = doc
     .createAccessor()
@@ -66,10 +84,14 @@ function mesh(doc: Document, buffer: Buffer, pos: number[], idx: number[]) {
 
 /**
  * A small raceable track, built like the Blender export: a scaled ground under a moved parent,
- * and markers under their own moved parent, listed out of order.
+ * and markers under their own moved parent, listed out of order. The grid faces +X, and gates
+ * 0..3 stand across the road at x = 0, 8, 16, 24, each with a respawn 2 m after it. The ground
+ * ends at x = ±40.
+ * - wall: a solid wall across the road at x = 12, between gates 1 and 2
+ * - swapGates: gates 1 and 2 trade places, so a ball crosses them out of order
  */
 async function syntheticTrack(
-  opts: { spawns?: boolean } = {},
+  opts: { spawns?: boolean; wall?: boolean; swapGates?: boolean } = {},
 ): Promise<Uint8Array> {
   const doc = new Document();
   const buffer = doc.createBuffer();
@@ -82,6 +104,13 @@ async function syntheticTrack(
       .setScale([2, 1, 2])
       .setMesh(groundMesh(doc, buffer, 20)),
   );
+  if (opts.wall)
+    collision.addChild(
+      doc
+        .createNode("wall_col")
+        .setTranslation([12, 1, 0])
+        .setMesh(solidBox(doc, buffer, [0.5, 2, 6])),
+    );
   const markers = doc.createNode("markers").setTranslation([0, -1, 0]);
   const add = (
     name: string,
@@ -101,13 +130,15 @@ async function syntheticTrack(
           .setRotation(FACE_PLUS_X),
       );
   for (const index of [2, 0, 3, 1]) {
+    const slot =
+      opts.swapGates && (index === 1 || index === 2) ? 3 - index : index;
     add(
       `cp_0${index}`,
       { rb: "checkpoint", index, section: `s${index}` },
       (n) =>
         n
-          .setTranslation([index * 8, 1, 0])
-          .setScale([0.5, 2, 3])
+          .setTranslation([slot * 8, 1, 0])
+          .setScale([3, 2, 0.5]) // 6 m across the road, 1 m thick
           .setRotation(FACE_PLUS_X),
     );
     add(`respawn_0${index}`, { rb: "respawn", checkpoint: index }, (n) =>
@@ -147,7 +178,7 @@ describe("loadTrack", () => {
     ]);
     const gate = world.getCollider(track.checkpoints[1].collider);
     expect(gate.isSensor()).toBe(true);
-    expect(gate.halfExtents()).toEqual({ x: 0.5, y: 2, z: 3 }); // the Empty's scale
+    expect(gate.halfExtents()).toEqual({ x: 3, y: 2, z: 0.5 }); // the Empty's scale
 
     expect(track.respawns).toHaveLength(4);
     expect(track.respawns.find((r) => r.checkpoint === 3)?.pos).toEqual([
@@ -204,6 +235,83 @@ describe("createRace on a loaded track", () => {
         laps: 1,
       }),
     ).rejects.toThrow("no spawn_* markers");
+  });
+});
+
+describe("respawn on a loaded track", () => {
+  let race: Race | undefined;
+  afterEach(() => {
+    race?.dispose();
+    race = undefined;
+  });
+
+  async function drive(opts: Parameters<typeof syntheticTrack>[0] = {}) {
+    race = await createRace(await syntheticTrack(opts), new NodeIO(), {
+      laps: 1,
+    });
+    race.addPlayer("me", "lion"); // slot 1, at (-3, -1, -1.5) facing +X
+    race.start(0, 1);
+    return race;
+  }
+
+  /** Steps until the first respawn (or the time limit) and returns when it happened and where to. */
+  function untilRespawn(r: Race, input: InputMsg, seconds = 15) {
+    for (let i = 1; i <= seconds / TICK_DT; i++) {
+      r.setInput("me", input);
+      r.step(TICK_DT);
+      if (r.drainEvents().some((e) => e.type === "respawn"))
+        return { t: i * TICK_DT, ball: r.snapshot(0, 0).balls[0] };
+    }
+    return null;
+  }
+
+  const GAS: InputMsg = { ...NEUTRAL_INPUT, gas: 1 };
+
+  it("returns a fallen ball to the respawn marker of the last gate it crossed", async () => {
+    const r = await drive();
+    const hit = untilRespawn(r, GAS); // gates 0..3, then off the end at x = 40
+    expect(hit).not.toBeNull();
+    expect(hit!.ball.p[0]).toBeCloseTo(26); // respawn_03 at (26, -1, 0)
+    expect(hit!.ball.p[1]).toBeCloseTo(-0.4); // ball radius + 0.1 above it
+    expect(hit!.ball.p[2]).toBeCloseTo(0);
+    expect(hit!.ball.h).toBeCloseTo(Math.PI / 2); // the marker's facing
+    expect(hit!.ball.v).toEqual([0, 0, 0]);
+  });
+
+  it("returns a ball that falls before the first gate to its grid slot", async () => {
+    const r = await drive();
+    // turn around on the spot (no gas), then drive off the back of the ground
+    for (let i = 0; i < Math.PI / tuning.turnRate / TICK_DT; i++) {
+      r.setInput("me", { ...NEUTRAL_INPUT, steer: 1 });
+      r.step(TICK_DT);
+    }
+    const hit = untilRespawn(r, GAS);
+    expect(hit!.ball.p).toEqual([
+      expect.closeTo(-3),
+      expect.closeTo(-0.4),
+      expect.closeTo(-1.5),
+    ]);
+    expect(hit!.ball.h).toBeCloseTo(Math.PI / 2);
+  });
+
+  it("counts gates only in order, so a skipped gate is not a respawn point", async () => {
+    const r = await drive({ swapGates: true }); // crosses gates 0, 2, 1, 3
+    const hit = untilRespawn(r, GAS);
+    expect(hit!.ball.p[0]).toBeCloseTo(10); // respawn_01: gate 2 and 3 were out of order
+  });
+
+  it("respawns a ball held against a wall after stuckSeconds of gas", async () => {
+    const r = await drive({ wall: true });
+    const hit = untilRespawn(r, GAS);
+    expect(hit!.ball.p[0]).toBeCloseTo(10); // respawn_01, the last gate before the wall
+    // about 1 s to reach the wall and stop bouncing off it, then stuckSeconds pinned against it
+    expect(hit!.t).toBeGreaterThan(tuning.stuckSeconds);
+    expect(hit!.t).toBeLessThan(tuning.stuckSeconds + 3);
+  });
+
+  it("never respawns a ball that isn't trying to drive", async () => {
+    const r = await drive({ wall: true });
+    expect(untilRespawn(r, NEUTRAL_INPUT, 10)).toBeNull();
   });
 });
 

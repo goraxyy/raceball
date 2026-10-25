@@ -9,7 +9,7 @@ You own **everything between the players' hands and the game state**: the monore
 | Protocol, the contract (everyone reviews changes) | `packages/shared` |
 | Connection, snapshot buffer, interpolation, React hooks | `apps/web/src/net` |
 | Phone controller logic (Nuris owns `style.css` and the visual markup) | `apps/pad` |
-| Vercel settings for web + pad (Ali imports the projects; Railway is Ali's) | `apps/web/vercel.json`, the settings you give Ali |
+| Vercel: the web + pad projects (in your account; Railway is Ali's) | `apps/web/vercel.json`, `apps/pad/vercel.json`, the Vercel dashboard |
 
 ## How your work connects to the others
 
@@ -104,11 +104,11 @@ Keep `experimentalDecorators: true` and `useDefineForClassFields: false` in the 
 
 ### 4. Deploying web and pad to Vercel
 
-**Ali** imports the projects, because Vercel's free plan has no team members and only the repo owner can grant access. **Rasim** gives him the settings:
+**You** own both projects, in your Vercel account, connected to the `raceball` GitHub org (Vercel's GitHub app is installed on the org). The live projects are `raceball` (the pad, https://raceball-delta.vercel.app) and `raceball-web` (https://raceball-web-delta.vercel.app). To recreate them:
 
-1. In Vercel, choose New Project > Import `goraxyy/raceball`.
+1. In Vercel, choose New Project > Import `raceball/raceball`.
 2. **Root Directory:** `apps/web`. Framework: Vite. Make sure "Include files outside the root directory in the build step" is enabled, because the app imports `packages/shared`.
-3. **Env:** `VITE_SERVER_URL = wss://raceball-server-production.up.railway.app`, and `VITE_PAD_URL = https://raceball-pad.vercel.app`.
+3. **Env:** `VITE_SERVER_URL = wss://raceball-server-production.up.railway.app`, and `VITE_PAD_URL = https://raceball-delta.vercel.app`.
 4. Repeat for the pad with Root Directory `apps/pad`. It only needs `VITE_SERVER_URL`.
 5. **SPA routing** for `/host` and `/play`: add `apps/web/vercel.json`:
 

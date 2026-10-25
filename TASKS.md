@@ -52,7 +52,7 @@
 - [x] **Race length:** 3 laps. **Demo races are 1 lap**, set with a lap selector in the host lobby
 - [x] **Feedback on phones:** sound + visuals only. **No vibration**, and no native iPhone app
 - [x] **Demo format:** table presentation with **2 laptops + 4 phones** ([docs/DEMO.md](docs/DEMO.md))
-- [x] **Accounts:** Ali owns Railway end to end (project, service settings, deploys, logs). Ali also imports the Vercel projects (he owns the repo), using the settings from Rasim
+- [x] **Accounts:** Ali owns Railway end to end (project, service settings, deploys, logs). Rasim owns Vercel (web + pad projects in his account, connected to the `raceball` GitHub org; moved there after Ali's account hit the free build limit)
 - [x] **Schedule:** none. Milestones in order
 
 ## Still open

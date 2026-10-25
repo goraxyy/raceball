@@ -17,6 +17,7 @@ const player = (over: Partial<PlayerView>): PlayerView => ({
   lap: 0,
   checkpoint: 0,
   place: 0,
+  progress: 0,
   finishedAt: 0,
   connected: true,
   wins: 0,
@@ -91,7 +92,13 @@ describe("NetFeed", () => {
   it("passes the session's poses through and follows your own ball once welcomed", () => {
     const room = new FakeRoom();
     const feed = new NetFeed(room);
-    const pose: BallPose = { p: [1, 0.5, 2], q: [0, 0, 0, 1], h: 0.3 };
+    const pose: BallPose = {
+      p: [1, 0.5, 2],
+      q: [0, 0, 0, 1],
+      h: 0.3,
+      s: 0,
+      d: 0,
+    };
     room.balls.set("p1", pose);
     expect(feed.ownId).toBeNull(); // the big screen, or a laptop before its welcome
     expect(feed.sample().get("p1")).toBe(pose);

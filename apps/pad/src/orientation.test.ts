@@ -29,6 +29,19 @@ describe("nextSide", () => {
     expect(nextSide(90, ...up(90))).toBe(-90);
   });
 
+  test("locked (racing): turning the wheel past upright never drops to portrait", () => {
+    for (const steer of [-90, -80, 80, 90]) {
+      expect(nextSide(90, ...up(-90 + steer), true)).toBe(90);
+      expect(nextSide(-90, ...up(90 + steer), true)).toBe(-90);
+    }
+    expect(nextSide(90, ...up(0))).toBeNull(); // unlocked, upright is portrait again
+  });
+
+  test("locked still finds landscape from portrait, and still turns round", () => {
+    expect(nextSide(null, ...up(-90), true)).toBe(90);
+    expect(nextSide(90, ...up(90), true)).toBe(-90);
+  });
+
   test("lying flat keeps the last side", () => {
     expect(nextSide(-90, 0.2, 0.1)).toBe(-90);
   });

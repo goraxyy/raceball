@@ -40,3 +40,91 @@
 .split-screen .follow-place {
   font-size: clamp(24px, 3vw, 44px);
 }
+
+/* each player's wheel indicator, just above their name plate: the ball fills the bottom center, and the race board
+   and the host's buttons cover the corners where the views meet */
+.split-screen .steer-wheel {
+  position: absolute;
+  left: 22px;
+  bottom: clamp(62px, 6.4vw, 96px);
+  --wheel-size: clamp(40px, 4.6vw, 72px);
+}
+
+/* the drift chip sits beside the wheel there, not under it on the plate */
+.split-screen .steer-drift {
+  top: 50%;
+  left: 100%;
+  margin: 0 0 0 10px;
+  transform: translateY(-50%);
+}
+
+/*
+ * The race board: the live map and the timing tower. In the split screen it sits in the middle, where the views
+ * meet, like a kart game's center map; in the global view it moves to the right.
+ */
+.host-board {
+  position: fixed;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  width: clamp(220px, 22vw, 360px);
+  pointer-events: none;
+}
+
+.host-board[data-layout="center"] {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.host-board[data-layout="side"] {
+  right: 16px;
+  top: 16px;
+}
+
+.host-board .map-card {
+  padding: 6px;
+}
+
+.host-board .track-map {
+  max-height: 30vh;
+}
+
+/* a compact timing tower: up to 8 rows next to the map */
+.host-board .standings {
+  gap: 4px;
+}
+
+.host-board .standing {
+  grid-template-columns: 30px 28px 1fr auto auto;
+  gap: 6px;
+  min-height: 30px;
+  padding-right: 8px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.host-board .standing-place {
+  font-size: 20px;
+}
+
+.host-board .standing-plate {
+  margin: 0 -6px;
+}
+
+.host-board .standing-plate .shape {
+  --shape-size: 14px;
+}
+
+.host-board .standing-name {
+  padding-left: 4px;
+  font-size: clamp(13px, 1.2vw, 18px);
+}
+
+.host-board .standing-lap {
+  font-size: 11px;
+}
+
+.host-board .standing-gap {
+  min-width: 44px;
+  font-size: 14px;
+}

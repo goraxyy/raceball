@@ -22,6 +22,8 @@ export const PlayerState = schema(
     lap: t.uint8().default(0),
     checkpoint: t.uint16().default(0),
     place: t.uint8().default(0),
+    /** m along the race from the start line, whole meters, for the big screen's gaps (negative on the grid) */
+    progress: t.int32().default(0),
     /** Race time in ms when they finished, 0 until then */
     finishedAt: t.number().default(0),
     connected: t.boolean().default(true),

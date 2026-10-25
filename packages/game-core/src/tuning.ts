@@ -12,6 +12,21 @@ export const tuning = {
   brakeStrength: 3, // how quickly the brake stops you
   airControl: 0.2, // share of control while airborne
   groundProbe: 0.15, // m below the ball that still counts as touching the ground
+  maxRouteAngle: 1.6, // rad (about 90°): the heading never turns further than this from the road's direction
+  routeTangentSpan: 4, // m either side of the ball the road's direction is measured over, so polyline corners don't jerk it
+
+  // Drifting: brake into a clear turn at speed and the ball slides round the corner instead of braking
+  driftMinSpeed: 9, // m/s needed to start a drift (half of top speed)
+  driftKeepSpeed: 5, // m/s; slower than this and the drift ends (no mini-turbo)
+  driftSteerMin: 0.35, // |steer| needed to start one; its sign picks the drift's direction
+  driftTurnMin: 0.4, // share of full turn while steering out of the drift (wide line)
+  driftTurnMul: 1.35, // turn rate multiplier at full steer into the drift (tight line)
+  driftGrip: 0.6, // grip multiplier while drifting: the ball slides out about 25° but its path still turns tighter
+  driftDrag: 0.25, // how quickly a drift bleeds speed (the brake is 3)
+  driftTurboTime: 0.7, // s of drift for a mini-turbo on release
+  driftTurboSpeed: 3, // m/s it adds along the heading
+  driftSuperTime: 1.6, // s of drift for the bigger one
+  driftSuperSpeed: 5.5, // m/s
 
   // Respawn
   fallY: -10, // below this height a ball respawns

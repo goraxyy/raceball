@@ -14,3 +14,20 @@
   box-shadow: 3px 3px 0 #17151f;
   cursor: pointer;
 }
+
+/* split screen ↔ global view, next to Rematch */
+.host-view-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 70px;
+  z-index: 20;
+  padding: 10px 16px;
+  font:
+    800 16px system-ui,
+    sans-serif;
+  border: 3px solid #17151f;
+  border-radius: 8px;
+  background: #fff8ec;
+  box-shadow: 3px 3px 0 #17151f;
+  cursor: pointer;
+}

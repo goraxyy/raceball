@@ -162,19 +162,8 @@ export async function loadTrack(
         track.cameras.push({ section: String(extras.section ?? ""), pos, rot });
         break;
       case "route": {
-        // x, z pairs in the node's space, flattened: [x0, z0, x1, z1, …]
-        const flat = Array.isArray(extras.points) ? extras.points : [];
-        const m = node.getWorldMatrix();
-        const points: [number, number][] = [];
-        for (let i = 0; i + 1 < flat.length; i += 2) {
-          const p = vec3.transformMat4(
-            vec3.create(),
-            [Number(flat[i]), 0, Number(flat[i + 1])],
-            m,
-          );
-          points.push([p[0], p[2]]);
-        }
-        if (points.length >= 2) track.path = makePath(points);
+        const path = routeOf(node, extras);
+        if (path) track.path = path;
         break;
       }
       default:
@@ -192,6 +181,41 @@ export async function loadTrack(
   track.spawns.sort((a, b) => a.slot - b.slot);
   track.checkpoints.sort((a, b) => a.index - b.index);
   return track;
+}
+
+/**
+ * Just the route's centerline from a collision track, without building any physics: the big screen's live map
+ * needs it, but has no race of its own. Null on tracks without a `route` marker.
+ */
+export async function readRoute(
+  glb: Uint8Array,
+  io: PlatformIO,
+): Promise<TrackPath | null> {
+  const doc = await io.readBinary(glb);
+  for (const node of doc.getRoot().listNodes()) {
+    const extras = node.getExtras() as Record<string, unknown>;
+    if (extras.rb === "route") return routeOf(node, extras);
+  }
+  return null;
+}
+
+/** A `route` marker's points: x, z pairs in the node's space, flattened [x0, z0, x1, z1, …] */
+function routeOf(
+  node: Node,
+  extras: Record<string, unknown>,
+): TrackPath | null {
+  const flat = Array.isArray(extras.points) ? extras.points : [];
+  const m = node.getWorldMatrix();
+  const points: [number, number][] = [];
+  for (let i = 0; i + 1 < flat.length; i += 2) {
+    const p = vec3.transformMat4(
+      vec3.create(),
+      [Number(flat[i]), 0, Number(flat[i + 1])],
+      m,
+    );
+    points.push([p[0], p[2]]);
+  }
+  return points.length >= 2 ? makePath(points) : null;
 }
 
 /**

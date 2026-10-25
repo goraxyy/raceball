@@ -41,6 +41,19 @@ export function HostPage() {
 function HostRoom({ session }: { session: NetSession }) {
   const state = useRaceState(session);
   const [laps, setLaps] = useState<Laps>(3);
+  const [view, setView] = useState<"split" | "global">("split");
+  const racing = !!state.phase && state.phase !== "lobby";
+  // G flips the view too, so the host doesn't need the mouse mid-race
+  useEffect(() => {
+    if (!racing) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code !== "KeyG" || event.repeat) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      setView((v) => (v === "split" ? "global" : "split"));
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [racing]);
 
   if (session.closed)
     return <ErrorScreen kind="disconnected" room={session.code} />;
@@ -48,9 +61,7 @@ function HostRoom({ session }: { session: NetSession }) {
     <>
       {/* Split screen: a first-person view per player. Mounted from the countdown on, so the views don't draw
           hidden behind the lobby (and can't trip the fps fallback before the race) */}
-      {state.phase && state.phase !== "lobby" && (
-        <GameView mode="host" session={session} />
-      )}
+      {racing && <GameView mode="host" session={session} view={view} />}
       {!state.phase && <LoadingScreen progress={0.6} label="Opening a room" />}
       {state.phase === "lobby" && (
         <HostLobby
@@ -70,7 +81,20 @@ function HostRoom({ session }: { session: NetSession }) {
           now={() => session.clock.serverNow()}
         />
       )}
-      {state.phase && state.phase !== "lobby" && (
+      {racing && (
+        <button
+          type="button"
+          className="host-view-toggle"
+          aria-pressed={view === "global"}
+          onClick={(event) => {
+            setView(view === "split" ? "global" : "split");
+            event.currentTarget.blur();
+          }}
+        >
+          {view === "split" ? "Global view · G" : "Split screen · G"}
+        </button>
+      )}
+      {racing && (
         <button
           type="button"
           className="host-rematch"

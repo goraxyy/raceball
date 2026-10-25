@@ -216,6 +216,8 @@ export class LocalSession implements BallFeed {
         ],
         q: nlerp(p.q, b.q, a),
         h: lerp(p.h, b.h, a),
+        s: b.s,
+        d: b.d,
       });
     }
     return out;

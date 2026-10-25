@@ -177,6 +177,29 @@ describe("BigScreen", () => {
     big.dispose();
   });
 
+  it("the host's global view swaps the split screen for the overview with name tags, and back", () => {
+    const big = new BigScreen(scene, overview);
+    const poses = new Map([
+      ["a", at(0, 0)],
+      ["b", at(5, 0)],
+    ]);
+    const all = players(["a", "b"]);
+    big.update(poses, all, 1 / 60, 60);
+    expect(big.tileIds).toEqual(["a", "b"]);
+
+    big.setGlobal(true);
+    expect(big.update(poses, all, 1 / 60, 60)).toBe(true);
+    expect(big.tileIds).toEqual([]);
+    expect(scene.activeCameras).toHaveLength(0); // the overview fills the screen
+    expect(scene.getMeshByName("tag-a")).toBeTruthy();
+
+    big.setGlobal(false);
+    expect(big.update(poses, all, 1 / 60, 60)).toBe(true);
+    expect(big.tileIds).toEqual(["a", "b"]);
+    expect(scene.getMeshByName("tag-a")).toBeNull(); // the views show who's who again
+    big.dispose();
+  });
+
   it("swaps the split screen for the overview with name tags when the fps can't keep up", () => {
     const big = new BigScreen(scene, overview);
     const poses = new Map([

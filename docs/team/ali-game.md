@@ -311,6 +311,11 @@ Starting tuning values (`tuning.ts`):
 | `grip` | 6 | How quickly sideways sliding is removed |
 | `brakeStrength` | 3 | How quickly the brake stops you |
 | `airControl` | 0.2 | Share of control while airborne |
+| `maxRouteAngle` | 1.6 rad | The heading never turns further than this (~90°) from the road's direction, so you can't turn round |
+| `driftMinSpeed` | 9 m/s | Brake + a clear turn (`driftSteerMin` 0.35) above this starts a drift |
+| `driftTurnMul` / `driftTurnMin` | 1.35 / 0.4 | In a drift: steering into it turns tighter, out of it widens the line (it never straightens) |
+| `driftGrip` / `driftDrag` | 0.6 / 0.25 | In a drift the ball slides out a little and the brake only bleeds speed |
+| `driftTurboTime` / `driftSuperTime` | 0.7 / 1.6 s | Let go of the brake after this long for a mini-turbo of `driftTurboSpeed` / `driftSuperSpeed` (3 / 5.5 m/s) |
 
 ### 2. Greybox the route in Blender
 

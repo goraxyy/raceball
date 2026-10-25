@@ -18,7 +18,7 @@ import {
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
 import { COUNTDOWN_MS, type GameEvent } from "@raceball/shared";
 import type { Mixer } from "../audio/mixer";
-import { BallViews, type BallFeed } from "./balls";
+import { BallViews, type BallFeed, type BallPose } from "./balls";
 import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera, eventShake, swoopProgress } from "./cameras";
 import { GameFx, type FxEvent } from "./fx";
@@ -38,6 +38,8 @@ export interface Game {
   toggleOverview(): void;
   /** Host: where the page drew each follow-cam tile's frame */
   setTileRects(rects: Map<string, TileRect>): void;
+  /** Host: the global view (overview of the whole map) instead of the split screen */
+  setGlobalView(on: boolean): void;
   dispose(): void;
 }
 
@@ -51,6 +53,8 @@ export interface GameStatus {
   tiles?: string[];
   /** Host: the fps fell short, so the tiles became name tags */
   nameTags?: boolean;
+  /** Host: the global view is on, picked by the host */
+  globalView?: boolean;
 }
 
 interface GameOptions {
@@ -62,6 +66,8 @@ interface GameOptions {
   session?: SnapshotSource;
   /** Plays the event sounds and music (fx.ts); without it the effects are silent */
   mixer?: Mixer;
+  /** Every frame, with every ball's pose: the page's wheel indicators and live map read them */
+  onFrame?: (poses: Map<string, BallPose>) => void;
   onStatus?: (status: GameStatus) => void;
 }
 
@@ -354,6 +360,7 @@ export function createGame(
       if (!feed) return;
       const poses = feed.sample(performance.now());
       balls.sync(poses, (id) => feed?.look?.(id));
+      options.onFrame?.(poses);
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       const phase = local?.phase ?? net?.phase;
       // local race time starts with the countdown; online it's counted from the state patch that began it
@@ -401,6 +408,7 @@ export function createGame(
         if (big.update(poses, net, dt, fps)) {
           status.tiles = big.tileIds;
           status.nameTags = big.nameTags;
+          status.globalView = big.global;
           publish();
         }
       }
@@ -417,6 +425,9 @@ export function createGame(
     toggleOverview,
     setTileRects(rects) {
       big?.setRects(rects);
+    },
+    setGlobalView(on) {
+      big?.setGlobal(on);
     },
     dispose() {
       if (disposed) return;

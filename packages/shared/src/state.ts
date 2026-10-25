@@ -20,6 +20,8 @@ export interface PlayerView {
   lap: number;
   checkpoint: number;
   place: number;
+  /** m along the race from the start line (lap after lap), for the big screen's gaps; negative on the grid */
+  progress: number;
   /** Race time in ms when they finished, 0 until then */
   finishedAt: number;
   connected: boolean;

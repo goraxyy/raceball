@@ -109,12 +109,15 @@ interface Tile {
  * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player (up to MAX_TILES), each drawn
  * into the frame the page lays out on top of the canvas (`setRects`). If the fps can't take a render pass per
  * player, the split screen goes for good and the overview frames the pack, with a name tag on every ball.
+ * The host can also switch to that global view by hand (`setGlobal`) and back.
  */
 export class BigScreen {
   /** Players with a tile now, in order. The page draws a frame for each and reports its rect */
   tileIds: string[] = [];
   /** True once the tiles fell back to name tags */
   nameTags = false;
+  /** The host picked the global view: the overview with name tags instead of the split screen */
+  global = false;
   private readonly scene: Scene;
   private readonly overview: ArcRotateCamera;
   private readonly guard = new FpsGuard();
@@ -139,6 +142,17 @@ export class BigScreen {
       );
       engine.scissorClear(x, y, width, height, scene.clearColor);
     });
+  }
+
+  /** Global view (true) or split screen (false). The next update() swaps the tiles */
+  setGlobal(on: boolean): void {
+    this.global = on;
+    this.guard.restart(); // the render passes change: judge the fps afresh
+  }
+
+  /** True while the overview is what's on screen: picked by the host, or forced by a low fps */
+  get overviewShown(): boolean {
+    return this.nameTags || this.global;
   }
 
   /** The map's size caps how far back the overview goes */
@@ -170,7 +184,7 @@ export class BigScreen {
         changed = true;
       }
     }
-    const want = this.nameTags
+    const want = this.overviewShown
       ? []
       : players.all.filter((id) => poses.has(id)).slice(0, MAX_TILES);
     if (want.join() !== this.tileIds.join()) {
@@ -181,14 +195,14 @@ export class BigScreen {
       const pose = poses.get(id)!;
       this.tiles.get(id)!.eye.follow(Vector3.FromArray(pose.p), pose.h, dt);
     }
-    if (this.nameTags) this.syncTags(poses, players);
+    if (this.overviewShown) this.syncTags(poses, players);
+    else this.clearTags();
     return changed;
   }
 
   dispose(): void {
     this.setTiles([]);
-    for (const tag of this.tags.values()) disposeTag(tag.mesh);
-    this.tags.clear();
+    this.clearTags();
     this.scene.onBeforeCameraRenderObservable.remove(this.clearTile);
   }
 
@@ -241,6 +255,11 @@ export class BigScreen {
     this.drawnKey = key;
     this.scene.activeCamera = drawn[0] ?? this.overview;
     this.scene.activeCameras = drawn.length ? drawn : [];
+  }
+
+  private clearTags(): void {
+    for (const tag of this.tags.values()) disposeTag(tag.mesh);
+    this.tags.clear();
   }
 
   /** A billboard over each ball with the player's name, sized by distance so it reads the same at any zoom */

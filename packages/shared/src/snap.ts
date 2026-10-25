@@ -4,10 +4,11 @@ import type { BallSnap, SnapMsg } from "./protocol";
 // second to every screen. Small integers cost 1–3 bytes in MessagePack, a float costs 9.
 
 /** Integers per ball in PackedSnapMsg.d */
-export const SNAP_STRIDE = 11;
+export const SNAP_STRIDE = 13;
 const CM = 100; // positions and velocities in centimeters
 const QUAT = 32767; // quaternion components (−1…1) as Int16
 const MRAD = 1000; // heading in milliradians
+const STEER = 100; // steer (−1…1) in hundredths
 
 /** server → host + viewers: "snap". unpackSnap() turns it back into a SnapMsg */
 export interface PackedSnapMsg {
@@ -16,7 +17,7 @@ export interface PackedSnapMsg {
   t: number;
   /** Ball ids, in the same order as their numbers in d */
   ids: string[];
-  /** SNAP_STRIDE integers per ball: position (cm) ×3, quaternion (×32767) ×4, velocity (cm/s) ×3, heading (mrad) */
+  /** SNAP_STRIDE integers per ball: position (cm) ×3, quaternion (×32767) ×4, velocity (cm/s) ×3, heading (mrad), steer (×100), drift (−1, 0, 1) */
   d: number[];
 }
 
@@ -35,6 +36,8 @@ export function packSnap(snap: SnapMsg): PackedSnapMsg {
       Math.round(b.v[1] * CM),
       Math.round(b.v[2] * CM),
       Math.round(b.h * MRAD),
+      Math.round((b.s ?? 0) * STEER),
+      b.d ?? 0,
     );
   }
   return { tick: snap.tick, t: snap.t, ids: snap.balls.map((b) => b.id), d };
@@ -57,6 +60,8 @@ export function unpackSnap(msg: PackedSnapMsg): SnapMsg {
       q: [q[0] / len, q[1] / len, q[2] / len, q[3] / len],
       v: [d[o + 7] / CM, d[o + 8] / CM, d[o + 9] / CM],
       h: d[o + 10] / MRAD,
+      s: d[o + 11] / STEER,
+      d: d[o + 12],
     };
   });
   return { tick: msg.tick, t: msg.t, balls };

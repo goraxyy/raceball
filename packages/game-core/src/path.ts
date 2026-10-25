@@ -83,6 +83,16 @@ export function pointAt(path: TrackPath, s: number): [number, number] {
   return [ax + (bx - ax) * t, az + (bz - az) * t];
 }
 
+/**
+ * The route's direction at distance s, as a heading (0 faces +z, like a ball's), measured from `span` meters
+ * behind to `span` meters ahead so the corners between polyline points don't snap it.
+ */
+export function headingAt(path: TrackPath, s: number, span = 4): number {
+  const [ax, az] = pointAt(path, s - span);
+  const [bx, bz] = pointAt(path, s + span);
+  return Math.atan2(bx - ax, bz - az);
+}
+
 /** Shortest distance between two positions on a loop of this length. */
 function loopGap(a: number, b: number, length: number): number {
   const d = Math.abs(a - b) % length;

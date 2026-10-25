@@ -36,6 +36,21 @@ describe("SnapshotBuffer", () => {
     expect(x).toBeCloseTo(8.5);
   });
 
+  test("carries each ball's steer and drift, for the wheel indicators", () => {
+    const buf = new SnapshotBuffer();
+    buf.push(snap(1, 0, [{ ...ball("a", 0), s: 0, d: 0 }]), 0);
+    buf.push(snap(2, 100, [{ ...ball("a", 1), s: 1, d: 1 }]), 100);
+    const mid = buf.sample(100 + buf.interpDelay - 50).get("a")!;
+    expect(mid.s).toBeCloseTo(0.5);
+    expect(mid.d).toBe(1);
+    buf.ownId = "a";
+    expect(buf.sample(200).get("a")).toMatchObject({ s: 1, d: 1 });
+    // a snapshot without them (an older server) reads as straight, no drift
+    const old = new SnapshotBuffer();
+    old.push(snap(1, 0, [ball("a", 0)]), 0);
+    expect(old.sample(0).get("a")).toMatchObject({ s: 0, d: 0 });
+  });
+
   test("holds at the newest snapshot instead of running ahead", () => {
     const buf = filled();
     expect(buf.sample(1e6).get("a")!.p[0]).toBe(10);

@@ -128,7 +128,7 @@ A rolling ball has momentum, which hides latency far better than a twitchy kart 
 ## Protocol v1 (draft, lives in `packages/shared/src/protocol.ts`)
 
 ```ts
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -156,7 +156,7 @@ export interface InputMsg {
 /**
  * A snapshot of every ball, server → host + viewers at 60 Hz. On the wire it's packed into integer arrays
  * (PackedSnapMsg in packages/shared/src/snap.ts: positions and velocities in cm, quaternions × 32767,
- * heading in mrad). packSnap() / unpackSnap() convert.
+ * heading in mrad, steer × 100, drift −1/0/1). packSnap() / unpackSnap() convert.
  */
 export interface SnapMsg {
   tick: number;
@@ -169,6 +169,8 @@ export interface BallSnap {
   q: [number, number, number, number];  // rotation quaternion
   v: [number, number, number];          // velocity (m/s), used for extrapolation
   h: number;                            // heading (rad), used by the chase camera
+  s?: number;                           // steer input −1 … 1, for the wheel indicator on the player's screen
+  d?: number;                           // drifting: 1 right, −1 left, 0 not
 }
 
 /** server → pad + viewer + host */

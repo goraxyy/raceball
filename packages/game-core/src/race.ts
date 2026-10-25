@@ -10,7 +10,7 @@ import type {
 import { addBall, applyControls, BALL_RADIUS, type PlayerSim } from "./ball";
 import { NEUTRAL_INPUT } from "./input";
 import { rollItem } from "./items";
-import { pointAt, project } from "./path";
+import { headingAt, pointAt, project } from "./path";
 import { createWorld, initPhysics, TICK_DT } from "./physics";
 import {
   createFlatTrack,
@@ -236,6 +236,9 @@ class TrackRace implements Race {
       input: { ...NEUTRAL_INPUT },
       maxSpeedMul: 1,
       surfaceGrip: 1,
+      routeHeading: null,
+      drift: 0,
+      driftTime: 0,
       collider: body.collider(0).handle,
       next: 0,
       last: -1,
@@ -291,9 +294,13 @@ class TrackRace implements Race {
     if (racing) this.raceMs += dt * 1000;
     this.simMs += dt * 1000;
     this.expirePuddles();
+    const route = this.track.path;
     for (const p of this.players.values()) {
       if (p.input.item && p.item && drives(p)) this.fire(p, p.item);
       this.applySurfaces(p, dt);
+      p.routeHeading = route
+        ? headingAt(route, p.routeS, this.t.routeTangentSpan)
+        : null;
       applyControls(
         p,
         drives(p) ? p.input : NEUTRAL_INPUT,
@@ -330,7 +337,6 @@ class TrackRace implements Race {
       if (a && b) this.bump(a, b, e.totalForceMagnitude()); // balls against the track don't count
     });
 
-    const route = this.track.path;
     for (const p of this.players.values()) {
       const pos = p.body.translation();
       if (route) p.routeS = project(route, pos.x, pos.z, p.routeS);
@@ -363,6 +369,8 @@ class TrackRace implements Race {
         q: [rot.x, rot.y, rot.z, rot.w] as [number, number, number, number],
         v: [vel.x, vel.y, vel.z] as [number, number, number],
         h: p.heading,
+        s: p.input.steer,
+        d: p.drift,
       };
     });
     return { tick, t, balls };
@@ -730,6 +738,8 @@ class TrackRace implements Race {
     p.heading = at.heading;
     p.stuckFor = 0;
     p.boostLeft = 0;
+    p.drift = 0;
+    p.driftTime = 0;
     p.surfaces.clear(); // the teleport leaves them; their exit events may never arrive
     if (this.track.path)
       p.routeS = project(this.track.path, at.pos[0], at.pos[2]);

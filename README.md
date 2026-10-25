@@ -6,7 +6,7 @@ Built at **HackPSU Fall 2026** for the General Track, *The Mystery Stack*: phone
 
 > **Status: M0 in progress.** The monorepo, server, pad and `game-core` are in. What's left is in [TASKS.md](TASKS.md).
 >
-> **Live:** web [raceball-web-delta.vercel.app](https://raceball-web-delta.vercel.app) (local mode at `/play?local=1`), pad [raceball-delta.vercel.app](https://raceball-delta.vercel.app), server `wss://raceball-server-production.up.railway.app` ([health](https://raceball-server-production.up.railway.app/health)).
+> **Live:** web [raceball-hw9w.vercel.app](https://raceball-hw9w.vercel.app) (local mode at `/play?local=1`), pad [raceball-omega.vercel.app](https://raceball-omega.vercel.app), server `wss://raceball-server-production.up.railway.app` ([health](https://raceball-server-production.up.railway.app/health)).
 >
 > **New to the team? Start with [docs/ONBOARDING.md](docs/ONBOARDING.md).**
 

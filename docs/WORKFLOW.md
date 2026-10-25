@@ -58,7 +58,7 @@ Ali, as the repo owner, sets this up once:
 - Fill in the PR template: what, why, how to test, screenshots or video.
 - Tick the task in TASKS.md **in the same PR**.
 - **Reviewer:** anyone else on the team. Check that the app still runs (`pnpm dev`), that the change does what it says, and that it follows the conventions below.
-- **Vercel posts a preview URL** on every PR. Use it to test on phones without a tunnel.
+- **No Vercel previews on PRs**: only `main` deploys (the free plan allows 100 deploys a day). Test a branch on your phone locally.
 
 ## When is a PR done?
 
@@ -111,7 +111,7 @@ These are the same in Blender exports, Rapier and Babylon:
 | Variable | App | Example |
 |---|---|---|
 | `VITE_SERVER_URL` | web, pad | `wss://raceball-server-production.up.railway.app` |
-| `VITE_PAD_URL` | web | `https://raceball-delta.vercel.app` |
+| `VITE_PAD_URL` | web | `https://raceball-omega.vercel.app` |
 | `PORT` | server | `2567` locally. Railway sets it automatically |
 | `TRACK_PATH` | server | Optional. Defaults to `../../packages/game-core/tracks/happy_valley_col.glb` (relative to `apps/server`) |
 
@@ -125,7 +125,7 @@ These are the same in Blender exports, Rapier and Babylon:
 
 | What | How | Who |
 |---|---|---|
-| Web + pad | Automatic. Vercel deploys `main` to production, and every PR gets a preview URL | Nobody needs to do anything |
+| Web + pad | Automatic. Vercel deploys `main` to production (no branch or PR previews) | Nobody needs to do anything |
 | Server | Automatic. Railway redeploys on every push to `main` that touches `apps/server`, `packages/` or the lockfile ([setup](team/ali-game.md#6-deploying-the-server-to-railway)) | Nobody, once Ali has set it up |
 | Order | When the protocol changes: server first, then web and pad | |
 

@@ -15,6 +15,8 @@ export const tuning = {
 
   // Respawn
   fallY: -10, // below this height a ball respawns
+  stuckSeconds: 5, // holding gas this long while barely moving respawns the ball
+  stuckSpeed: 1, // m/s; slower than this counts as barely moving
 
   // Keyboard adapter (local mode only)
   keySteerRate: 4, // steer units per second while A/D is held

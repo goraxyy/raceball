@@ -6,7 +6,7 @@ Built at **HackPSU Fall 2026** for the General Track, *The Mystery Stack*: phone
 
 > **Status: M0 in progress.** The monorepo, server, pad and `game-core` are in. What's left is in [TASKS.md](TASKS.md).
 >
-> **Live:** web [raceball-web.vercel.app](https://raceball-web.vercel.app) (local mode at `/play?local=1`), pad [raceball-pad.vercel.app](https://raceball-pad.vercel.app), server `wss://raceball-server-production.up.railway.app` ([health](https://raceball-server-production.up.railway.app/health)).
+> **Live:** web [raceball-web-delta.vercel.app](https://raceball-web-delta.vercel.app) (local mode at `/play?local=1`), pad [raceball-delta.vercel.app](https://raceball-delta.vercel.app), server `wss://raceball-server-production.up.railway.app` ([health](https://raceball-server-production.up.railway.app/health)).
 >
 > **New to the team? Start with [docs/ONBOARDING.md](docs/ONBOARDING.md).**
 
@@ -143,7 +143,7 @@ The full day-one guide is in **[docs/ONBOARDING.md](docs/ONBOARDING.md)**. The s
 ### Bootstrap (milestone M0, done once by Rasim)
 
 ```bash
-git clone https://github.com/goraxyy/raceball && cd raceball
+git clone https://github.com/raceball/raceball && cd raceball
 corepack enable
 pnpm init
 printf 'packages:\n  - "apps/*"\n  - "packages/*"\n' > pnpm-workspace.yaml

@@ -254,6 +254,22 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
   - finish confetti
   - speed lines on the player view
 
+### VFX v1 files
+
+Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` JSON, all drawing from one atlas, `fx_atlas.png` (512×256, eight 128² cells: blob, cloud, puff ring, sparkle, star, leaf, confetti, ring). The atlas cells are grayscale, so each system's `color1`/`color2`/`colorDead` paints them. No effect uses color gradients, so code can retint any of them.
+
+| File | Event | How code drives it |
+|---|---|---|
+| `fx_dust.json` | Rolling (continuous) | Set `emitter` to the ball's position (a `Vector3` you update, never the rolling mesh). Set `emitRate = 24 × min(1, speed / topSpeed)`, and 0 while airborne. In the Arboretum, tint it Snow `#F4F6F8` at alpha 0.7 |
+| `fx_bump_sparks.json` | `bump` | Move `emitter` to the contact point, then `manualEmitCount = round(6 + 12 × strength)` |
+| `fx_respawn_poof.json` | Respawn | Move `emitter` to the respawn marker, then `manualEmitCount = 10` |
+| `fx_respawn_stars.json` | Respawn (with the poof) | Tint `color1`/`color2` to the player color and `colorDead` to it at alpha 0, then `manualEmitCount = 7` |
+
+- **Loading:** `ParticleSystem.Parse(json, scene, "/assets/fx/", true)`, then `start()` once. Bursts are saved with `manualEmitCount` 0, so they sit idle until an event sets the count. Load each file once per scene and reuse it, so a crash of eight balls doesn't create eight systems.
+- **Source:** `tools/fx/gen_fx_textures.py` draws the atlas and `tools/fx/build_fx.mjs` builds the four systems with Babylon's own API, so the JSON always matches the engine version. Run both after a change (`python3 tools/fx/gen_fx_textures.py && node tools/fx/build_fx.mjs`).
+- **Preview:** `/ui` > fx shows a ball circling a patch of track with buttons for a light or hard bump, a respawn, the player color, speed, snow dust and the camera. The preview loads the files the same way the game should.
+- **Budget:** 112 particles at most across the four systems for one ball, and one 40 KB texture.
+
 ## Animation
 
 - glTF animations from Blender, which Babylon plays as AnimationGroups:
@@ -279,6 +295,17 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 - **Loops ship as WAV, not MP3.** MP3 adds a little silence at both ends, which leaves an audible gap every time a loop repeats. Loops are short mono 22 kHz WAVs instead (a 4 s loop is about 170 KB), and they repeat cleanly in every browser.
 - **Rolling loop in code:** play `sfx_roll_loop.wav` with `loop = true`, and drive its playback rate (about 0.6 at a crawl to 1.6 at top speed) and volume from the ball's speed.
 - **Bumps:** pick one of `sfx_bump_01–03` at random, set the volume from the event's `strength`, and vary the playback rate by ±5%, so repeated bumps don't sound identical.
+- **Music:** `tools/audio/gen_music.py` composes both loops from scratch, so they're original and match the pizzicato and steel-drum jingles. Listen at `/ui` > music.
+
+  | File | Feel | Length |
+  |---|---|---|
+  | `mus/mus_lobby_loop.wav` | Swung toy-box groove, 100 BPM, F major: marimba, plucked bass, glockenspiel, brushes, shaker | 8 bars, 19.2 s, −18 LUFS |
+  | `mus/mus_race_loop.wav` | Driving, 148 BPM, G major: steel-drum hook, plucked bass with a sub, offbeat marimba, kick/clap/hats, a fill into the loop | 8 bars, 13.0 s, −16 LUFS |
+
+  - **Play them looped** (`AudioBufferSourceNode` with `loop = true`). They're stereo 32 kHz WAVs (2.5 MB and 1.7 MB) for the same reason as the other loops, and each one is rendered three times with the middle copy kept, so note and reverb tails wrap around and there's no seam.
+  - **Final lap:** ramp the race loop's `playbackRate` to **1.06** over about half a second. That lifts it about a semitone and a touch faster, the classic kart-racer cue.
+  - **Lobby → race:** crossfade over about 1 s when the countdown starts, so the music never stops dead.
+  - **Mix:** the big screen plays music at full level. Laptops play it **8 dB quieter** (gain ≈ 0.4), so their own ball's sounds stay on top.
 
 ## Where assets come from (check every license)
 
@@ -316,7 +343,7 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 
 ### Kenney shortlist (Particle Pack + audio packs, reviewed by Nuris)
 
-Reviewed from the CC0 packs on kenney.nl: **Particle Pack, Impact Sounds, Interface Sounds, Digital Audio, Sci-Fi Sounds and Music Jingles**. The downloads live in `assets-src/packs/` (Drive), not in git. Nothing here is in the game yet: each pick is optimized, renamed by our convention (`fx_`, `sfx_`, `mus_`) and credited when the VFX or sound task uses it. Durations and loudness were measured from the files.
+Reviewed from the CC0 packs on kenney.nl: **Particle Pack, Impact Sounds, Interface Sounds, Digital Audio, Sci-Fi Sounds and Music Jingles**. The downloads live in `assets-src/packs/` (Drive), not in git. VFX v1 uses our own drawn atlas instead (see [VFX v1](#vfx-v1-files)), in the same shapes; the particle picks below stay the reference for v2. Nothing else here is in the game yet: each pick is optimized, renamed by our convention (`fx_`, `sfx_`, `mus_`) and credited when the VFX or sound task uses it. Durations and loudness were measured from the files.
 
 #### Particle textures (Particle Pack, `PNG (Transparent)`)
 
@@ -379,7 +406,9 @@ All 80 are white on transparent at 512², so we tint them with the art bible pal
 |---|---|---|---|---|
 | Mood board photos `docs/moodboard/01–09` | Dough4872, George Chriss, JohnDziak, Nathaniel C. Sheetz, adeans, Acroterion, photochem_PA (via Wikimedia Commons) | CC BY-SA 4.0 / 3.0, CC BY 2.5 / 2.0 (per image) | [docs/moodboard/README.md](moodboard/README.md#credits) | Team reference only, not shipped |
 | Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`packages/shared/theme/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad, web and big-screen UI, art bible sheets |
+| `mus_lobby_loop`, `mus_race_loop` | RaceBall team (composed by `tools/audio/gen_music.py`) | Original, MIT with the code | This repo | Lobby and race music |
 | `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |
+| `fx_atlas.png`, `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof`, `fx_respawn_stars` | RaceBall team (drawn by `tools/fx/gen_fx_textures.py`, built by `tools/fx/build_fx.mjs`) | Original, MIT with the code | This repo | Rolling dust, bump sparks, respawn poof |
 | Marble Kit 2.0: `tree-large` | Kenney | CC0 | https://kenney.nl/assets/marble-kit | Trees in `maps/happy_valley.glb` |
 | Racing Kit: `overhead`, `grandStand`, `barrierRed` | Kenney | CC0 | https://kenney.nl/assets/racing-kit | Finish arch, stadium stands and start barriers in `maps/happy_valley.glb` |
 | Happy Valley greybox: road, rails, landmark boxes, markers | RaceBall team (generated by `tools/track/build_happy_valley.py`) | Original, MIT with the code | This repo | `maps/happy_valley.glb`, `tracks/happy_valley_col.glb` |

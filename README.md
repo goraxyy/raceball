@@ -15,9 +15,9 @@ Built at **HackPSU Fall 2026** for the General Track, *The Mystery Stack*: phone
 | [docs/ONBOARDING.md](docs/ONBOARDING.md) | Day one: accounts, tools, running the project, testing on your phone |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Git, PRs, the protocol change process, shared conventions, deploying |
 | [TASKS.md](TASKS.md) | Decisions, milestones, per-person checklists |
-| [docs/team/ali-game.md](docs/team/ali-game.md) | **Ali's guide:** physics, race rules, track loading, 3D scene, cameras, items |
+| [docs/team/ali-game.md](docs/team/ali-game.md) | **Ali's guide:** physics, race rules, track loading, 3D scene, cameras, items, 3D models |
 | [docs/team/rasim-platform.md](docs/team/rasim-platform.md) | **Rasim's guide:** monorepo, server, hosting, netcode, phone controller |
-| [docs/team/nuris-art-ui.md](docs/team/nuris-art-ui.md) | **Nuris's guide:** art bible, asset pipeline, landmarks, VFX, audio, UI |
+| [docs/team/nuris-art-ui.md](docs/team/nuris-art-ui.md) | **Nuris's guide:** art bible, VFX, audio, UI, branding |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Roles, netcode, latency and how to cut it, protocol, hosting and costs |
 | [docs/CONTROLLER.md](docs/CONTROLLER.md) | Phone controller: sensors, calibration, the screen-rotation fix, iPhone vs Android |
 | [docs/ASSETS.md](docs/ASSETS.md) | Art bible, importing assets and editing the scene, pipeline, budgets, licenses |
@@ -113,7 +113,7 @@ raceball/
 │  │  ├─ src/game/   # Babylon scene, cameras, VFX hooks          (Ali)
 │  │  ├─ src/net/    # connection, snapshot buffer, interpolation (Rasim)
 │  │  ├─ src/ui/     # lobby, HUD, big-screen map, results        (Nuris)
-│  │  └─ public/assets/  # optimized runtime assets only          (Nuris)
+│  │  └─ public/assets/  # optimized runtime assets: models (Ali), fx/sfx/mus/ui (Nuris)
 │  ├─ pad/        # phone controller: tiny, fast-loading            (Rasim logic, Nuris style)
 │  └─ server/     # Colyseus rooms + 60 Hz simulation loop          (Rasim)
 ├─ packages/
@@ -181,9 +181,9 @@ Put the server tunnel URL in `apps/pad/.env.local` and `apps/web/.env.local` as 
 
 | Who | Owns | Main folders | Guide |
 |---|---|---|---|
-| **Ali** | **Game:** physics and gameplay, track loading, race rules, 3D scene, cameras (incl. big-screen follow-cams), items, map greybox + gameplay markers, wiring art/VFX/audio to events, Railway hosting | `packages/game-core`, `apps/web/src/game`, `railway.json` | [ali-game.md](docs/team/ali-game.md) |
+| **Ali** | **Game:** physics and gameplay, track loading, race rules, 3D scene, cameras (incl. big-screen follow-cams), items, map greybox + gameplay markers, 3D models (balls, Penn State landmarks, props) and their pipeline, wiring art/VFX/audio to events, Railway hosting | `packages/game-core`, `apps/web/src/game`, `railway.json` | [ali-game.md](docs/team/ali-game.md) |
 | **Rasim** | **Platform + controller:** monorepo, server code, Vercel settings, rooms, pairing, phone-only join, netcode, the phone controller and the rotation fix | `apps/server`, `apps/pad`, `packages/shared`, `apps/web/src/net` | [rasim-platform.md](docs/team/rasim-platform.md) |
-| **Nuris** | **Art, audio + UI:** art bible, Penn State landmark models, materials, animation, particles, sound, lobby/HUD/big-screen UI, pad look, branding | `apps/web/public/assets`, `apps/web/src/ui`, `apps/pad/src/style.css` | [nuris-art-ui.md](docs/team/nuris-art-ui.md) |
+| **Nuris** | **Art direction, audio + UI:** art bible (and reviewing models against it), particles, sound, lobby/HUD/big-screen UI, pad look, branding | `apps/web/public/assets`, `apps/web/src/ui`, `apps/pad/src/style.css` | [nuris-art-ui.md](docs/team/nuris-art-ui.md) |
 
 How we work together (branches, PRs, conventions, protocol changes) is in **[docs/WORKFLOW.md](docs/WORKFLOW.md)**.
 

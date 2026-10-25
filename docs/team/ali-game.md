@@ -1,18 +1,19 @@
 # Ali: Game guide
 
-You own **the game**: how the ball moves, the race rules, the track, the items, and everything you see in 3D.
+You own **the game**: how the ball moves, the race rules, the track, the items, and everything you see in 3D, including **the 3D models** (balls, landmarks, props) and their pipeline.
 
 | Area | Where |
 |---|---|
 | Simulation: physics, race rules, items, track loading | `packages/game-core` |
 | 3D rendering, cameras, VFX/audio hookup | `apps/web/src/game` |
+| 3D models: balls, landmarks, props, dressing kit | Sources in Drive `RaceBall/assets-src/`, optimized into `apps/web/public/assets/` (`models/`, `maps/`, `tex/`, `mat/`) |
 | Server hosting on Railway | `railway.json`, `apps/server/Dockerfile`, `.dockerignore`, the Railway dashboard |
 | Map greybox + gameplay markers | `happy_valley.blend` (Drive), exported to `packages/game-core/tracks/` and `apps/web/public/assets/maps/` |
 
 ## How your work connects to the others
 
 - **Rasim** runs your `game-core` inside the server's 60 Hz loop. He feeds it phone inputs, broadcasts your `snapshot()` to every screen, and routes your events to phones. His net library (`apps/web/src/net`) gives you interpolated ball transforms every frame.
-- **Nuris** delivers models, materials, particles and sounds into `apps/web/public/assets` (conventions in [ASSETS.md](../ASSETS.md)). You load them and fire them from gameplay events. Nuris's React UI (HUD, map, results) sits on top of your canvas.
+- **Nuris** sets the look in the art bible ([ASSETS.md](../ASSETS.md)), reviews your models against it, and delivers particles and sounds into `apps/web/public/assets`. You fire those from gameplay events. Nuris's React UI (HUD, map, results) sits on top of your canvas.
 - **The contract** is `packages/shared/src/protocol.ts`. Change it only through the [protocol process](../WORKFLOW.md#changing-the-protocol-packagessharedsrcprotocolts).
 
 ## Golden rules
@@ -525,6 +526,102 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 
 ---
 
+## Assets: 3D models and pipeline
+
+You build the 3D models: balls, landmarks, props and the track dressing kit. **Nuris's art bible in [ASSETS.md](../ASSETS.md) sets the style**, so ask Nuris to review each model before it's merged. Nuris still makes the particles, sounds and UI.
+
+### M0: Kenney track and prop packs
+Download and look through the **Kenney Marble Kit** and **Racing Kit** (both CC0). Add the track pieces and props you'd use to the shortlist in ASSETS.md. Put the downloads in `assets-src/packs/` in Drive.
+
+### M0: Run one asset through the whole pipeline
+Do this with one ball and one track piece, so the pipeline is proven before real work starts.
+
+1. **Blender:**
+   - 1 unit = 1 m. The ball is a 1 m diameter UV sphere, 5k triangles or fewer.
+   - Apply the transforms (Ctrl+A > All Transforms).
+   - Origin at the base center for props. Origin at the center for balls.
+2. **Export:** File > Export > glTF 2.0:
+
+   | Setting | Value |
+   |---|---|
+   | Format | glTF Binary (`.glb`) |
+   | Include | Limit to **Selected Objects** (or Visible), **Custom Properties** on |
+   | Transform | **+Y Up** on |
+   | Data > Mesh | Apply Modifiers on, UVs on, Normals on |
+   | Data > Material | Export |
+   | Animation | On, only if the asset is animated |
+   | Compression | Off (we compress in the next step) |
+
+3. **Optimize:**
+
+   ```bash
+   gltf-transform optimize ball_lion.glb ball_lion.opt.glb --compress meshopt --texture-compress webp
+   # with toktx installed you can use --texture-compress ktx2 instead
+   gltf-transform inspect ball_lion.opt.glb    # check triangles, textures, size
+   ```
+
+4. **Check:** drag the optimized file into the Babylon Sandbox. Look at the scale (compare it with a 1 m cube), the materials, normals (no black or inside-out faces) and any animations.
+5. **Commit:** rename it to the final name, without `.opt`, and place it in the right folder (e.g. `apps/web/public/assets/models/ball_lion.glb`). Add a credits line in ASSETS.md, then open a PR with a Sandbox screenshot.
+
+### M0: Drive folder
+Create the folders:
+- `RaceBall/assets-src/`, containing `models/`, `maps/` (`happy_valley.blend` lives here), `textures/`, `audio/`, `packs/` and `reference/`
+- `RaceBall/exports/`, for files you want to share before they're optimized
+
+Share the folder with Nuris and Rasim.
+
+### M1: Ball skins (first 4: Lion, Creamery scoop, football, snowball)
+- **One material per ball.** Textures are 1024² at most. The player-color ring or trim must be clearly visible, because it's how players spot themselves.
+- **The Lion is an original cartoon lion.** Don't copy the official logo.
+- **File names:** `models/ball_lion.glb`, `ball_scoop.glb`, `ball_football.glb`, `ball_snowball.glb`.
+- **Player color:** either make the colored part a separate material named `mat_player_color` (you tint it in code), or use a mask texture.
+
+### M1: Track dressing kit
+Barriers, fall trees (2–3 variants), lamp posts, benches, the start/finish arch, ground tiles.
+
+**Use one shared palette texture:** a small image (e.g. 256×256) of color swatches. UV each prop onto the swatches it needs, and give **every prop the same material**. Hundreds of props then cost a handful of draw calls instead of hundreds. This is the most important performance trick for an asset-heavy scene.
+
+**Lighting:** one HDRI from Poly Haven (CC0), converted to Babylon's `.env` format (the Babylon Sandbox or IBL tools can do this), saved as `tex/env_happy_valley.env`.
+
+### M3: Landmark order and budgets
+From [MAP.md](../MAP.md).
+
+| Order | Landmark | Triangle budget | Notes |
+|---|---|---|---|
+| 1 | Old Main + start/finish arch | 25k | The judges see this first. Bell tower silhouette |
+| 2 | Lion Shrine | 8k | Original low-poly lion on a rock |
+| 3 | Creamery + giant cone | 15k | The cone is also a ramp. Match your collision shape |
+| 4 | Beaver Stadium bowl + tunnel + scoreboard prop | 40k total | Build one stand segment and instance it around the bowl |
+| 5 | Pattee Library facade + steps | 12k | Steps must line up with the collision steps |
+| 6 | Mount Nittany backdrop | Card or texture | A far-away silhouette layer, not real geometry |
+
+### M3: How to model over the greybox
+1. Open `happy_valley.blend` in Drive. Your greybox boxes and collision meshes are there.
+2. Model each landmark **in place over its box**, in the `visual` collection. Don't touch `collision` or `markers`.
+3. Anything a ball can touch (ramps, steps, the cone) must match the collision shape. If you want a different shape, change the collision first.
+4. Use the shared palette texture where you can. Only hero pieces (Old Main, the lion, the cone) get their own textures.
+5. Export the `visual` collection to `apps/web/public/assets/maps/happy_valley.glb`, optimize it, check the size, commit.
+
+### M3: Remaining skins
+Old Main bell, blue-white beach ball, library book, campus squirrel. Same rules as the first four.
+
+### M3: Animated props
+Item boxes (spin + bob), flags, the arch, crowd cards (2-frame sprite cards). Animate in Blender, then export with Animation on. Give every animation a clear name (`anim_itembox_spin`), because your code plays them by name.
+
+### Before you commit a model
+
+- [ ] Named by the convention (`trk_`, `prop_`, `ball_`, `mat_`)
+- [ ] Real-world scale (1 unit = 1 m) and the origin in the right place
+- [ ] Within its triangle and texture budget (`gltf-transform inspect`)
+- [ ] Optimized (Meshopt + WebP/KTX2)
+- [ ] Checked in the Sandbox (scale, normals, materials, animations)
+- [ ] Reviewed by Nuris against the art bible
+- [ ] Credits line in ASSETS.md, task ticked in TASKS.md
+
+**Model pitfalls:** unapplied scale (physics and visuals stop matching), too many materials (use the palette texture), 4K textures (2048² is the maximum), and official Penn State logos (never, even on small props).
+
+---
+
 ## Testing
 
 - **Vitest (`pnpm --filter @raceball/game-core test`):**
@@ -548,4 +645,4 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 ## Who to ask
 
 - **Rasim:** server loop, net library, phones, deploys, bots.
-- **Nuris:** asset names, sizes, materials, particles, sounds, and how the UI reads race state.
+- **Nuris:** the art bible, reviews of your models, particles, sounds, and how the UI reads race state.

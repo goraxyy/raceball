@@ -2,7 +2,7 @@
 
 **A toy-sized, stylized Penn State campus.** It's *inspired by* real landmarks, not a to-scale replica: exaggerated shapes, chunky low-poly models, fall colors and a snowy finale.
 
-- **Owners:** Ali designs the route (greybox + gameplay markers). Nuris does the art pass (landmarks, props, materials, VFX, sound).
+- **Owners:** Ali designs the route (greybox + gameplay markers) and models the landmarks and props. Nuris sets the art direction and does the VFX and sound.
 - **Target lap:** 60–75 seconds. 3 laps a race.
 
 ## Route
@@ -56,7 +56,7 @@ Use photos for reference and model everything ourselves. Don't extract meshes fr
 ## Build order
 
 1. **Greybox (Ali):** lay out the whole route in Blender with Kenney pieces and plain boxes for the landmarks. Add the gameplay markers ([how](ASSETS.md#importing-assets-and-editing-the-scene)), export, and playtest until a lap feels good.
-2. **Art pass, one section at a time (Nuris):** replace the boxes with real landmark models. Start with the **start/finish (Old Main)**, because the judges see it first. The collision mesh and markers stay unchanged, so gameplay doesn't break.
+2. **Art pass, one section at a time (Ali, reviewed by Nuris):** replace the boxes with real landmark models. Start with the **start/finish (Old Main)**, because the judges see it first. The collision mesh and markers stay unchanged, so gameplay doesn't break.
 3. **Dress + light:** props, HDRI, sound for each section, VFX for the hazards.
 
 ## Trademark note

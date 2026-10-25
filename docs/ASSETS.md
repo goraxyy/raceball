@@ -1,6 +1,6 @@
 # Assets: art bible and pipeline
 
-Owner: **Nuris**. Ali integrates the assets into gameplay. RaceBall is **asset-heavy** (models, materials, audio, particles, animation), so budgets and a pipeline are decided in M0, not at the end.
+Owners: **Nuris** sets the art direction (this art bible) and makes the particles, sounds and UI art. **Ali** builds the 3D models and runs the model pipeline, and Nuris reviews them against the art bible. RaceBall is **asset-heavy** (models, materials, audio, particles, animation), so budgets and a pipeline are decided in M0, not at the end.
 
 ## Art direction (decide in M0)
 

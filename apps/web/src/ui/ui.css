@@ -2642,3 +2642,19 @@
   box-shadow: none;
   opacity: 0.55;
 }
+
+/* ---- error screens: the shared .error-screen styles (theme.css), centered on the page */
+
+.ui-screen.error-screen {
+  display: grid;
+  place-items: center;
+}
+
+.error-sign-wrap {
+  display: contents;
+}
+
+.hud-controls button.is-on {
+  background: var(--ink);
+  color: var(--paper);
+}

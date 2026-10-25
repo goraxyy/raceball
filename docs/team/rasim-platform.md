@@ -391,6 +391,9 @@ See [CONTROLLER.md](../CONTROLLER.md#steering-math-use-gravity-in-the-device-fra
 - **Rematch:** results → lobby with the same players, who stay paired.
 - **Session stats:** wins and best lap, kept in room memory for the event.
 - **Error screens:** room not found, room full, version mismatch, motion permission denied, unsupported browser (no `DeviceMotionEvent`).
+  - **Built (Nuris):** each error is a trackside road sign with a code plate, a headline and one button. The copy, the sign art and `errorKindFor(code)` (join error or close code → screen) are in `packages/shared/src/errors.ts`, and the styles are `.error-screen` in `theme.css`, so the pad and the laptop match. See them all at `/ui` > errors and in the pad's `screens.html`.
+  - **Pad: wired.** A failed join or a dropped connection shows `errorHtml(kind, room, code)`. Motion denied shows `permission`, and a browser with no `DeviceMotionEvent` shows `unsupported` before the start screen. The button retries (reloads), goes back to start, or copies the link to open in Safari or Chrome.
+  - **Web: left for you.** In `/host` and `/play`, catch the join error and render `<ErrorScreen kind={errorKindFor(err.code)} room={code} code={err.code} />`. For `unsupported` on a laptop, check for WebGL 2 before loading Babylon. Unknown paths already show the `lost` screen ("Wrong turn").
 - **Self-host Babylon's Meshopt and KTX2 decoders** under `apps/web/public/decoders/`, and point Babylon at them. That removes the CDN dependency on demo day.
 - **Pad accessibility settings:** auto-gas, sensitivity (`MAX_STEER` from 30° to 60°), dead zone. Save them in `localStorage`.
 

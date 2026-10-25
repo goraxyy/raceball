@@ -1,9 +1,12 @@
 // Pad screens, built with exactly the markup in apps/pad/screens.html (Nuris's markup contract).
 // Behaviour lives in main.ts; these only return HTML.
 import {
+  ERROR_COPY,
+  errorSignSvg,
   PLANETS,
   PLAYER_COLORS,
   PLAYER_SHAPES,
+  type ErrorKind,
   type Planet,
   type PlayerShape,
   type PlayerView,
@@ -43,15 +46,27 @@ export const startHtml = () => `
     </ul>
   </section>`;
 
-export const permissionHelpHtml = () => `
-  <section class="screen permission-help">
-    <h1>Motion access is off</h1>
-    <p>
-      RaceBall needs motion to steer. On iPhone, close Safari completely, reopen
-      this page and tap Allow. On Android, allow "Motion sensors" in the site settings.
-    </p>
-    <button class="start-button" type="button">Try again</button>
+/** An error as a road sign with one way out (copy and art: packages/shared/src/errors.ts) */
+export const errorHtml = (kind: ErrorKind, room?: string, code?: number) => {
+  const copy = ERROR_COPY[kind];
+  const plate = [room && `Room ${escape(room)}`, code && `Code ${code}`]
+    .filter(Boolean)
+    .join(" · ");
+  return `
+  <section class="screen error-screen" data-kind="${kind}">
+    <div class="error-body">
+      ${errorSignSvg(kind)}
+      <div class="error-text">
+        ${plate ? `<span class="error-plate">${plate}</span>` : ""}
+        <h1>${copy.title}</h1>
+        <p>${copy.body.pad}</p>
+        <div class="error-actions">
+          <button class="btn" type="button">${copy.action.pad}</button>
+        </div>
+      </div>
+    </div>
   </section>`;
+};
 
 export const CALIBRATE_TEXT = {
   1: { title: "Hold it like a wheel", hint: "Keep it level for a second." },

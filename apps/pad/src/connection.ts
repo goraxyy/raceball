@@ -2,7 +2,8 @@ import { Client, type Room } from "@colyseus/sdk";
 import { startInputLoop } from "./input-loop";
 import {
   Clock,
-  JoinError,
+  errorKindFor,
+  type ErrorKind,
   PROTOCOL_VERSION,
   SERVER_PORT,
   readPadParams,
@@ -19,7 +20,7 @@ export type ConnectionStatus =
   | { state: "offline" } // no room in the URL: sensor testing only
   | { state: "connecting"; room: string }
   | { state: "joined"; room: string; playerId: string; phoneOnly: boolean }
-  | { state: "error"; message: string };
+  | { state: "error"; kind: ErrorKind; room?: string; code?: number };
 
 export let status: ConnectionStatus = { state: "offline" };
 export let room: Room | undefined;
@@ -40,14 +41,6 @@ export let inputAge: number | undefined;
 
 const PING_MS = 1000;
 
-const ERRORS: Record<number, string> = {
-  [JoinError.VersionMismatch]: "RaceBall was updated. Refresh this page.",
-  [JoinError.RoomFull]: "This race is full.",
-  [JoinError.BadPairToken]:
-    "That pairing code has expired. Scan the QR on your laptop again.",
-  [JoinError.AlreadyPaired]: "Another phone is already paired to this player.",
-};
-
 const serverUrl = () =>
   import.meta.env.VITE_SERVER_URL ?? `ws://${location.hostname}:${SERVER_PORT}`;
 
@@ -66,11 +59,13 @@ export async function connect(onChange: (s: ConnectionStatus) => void) {
   try {
     room = await new Client(serverUrl()).joinById(code, opts);
   } catch (e) {
-    const err = e as { code?: number; message?: string };
-    const message =
-      ERRORS[err.code ?? -1] ??
-      `Couldn't join room ${code}: ${err.message ?? "unknown error"}`;
-    return set({ state: "error", message });
+    const err = e as { code?: number };
+    return set({
+      state: "error",
+      kind: errorKindFor(err.code),
+      room: code,
+      code: err.code,
+    });
   }
 
   room.onMessage("welcome", (msg: WelcomeMsg) =>
@@ -82,10 +77,7 @@ export async function connect(onChange: (s: ConnectionStatus) => void) {
     }),
   );
   room.onLeave((closeCode) =>
-    set({
-      state: "error",
-      message: `Disconnected (${closeCode}). Scan the QR code again.`,
-    }),
+    set({ state: "error", kind: "disconnected", room: code, code: closeCode }),
   );
   room.onMessage("pong", (msg: PongMsg) =>
     clock.onPong(msg, performance.now()),

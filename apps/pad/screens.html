@@ -186,21 +186,52 @@
         </div>
       </section>
 
-      <!-- ============================================================ permission help -->
+      <!-- ============================================================ errors -->
       <section class="item">
-        <h2>Motion access off <small>.screen.permission-help</small></h2>
+        <h2>
+          Errors
+          <small
+            >.screen.error-screen[data-kind] (errorHtml in src/screens.ts; copy
+            and signs in packages/shared/src/errors.ts)</small
+          >
+        </h2>
         <div class="frames">
-          <div class="frame" data-contract>
-            <section class="screen permission-help">
-              <h1>Motion access is off</h1>
-              <p>
-                RaceBall needs motion to steer. On iPhone, close Safari
-                completely, reopen this page and tap Allow. On Android, allow
-                "Motion sensors" in the site settings.
-              </p>
-              <button class="start-button" type="button">Try again</button>
-            </section>
-          </div>
+          <div
+            class="frame"
+            data-contract
+            data-error="notFound"
+            data-room="ABCD"
+            data-code="522"
+          ></div>
+          <div class="frame portrait" data-error="unsupported"></div>
+        </div>
+        <div class="frames">
+          <div class="frame" data-error="permission"></div>
+          <div
+            class="frame"
+            data-error="full"
+            data-room="ABCD"
+            data-code="4004"
+          ></div>
+          <div class="frame" data-error="version" data-code="4001"></div>
+          <div
+            class="frame"
+            data-error="pairExpired"
+            data-room="ABCD"
+            data-code="4005"
+          ></div>
+          <div
+            class="frame"
+            data-error="alreadyPaired"
+            data-room="ABCD"
+            data-code="4006"
+          ></div>
+          <div
+            class="frame"
+            data-error="disconnected"
+            data-room="ABCD"
+            data-code="1006"
+          ></div>
         </div>
       </section>
 
@@ -491,6 +522,16 @@
       </section>
     </main>
 
+    <script type="module">
+      // The error screens come from the real errorHtml, so the sign art never drifts.
+      import { errorHtml } from "/src/screens.ts";
+      for (const f of document.querySelectorAll("[data-error]"))
+        f.innerHTML = errorHtml(
+          f.dataset.error,
+          f.dataset.room,
+          f.dataset.code && Number(f.dataset.code),
+        );
+    </script>
     <script type="module">
       // Show each screen's markup under it, straight from the DOM, so it never drifts.
       for (const frame of document.querySelectorAll("[data-contract]")) {

@@ -186,9 +186,9 @@ p {
   rotate: 1.5deg;
 }
 
-/* ------------------------------------------------------------------ permission help + connection lost */
+/* ------------------------------------------------------------------ connection lost */
+/* (the error screens are shared with the web app: .error-screen in theme.css) */
 
-.permission-help h1,
 .connection-lost h1 {
   color: var(--stop);
 }

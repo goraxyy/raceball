@@ -333,3 +333,178 @@
 .shape[data-shape="hexagon"] {
   clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
 }
+
+/* ------------------------------------------------------------------ error screens */
+/*
+ * Each error is a trackside road sign on a post (sign art: errorSignSvg in
+ * packages/shared/src/errors.ts), with a code plate, a headline and one way out.
+ * <section class="error-screen" data-kind="notFound"> > .error-body > svg.error-sign + .error-text
+ * Side by side when there's room (a phone turned sideways, a laptop), stacked when not.
+ */
+
+.error-screen {
+  container-type: inline-size;
+}
+
+.error-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 4cqi, 40px);
+  width: min(100%, 860px);
+  margin-inline: auto;
+  text-align: center;
+}
+
+@container (min-width: 560px) {
+  .error-body {
+    flex-direction: row;
+    text-align: left;
+  }
+  .error-body .error-text {
+    justify-items: start;
+  }
+  .error-body .error-sign {
+    width: clamp(120px, 24cqi, 220px);
+  }
+}
+
+.error-sign {
+  flex: none;
+  width: clamp(120px, 42cqi, 190px); /* stacked: a phone held upright */
+  overflow: visible;
+  filter: drop-shadow(5px 5px 0 var(--ink));
+}
+
+.error-sign .sign-swing {
+  transform-box: view-box;
+  transform-origin: 60px 120px; /* the foot of the post */
+  animation: sign-swing 1.4s cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+.error-sign .sign-face {
+  fill: var(--tone);
+  stroke: var(--ink);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+.error-sign .sign-post {
+  fill: var(--ink);
+}
+
+.error-sign .sign-ink {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 6.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.error-sign .sign-ink.thin {
+  stroke-width: 4;
+}
+
+.error-sign .sign-ink.paper {
+  stroke: #fff;
+}
+
+.error-sign .sign-dot {
+  fill: var(--ink);
+}
+
+.error-sign .sign-seat {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.error-sign .sign-slash {
+  fill: none;
+  stroke: var(--stop);
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.error-text {
+  display: grid;
+  justify-items: center;
+  gap: clamp(8px, 1.8cqi, 14px);
+  min-width: 0;
+}
+
+/* the code plate, like a race number: who to tell and what to tell them */
+.error-plate {
+  padding: 0.25em 0.6em 0.2em;
+  border: var(--line) solid var(--ink);
+  border-radius: 5px;
+  background: #fff;
+  font-family: var(--display);
+  font-size: clamp(13px, 2.4cqi, 17px);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  rotate: -2deg;
+}
+
+.error-text h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(32px, 7cqi, 64px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.92;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.error-text p {
+  max-width: 34ch;
+  margin: 0;
+  font-family: var(--text);
+  font-size: clamp(15px, 2.6cqi, 19px);
+  font-weight: 600;
+  line-height: 1.4;
+  text-wrap: pretty;
+  color: var(--ink-2);
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.error-actions .btn {
+  font-size: clamp(20px, 4cqi, 30px);
+}
+
+/* the sign drops in on its post and settles with a couple of wobbles */
+@keyframes sign-swing {
+  0% {
+    rotate: -24deg;
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  35% {
+    rotate: 9deg;
+  }
+  58% {
+    rotate: -4deg;
+  }
+  78% {
+    rotate: 1.5deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-sign .sign-swing {
+    animation: none;
+  }
+}

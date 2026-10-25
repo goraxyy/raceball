@@ -111,7 +111,7 @@ Nothing right now. Add new questions here.
 - [ ] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
 
 **Rasim**
-- [ ] `RaceRoom`: roles host/viewer/pad, short room code, join/leave, `PROTOCOL_VERSION` check
+- [x] `RaceRoom`: roles host/viewer/pad, short room code, join/leave, `PROTOCOL_VERSION` check
 - [ ] 60 Hz simulation loop calling `game-core`; `snap` sent to host + viewers (30 Hz first, then 60 Hz)
 - [ ] Pairing: viewer gets a `pairToken`, its QR opens the pad with the token, and the pad is bound to that player
 - [ ] `apps/web/src/net`: client, clock sync, snapshot buffer, interpolation, own-ball extrapolation, `useRaceState` / `usePairing` hooks

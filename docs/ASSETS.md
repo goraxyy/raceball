@@ -307,7 +307,7 @@ Nine more effects in the same folder and from the same atlas. The atlas is now *
 |---|---|---|---|---|
 | `bump` | `bump`, or `bumpHard` from strength 0.6 | Sparks where the two balls touch, 6 + 12 × strength (more for a crash); snow puffs in the Arboretum | Bump; a crash adds the heavy thud and the crowd's "oooh" (one gasp per 1.6 s) | |
 | `item` (pickup) | `pickup` | A pop of 18 sparkles on the ball | Item pickup | |
-| `use` (an item fired, see below) | `boost`, `roar`, `spill`, `snowday` | Flames + trail on the ball for 2.2 s; two roar rings 120 ms apart + dust; splat + sprinkles 1.2 m behind; snow puffs | The item's sound | "Ali: Lion Roar!" etc. |
+| `fire` (an item used) | `boost`, `roar`, `spill`, `snowday` | Flames + trail on the ball for 2.2 s; two roar rings 120 ms apart + dust; splat + sprinkles on the puddle; snow puffs | The item's sound | "Ali: Lion Roar!" etc. |
 | `overtake` | `takeLead`, only when the leader is passed | | Crowd cheer (big screen) | "Ali takes the lead!" |
 | `lap` | `lap`, or `finalLap` on the last lap | | Lap / final lap; the race music lifts a semitone on the final lap | "Lap 2/3", "Final lap!" (the leader's laps only) |
 | `finish` | `win` for 1st, `finish` after | Confetti cannon 6 m ahead of the ball (260 for the win, 70 after) | Finish fanfare + cheer | "Ali wins!", "Nuris · 2nd" |
@@ -315,7 +315,7 @@ Nine more effects in the same folder and from the same atlas. The atlas is now *
 
 - **Big screen vs laptop:** the big screen plays everything and tells the race story (the leader's laps, a new leader, every finish). A laptop plays its own ball at full level and other balls quieter with distance, silent past 45 m; laps, finishes and pickups are only yours.
 - **Always on:** dust behind every ball (by speed, none in the air), boost flames on any ball over normal top speed (so boost pads light up too), the rolling sound of your own ball (pitch follows speed), and the music by phase: lobby loop, silence for the countdown with beeps on 3-2-1 and the horn on Go (on server time), the race loop from Go, the results sting.
-- **Items:** the protocol's `item` event is the pickup, as on the pad. When Ali's items fire, call `fx.play({ type: "use", player, item })` (or add a `use` event to the protocol and pass it on).
+- **Items:** `item` is the pickup (sparkles and the pickup sound, as on the pad); `fire` is an item used, and its effect plays where the event says it happens (a spill's splat lands on the puddle).
 - **Camera shake (Ali):** `game.ts` hands every event to one `onEvent`, which shakes the chase camera (`eventShake` in `cameras.ts`) and calls `fx.play(event)`, so the shake and the effects always land together.
 - **Try it:** in local mode (`/play?local=1`), the panel's **Effects (fx.ts)** folder fires every cue on your ball.
 - **Tests:** `fx.test.ts` covers which cue each event becomes on each screen, the captions and the distance fade.

@@ -320,19 +320,31 @@ export function createGame(
     const me = session.ownId;
     const folder = session.gui.addFolder("Effects (fx.ts)");
     folder.close();
-    const buttons: [string, FxEvent][] = [
-      ["Bump", { type: "bump", a: me, b: "", strength: 0.35 }],
-      ["Crash", { type: "bump", a: me, b: "", strength: 1 }],
-      ["Item pickup", { type: "item", player: me, item: "boost" }],
-      ["Boost", { type: "use", player: me, item: "boost" }],
-      ["Lion Roar", { type: "use", player: me, item: "roar" }],
-      ["Creamery Spill", { type: "use", player: me, item: "spill" }],
-      ["Lap 2", { type: "lap", player: me, lap: 2 }],
-      ["Final lap", { type: "lap", player: me, lap: 3 }],
-      ["Win", { type: "finish", player: me, place: 1 }],
+    // where an item fires, as the server reports it: on the ball, or the puddle 1.2 m behind it for a spill
+    const at = (back = 0): [number, number, number] => {
+      const [x, y, z] = session.stats.position;
+      const h = session.stats.heading;
+      return [x - Math.sin(h) * back, y, z - Math.cos(h) * back];
+    };
+    const buttons: [string, () => FxEvent][] = [
+      ["Bump", () => ({ type: "bump", a: me, b: "", strength: 0.35 })],
+      ["Crash", () => ({ type: "bump", a: me, b: "", strength: 1 })],
+      ["Item pickup", () => ({ type: "item", player: me, item: "boost" })],
+      ["Boost", () => ({ type: "fire", player: me, item: "boost", pos: at() })],
+      [
+        "Lion Roar",
+        () => ({ type: "fire", player: me, item: "roar", pos: at() }),
+      ],
+      [
+        "Creamery Spill",
+        () => ({ type: "fire", player: me, item: "spill", pos: at(1.2) }),
+      ],
+      ["Lap 2", () => ({ type: "lap", player: me, lap: 2 })],
+      ["Final lap", () => ({ type: "lap", player: me, lap: 3 })],
+      ["Win", () => ({ type: "finish", player: me, place: 1 })],
     ];
     for (const [label, evt] of buttons)
-      folder.add({ go: () => fx.play(evt) }, "go").name(label);
+      folder.add({ go: () => fx.play(evt()) }, "go").name(label);
   }
 
   return {

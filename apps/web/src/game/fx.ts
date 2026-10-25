@@ -21,8 +21,8 @@ import type { Mixer } from "../audio/mixer";
 import { EVENT_SOUNDS, SOUNDS, type Screen } from "../audio/sounds";
 import type { BallPose } from "./balls";
 
-/** A game event, plus an item being fired (the protocol's `item` is the pickup, as on the pad) */
-export type FxEvent = GameEvent | { type: "use"; player: string; item: ItemId };
+/** What the effects play: the game events (`item` is a pickup, `fire` an item used, with where it happens) */
+export type FxEvent = GameEvent;
 
 type FxFile =
   | "fx_dust"
@@ -48,7 +48,7 @@ type Fx = ParticleSystem | GPUParticleSystem;
 export type Anchor =
   | "ball" // on the player's ball
   | "contact" // where the two bumping balls touch
-  | "behind" // 1.2 m behind the ball, where a dropped spill lands
+  | "behind" // where a fired item lands: the event's position, or 1.2 m behind the ball
   | "above" // 2.5 m over the ball
   | "ahead"; // 6 m ahead on the road: a finisher rolls on into the confetti cannon
 
@@ -208,6 +208,8 @@ export interface Cue {
   player: string;
   /** The other ball in a bump */
   other?: string;
+  /** Where a fired item happens, from the event (a spill: the puddle) */
+  pos?: [number, number, number];
   strength: number;
   vars: Record<string, string | number>;
 }
@@ -237,8 +239,8 @@ export function cueFor(evt: FxEvent, world: FxWorld): Cue | null {
     }
     case "item":
       return cue("pickup", evt.player);
-    case "use":
-      return cue(ITEM_CUE[evt.item], evt.player);
+    case "fire":
+      return { ...cue(ITEM_CUE[evt.item], evt.player), pos: evt.pos };
     case "overtake":
       // only a change at the front is news; the standings tower shows the rest
       if (world.place(evt.passed) !== 1) return null;
@@ -649,9 +651,9 @@ export class GameFx {
         return o ? Vector3.Center(b.p, o.p) : b.p.clone();
       }
       case "behind":
-        return b.p.add(
-          new Vector3(-Math.sin(b.h), 0, -Math.cos(b.h)).scale(1.2),
-        );
+        return cue.pos
+          ? Vector3.FromArray(cue.pos)
+          : b.p.add(new Vector3(-Math.sin(b.h), 0, -Math.cos(b.h)).scale(1.2));
       case "above":
         return b.p.add(new Vector3(0, 2.5, 0));
       case "ahead":

@@ -90,16 +90,22 @@ describe("cueFor", () => {
     );
   });
 
-  it("treats the protocol's item as a pickup and a fired item as its own effect", () => {
+  it("treats the protocol's item as a pickup and fire as the item's own effect, where it happens", () => {
     expect(
       cueFor({ type: "item", player: "ali", item: "roar" }, world("big"))?.name,
     ).toBe("pickup");
     expect(
-      cueFor({ type: "use", player: "ali", item: "roar" }, world("big"))?.name,
+      cueFor(
+        { type: "fire", player: "ali", item: "roar", pos: [0, 0, 0] },
+        world("big"),
+      )?.name,
     ).toBe("roar");
     expect(
-      cueFor({ type: "use", player: "ali", item: "spill" }, world("big"))?.name,
-    ).toBe("spill");
+      cueFor(
+        { type: "fire", player: "ali", item: "spill", pos: [4, 1, 2] },
+        world("big"),
+      ),
+    ).toMatchObject({ name: "spill", pos: [4, 1, 2] }); // the splat goes where the puddle is
   });
 });
 

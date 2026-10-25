@@ -174,7 +174,11 @@ export type GameEvent =
   | { type: "finish"; player: string; place: number }
   | { type: "respawn"; player: string };
 
-/** server → the joining viewer or pad, right after join: which player slot is theirs */
+/**
+ * Which player slot is yours. Send "hello" (no payload) once your message handlers are
+ * registered, and the server answers with "welcome". Asking avoids losing a message sent
+ * before the client is listening.
+ */
 export interface WelcomeMsg {
   playerId: string;
 }

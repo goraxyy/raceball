@@ -29,6 +29,10 @@ export class RaceRoom extends Room<{ state: RaceState }> {
 
   async onCreate() {
     this.roomId = await claimRoomCode(this.presence);
+    this.onMessage("hello", (client) => {
+      const playerId = this.seats.get(client.sessionId)?.playerId;
+      if (playerId) client.send("welcome", { playerId } satisfies WelcomeMsg);
+    });
   }
 
   /** Runs before a seat is taken, so rejected clients never count against maxClients */
@@ -71,7 +75,6 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     // viewer, or a phone-only pad (no laptop): both create a player
     const playerId = this.addPlayer(opts, opts.role === "pad");
     this.seats.set(client.sessionId, { role: opts.role, playerId });
-    client.send("welcome", { playerId } satisfies WelcomeMsg);
   }
 
   onLeave(client: Client) {

@@ -5,13 +5,15 @@ import {
   PROTOCOL_VERSION,
   SERVER_PORT,
   padUrl,
+  type GameEvent,
   type JoinOptions,
   type Laps,
   type StatusMsg,
   type NetStatMsg,
   type PongMsg,
   type RaceStateView,
-  type SnapMsg,
+  type PackedSnapMsg,
+  unpackSnap,
   type WelcomeMsg,
 } from "@raceball/shared";
 
@@ -44,6 +46,7 @@ export class NetSession {
   /** The room is gone (left, or reconnection failed) */
   closed = false;
   private listeners = new Set<() => void>();
+  private eventListeners = new Set<(event: GameEvent) => void>();
   private pinger: ReturnType<typeof setInterval>;
   readonly room: Room;
 
@@ -56,9 +59,12 @@ export class NetSession {
       "netstat",
       (msg: NetStatMsg) => (this.inputAge = msg.inputAge),
     );
-    room.onMessage("snap", (msg: SnapMsg) =>
-      this.buffer.push(msg, performance.now()),
+    room.onMessage("snap", (msg: PackedSnapMsg) =>
+      this.buffer.push(unpackSnap(msg), performance.now()),
     );
+    room.onMessage("evt", (event: GameEvent) => {
+      for (const listener of this.eventListeners) listener(event);
+    });
     room.onMessage("welcome", (msg: WelcomeMsg) => {
       this.playerId = msg.playerId;
       this.pairToken = msg.pairToken;
@@ -137,6 +143,12 @@ export class NetSession {
   subscribe(listener: () => void) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** Game events (bumps, laps, finishes…) as the server sends them, for VFX and camera shake. Returns an unsubscribe function */
+  onEvent(listener: (event: GameEvent) => void) {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
   }
 
   async leave() {

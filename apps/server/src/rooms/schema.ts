@@ -22,9 +22,13 @@ export const PlayerState = schema(
     lap: t.uint8().default(0),
     checkpoint: t.uint16().default(0),
     place: t.uint8().default(0),
-    /** Server time in ms, 0 until finished */
+    /** Race time in ms when they finished, 0 until then */
     finishedAt: t.number().default(0),
     connected: t.boolean().default(true),
+    /** Session stats, kept across rematches for as long as the player stays in the room */
+    wins: t.uint16().default(0),
+    /** Fastest lap this session, ms; 0 until they complete one */
+    bestLap: t.number().default(0),
   },
   "PlayerState",
 );

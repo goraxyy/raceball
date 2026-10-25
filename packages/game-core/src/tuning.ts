@@ -64,6 +64,11 @@ export const tuning = {
   camHeight: 3, // m above the ball
   camStiffness: 8, // higher = the camera catches up faster
   camLookAhead: 2, // m ahead of the ball the camera looks at
+  camFovBase: 1, // rad of vertical field of view at a standstill
+  camFovMax: 1.2, // rad at camFovSpeed and above
+  camFovSpeed: 24, // m/s where the field of view stops widening (past top speed, so boosts still widen it)
+  camShake: 0.35, // m the look point wobbles on a strength 1 bump
+  camShakeSeconds: 0.45, // how long a shake takes to die out
 };
 
 export type Tuning = typeof tuning;

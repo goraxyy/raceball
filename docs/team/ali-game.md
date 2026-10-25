@@ -467,6 +467,13 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 
 - If `engine.getFps() < 50` for 3 s, drop the tiles and show name tags instead. Every tile draws the scene again, so this is the safety valve.
 
+**How it's built** (`game/big-screen.ts`, `game/TileFrames.tsx`):
+
+- **Overview:** frames the whole pack. It eases toward the middle of every ball and backs off 1.2 m per metre of spread, plus 30 m (at least 45 m, at most the whole map). The angle stays where it is.
+- **Tiles:** the first 4 phone-only players in join order. The page draws Nuris's `FollowTile` frames along the top and measures the inside of each one. The game then draws that player's `ChaseCamera` in the matching viewport. Babylon clears only depth before each extra camera, so every tile scissor-clears its own rectangle first. Without that, the tile's sky would show the overview underneath.
+- **Fallback:** `FpsGuard` ignores the 2 s after the tiles change (new render passes compile shaders), then trips after 3 s in a row under 50 fps. The tiles go for good, and every ball gets a billboard name tag (player color dot, name) that stays the same size on screen at any zoom. Headless software rendering trips it after about 12 s, so expect it on a weak projector laptop.
+- **Place on the tiles:** `FollowTile` hides the place while it's 0. It shows once the server syncs standings into the schema.
+
 **Done when:** 4+ players (laptop and phone-only, real or bots) finish 3 laps in the correct order.
 
 ---

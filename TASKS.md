@@ -153,7 +153,7 @@ Nothing right now. Add new questions here.
 - [ ] Ball-to-ball collisions that feel good; emit `bump` (with strength) and `overtake` (with section) events
 - [ ] `botInput()` for Rasim's bots
 - [x] Own-ball extrapolation in the player view (with Rasim) (Rasim's snapshot buffer, drawn by `NetFeed`; smooth at 65 ms round trip with jitter)
-- [ ] Big screen: overview camera + **up to 4 follow-cam tiles** for phone-only players, with an automatic fallback to name tags below 50 fps
+- [x] Big screen: overview camera + **up to 4 follow-cam tiles** for phone-only players, with an automatic fallback to name tags below 50 fps (overview frames the pack; tiles draw inside Nuris's `FollowTile` frames; [details](docs/team/ali-game.md#big-screen-cameras))
 - [ ] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`
 
 **Rasim**

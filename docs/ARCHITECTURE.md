@@ -205,6 +205,12 @@ export interface PongMsg {
   /** Server time in ms (same clock as SnapMsg.t) */
   s: number;
 }
+
+/** server → a player's pad and laptop, 1 Hz: numbers for the net HUD */
+export interface NetStatMsg {
+  /** How old this player's latest input is at the server, ms. 200+ means it's treated as neutral */
+  inputAge: number;
+}
 ```
 
 Colyseus schema (synced automatically):

@@ -189,7 +189,7 @@ Nothing right now. Add new questions here.
 - [x] Section mechanics: library-step bounces, Lion Shrine bank + jump, Creamery cone ramp + puddles, stadium tunnel, snow/ice surfaces, College Ave boost pads (geometry in the greybox; surface grip, snow drag and boost pads in `race.ts`)
 - [ ] Event-to-effect table (`fx.ts`): particles, sounds and camera shake for every event
 - [ ] Performance pass: instancing/merging, one shadow light, LOD, freezing static meshes; under 150 draw calls
-- [ ] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown
+- [x] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown (`cameras.ts`; `camFov*` and `camShake*` in `tuning.ts`; `ChaseCamera.shake()` is the hook for `fx.ts`; local mode now has the 3 s countdown)
 - [ ] Railway: check the health check, logs and resource graphs under load
 - [ ] **Landmark art pass** for the landmarks a ball touches, in this order: Old Main, Lion Shrine, Creamery + cone, Pattee Library (budgets in [your guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Nuris reviews each against the art bible
 

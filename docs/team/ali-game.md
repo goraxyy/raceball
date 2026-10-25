@@ -553,9 +553,14 @@ On the real map, the bot's laps drop from about 64 s to about 61 s. The two star
 - **Merge** static meshes that share a material: `Mesh.MergeMeshes`.
 
 ### Camera polish
-- Widen the FOV slightly at speed.
-- Add a small shake on bumps and roars, which turns off when reduced motion is set in the settings.
-- Do a quick swoop over the grid during the countdown.
+
+**Done.** It's all in the chase camera (`apps/web/src/game/cameras.ts`), with the math in plain functions tested in `cameras.test.ts`:
+- **FOV at speed:** `chaseFov(speed)` widens from `camFovBase` (1 rad) to `camFovMax` (1.2 rad) on an S-curve, and stops at `camFovSpeed` (24 m/s, past top speed, so boosts still widen it). The speed comes from how far the ball moved each frame, and the FOV eases toward it.
+- **Shake:** `ChaseCamera.shake(strength)`, 0…1, wobbles the look point by up to `camShake` m and dies out over `camShakeSeconds`. A weaker shake never cuts a stronger one short. It fires for bumps your ball is in (`eventShake`) and for big landings (a fall of 6 m/s or more that stops; full strength at 14 m/s). Nuris's `fx.ts` calls `shake()` for anything else, like the Lion Roar.
+- **Grid swoop:** during the countdown, `swoopPose` starts 16 m in front of the ball and 10 m up, looking back over the grid. It swings round one side as it comes down, and lands exactly on the chase pose 0.4 s before the start.
+- **Reduced motion:** with `prefers-reduced-motion` there's no shake and no swoop, so the camera waits behind the ball. The FOV still widens.
+- **Events:** `game.ts` hears every game event, from the local race or the server's `evt` messages (`NetSession.onEvent`), in one `onEvent`. That's where `fx.ts` plugs in.
+- **Local mode** now has the same 3 s countdown as online, so the swoop plays after every reset. The panel's **Test bump** button fakes a strength 1 bump, for tuning the shake.
 
 ---
 

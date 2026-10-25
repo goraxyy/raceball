@@ -209,6 +209,28 @@ gltf-transform optimize assets-src/models/happy_valley_landmarks.glb apps/web/pu
 
 Keep `--flatten false`: it keeps the `lm_*` root nodes, which the tests look for. What's in them: [ASSETS.md > Campus landmarks](../ASSETS.md#campus-landmarks-old-main-pattee-library-the-lion-shrine-and-the-creamery).
 
+### M3 polish: the world, the road and the interactables
+
+From playtest notes: the models looked plain, the void was everywhere, and the boost pads and particles went unnoticed. Done:
+- **The ground and the sky.** A grass board round the track, with two chasms kept as the dangerous places. Over it, a sky with clouds and haze.
+- **The road.** A textured surface with kerbs and a start line.
+- **The last greybox blocks.** Buildings and snow drifts now stand over them.
+- **The boost pads.** They glow now.
+- **The particles.** Bigger and brighter.
+- **Two new interactables, no button needed.** Creamery Scoops and Lion Paw bumpers.
+
+All of it is rebuilt from scripts:
+
+```bash
+python tools/track/build_interactables.py      # where the scoops and paws go (plain Python)
+python tools/models/build_world.py             # bpy: the board, causeways, hills, road surface, buildings
+python tools/models/build_interactables.py     # bpy: scoops, the paw bumper, the boost pad
+node tools/fx/build_fx.mjs                     # every particle system, v1 to v3
+python tools/audio/gen_sfx.py                  # the synthesized sounds (new ones last, so the old stay identical)
+```
+
+Optimize the two models as their docstrings say (keep `--join false --flatten false`). What's in them and how the game drives them: [ASSETS.md > The world, the road and the interactables](../ASSETS.md#the-world-the-road-and-the-interactables).
+
 ---
 
 ## Before you commit an asset

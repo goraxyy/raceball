@@ -377,6 +377,90 @@ The landmarks a ball races past, built by `tools/models/landmarks_campus.py` int
 
 ![Old Main from the grid, the library steps, the Lion Shrine and the giant cone](art/landmarks-campus.png)
 
+## The world, the road and the interactables
+
+The M3 polish pass, from playtest notes: plain materials, the void everywhere, and boost pads and particles that nobody noticed.
+
+### The ground and the sky
+
+- **One definition, two uses.** `packages/game-core/tracks/happy_valley_world.json` is a board of grass at y = −0.3 with two voids left as the dangerous places: the Arboretum gorge and the College Ave cliff, both well clear of the road. game-core builds its colliders from it (`ground.ts`), and leaving the road onto the grass respawns you after 0.8 s (`offTrackSeconds`), as falling into a void does. `tools/models/build_world.py` builds the board you see from the same file.
+- **`maps/happy_valley_world.glb`** (about 380 KB), loaded by `world.ts` over the map:
+
+  | Node | What it is |
+  |---|---|
+  | `ground_board` | Mown grass, 16 m stripes with tufts and daisies (a painted texture, world UVs) |
+  | `ground_edges` | The cut face wherever the board ends, round the voids and at its edges: turf, topsoil with pebbles, clay, rock, like a diorama board |
+  | `causeways` | Limestone walls with pilasters under the rails wherever the road runs above the grass, so it never floats |
+  | `hills`, `tree_*` | Rolling hills in the outer band and clumps of fall trees on the lawns (instanced), away from the road, the landmarks and Mount Nittany |
+  | `road_<section>`, `kerbs`, `start_line` | The road's surface (below) |
+  | `buildings`, `snow_drifts` | The HUB and three College Ave storefronts over Ali's greybox blocks, and drifts over the Arboretum's snowbank blocks, each a little bigger than the block it hides |
+
+- **Sky** (`createSky` in `world.ts`):
+  - a gradient dome, deep blue overhead fading to a pale warm horizon;
+  - toy clouds circling the board: high ones round the horizon (never over the track, so the overview stays clear) and a deck below, seen through the gorge and past the edges;
+  - haze in the horizon color that starts past whatever the camera looks at;
+  - a warm sun with a blue fill, and the neutral (KHR PBR) tone map.
+
+### The road
+
+- **The surface lies 2.5 cm over Ali's greybox road, on his own chords**, so it never cuts below the curve. `world.ts` pulls it toward the camera (polygon offset) so it never flickers against the greybox from far up.
+- **Asphalt:** grain, old patches, darker polished bands where the wheels go, chalk edge lines and the center dashes. Each section gets its own tint and shine (`ROAD_LOOK`): the Creamery is a touch pink, and the Arboretum is icy and glossy where the snow falls.
+- **Kerbs and start line:** kerbs in 1.5 m blocks, each section's color with white (the start's is red, the Creamery's strawberry), and a checkered start line.
+- **Finish on the greybox:** Ali's rails and blocks get a lacquered toy finish (`finishGreybox`). The Kenney trees stay matte.
+
+### The interactables: Creamery Scoops and Lion Paw bumpers
+
+Nothing to press: you just drive into them. `tools/track/build_interactables.py` places them on the route and writes `tracks/happy_valley_interactables.json`, which game-core and the web both read.
+
+- **Creamery Scoops** are Mario Kart's coins: 23 in six lines round the loop, some on the racing line and some tempting you wide.
+  - **Collecting:** each one held adds 1.2% top speed, up to 10 (+12%).
+  - **Losing them:** a hard bump knocks 2 off both balls, a Lion Roar knocks 3 off everyone it reaches, and a respawn loses half.
+  - **Coming back:** a collected scoop returns after 6 s.
+- **Lion Paw bumpers** are pinball posts near the road's edges: a slalom into the Lion Shrine hairpin and a pair on the stadium approach.
+  - **The kick:** a ball leaves one at 13 m/s or more, straight out, with a hop.
+  - **Bots:** they stand off the centerline, so the bots run clean.
+- **Models** (`models/kit_interactables.glb`, `tools/models/build_interactables.py`), each root at the spot the game places it:
+
+  | Node | What it is |
+  |---|---|
+  | `prop_scoop_strawberry`, `_vanilla`, `_chocolate` | A lacquered scoop on a waffle-cone tip, with a ruffled rim, a drip, sprinkles and a cherry. Origin at the pickup's center; the flavours take turns along the track |
+  | `prop_paw_bumper` | A white body on a white rubber ring, a broad gold light band (`mat_paw_light`) and a navy cap with the lion's paw print. 1.1 m radius, 1.4 m tall, as the collider |
+  | `prop_boost_pad` | 8 × 4 m like the boost markers: a navy frame, a panel of glowing chevrons (`mat_boost_chevrons`) and cyan light bars (`mat_boost_light`) |
+
+- **In the game** (`interactables.ts`):
+  - the boost pads go over the track's boost markers (`readBoostPads`), and the greybox's flat blue pads are hidden;
+  - the chevrons always flow forward and glimmer, and a pad flashes when a ball hits it;
+  - a paw flashes and squashes when it kicks;
+  - scoops spin, bob, and shrink away while gone;
+  - a glow layer lights them on laptops (not on the big screen, whose tiles would each pay for it).
+- **Item boxes** are the flag-yellow crate from the animated kit now, and a Creamery Spill is a glossy strawberry splat (`items.ts`).
+- **HUD:** the local panel shows scoops held and the top-speed gain. `RaceHud` takes `scoops` for a 10-pip meter under the item (see `/ui` > hud).
+- **Protocol v7** adds four events:
+  - `pad`: over a boost pad;
+  - `scoop`: collected, with the count now held;
+  - `drop`: scoops knocked off;
+  - `bounce`: a paw's kick.
+
+  It also adds `scoops` per player and the synced `scoops` list.
+- **Review:** `/ui` > models > Interactables shows all three side by side.
+
+### VFX v3 files
+
+Bigger and brighter all round: the dust is larger and more solid (it reads on the dark asphalt), and sparks are additive and larger, as are the respawn stars and the boost flames. Six new systems, from the same atlas:
+
+| File | Event | How code drives it |
+|---|---|---|
+| `fx_pad_burst.json` | `pad` | At the ball, 36: a curtain of cyan streaks shooting up off the pad (then the boost flames run, as the ball is over top speed) |
+| `fx_pad_glimmer.json` | Always, on every pad | Set `emitter` to the pad's panel mesh: its box of rising sparkles turns with the pad |
+| `fx_scoop_sparkle.json` | `scoop` | At the scoop, 14 gold and white sparkles, with 12 of the spill's sprinkles |
+| `fx_scoop_drop.json` | `drop` | At the ball, 2 + 3 per scoop lost: vanilla and strawberry blobs flung up |
+| `fx_paw_ring.json` | `bounce` | At the paw, 1: a quick gold ring |
+| `fx_paw_stars.json` | `bounce` | At the paw, 14 stars, with 8 bump sparks on the ball |
+
+`FX_TABLE` gains `pad`, `scoop`, `scoopDrop` and `bounce`. None of them has a caption (they happen all race long). On a laptop, someone else's scoop is silent. A scoop's pop climbs in pitch with every scoop held, like coins, and a paw's kick shakes your chase camera.
+
+![The world from the overview: the board, the gorge, hills, the HUB and the storefronts](art/world-overview.png)
+
 ## Audio
 
 | Category | Examples | Notes |
@@ -417,7 +501,7 @@ mix.loop("roll", true, { strength: speed01, rate: 0.6 + speed01 }); // call ever
 mix.finalLap(); // race music up about a semitone
 ```
 
-- **Events → sounds** (`EVENT_SOUNDS`): `bump`; `bumpHard` (bump + heavy layer + crowd oooh); `overtake` (crowd cheer); `lap`; `finalLap`; `finish` (fanfare + cheer); `respawn` (fall, then the respawn); `boost`; `roar` (the roar + its whoomp); `spill`; `snowday`. Sounds with several files pick one at random, and some vary the rate a little (`spread`), so repeats never sound copied.
+- **Events → sounds** (`EVENT_SOUNDS`): `bump`; `bumpHard` (bump + heavy layer + crowd oooh); `overtake` (crowd cheer); `lap`; `finalLap`; `finish` (fanfare + cheer); `respawn` (fall, then the respawn); `boost`; `roar` (the roar + its whoomp); `spill`; `snowday`; and for the interactables `pad` (whoosh), `scoop` (pop), `scoopDrop` and `bounce` (boing). Sounds with several files pick one at random, and some vary the rate a little (`spread`), so repeats never sound copied.
 - **Two mixes.** Each sound has a level per screen (`gain.big`, `gain.laptop`), and goes through a bus: music 0.55, race cues 1, effects 0.85, crowd 0.7, UI 0.6.
   - **Big screen:** everything, with music at full level and the crowd.
   - **Laptop:** music 8 dB down, **no crowd**, and the player's own ball a little louder, so their sounds stay on top of the room.
@@ -440,6 +524,11 @@ mix.finalLap(); // race music up about a semitone
   - **`sfx_crowd_cheer`:** 48 voices whooping up on "yeah / hey / wahh", with claps and a stadium tail.
   - **`sfx_crowd_oooh`:** 40 voices on "oooh", swelling up and falling away.
   - **`sfx_lion_roar`:** a growl that opens up and closes, with a sub-octave for size and a snarl.
+  - The interactables, generated last on their own random stream so every sound above stays byte-identical:
+    - **`sfx_pad_whoosh`:** a thump, air rushing up a rising band, and a two-note zing.
+    - **`sfx_scoop_pop`:** a soft bloop and a little bell; the game raises its pitch with each scoop held.
+    - **`sfx_scoop_drop`:** three plops falling in pitch.
+    - **`sfx_paw_boing`:** a pinball thwack and a springy boing with a metallic ring.
 - **Tests:** `apps/web/src/audio/sounds.test.ts` checks that every file in the bank exists, that loops are WAVs, that levels are in range with no crowd on laptops, and that every game event maps to real sounds.
 
 ## Where assets come from (check every license)

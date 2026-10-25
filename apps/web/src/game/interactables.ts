@@ -1,13 +1,13 @@
 import {
   type AbstractMesh,
   type AssetContainer,
-  type BaseTexture,
   GlowLayer,
   LoadAssetContainerAsync,
   type Mesh,
   ParticleSystem,
   PBRMaterial,
   type Scene,
+  Texture,
   type TransformNode,
   Vector3,
 } from "@babylonjs/core";
@@ -79,7 +79,7 @@ export class InteractableViews {
   private pads: Lit[] = [];
   private paws: Lit[] = [];
   private readonly scoops = new Map<string, ScoopView>();
-  private chevrons: BaseTexture[] = [];
+  private chevrons: Texture[] = [];
   private glimmers: ParticleSystem[] = [];
   private glow?: GlowLayer;
   private time = 0;
@@ -125,7 +125,7 @@ export class InteractableViews {
       if (mat.name === "mat_boost_chevrons" && mat instanceof PBRMaterial)
         this.chevrons = [
           ...new Set([mat.albedoTexture, mat.emissiveTexture]),
-        ].filter((t): t is BaseTexture => !!t);
+        ].filter((t): t is Texture => t instanceof Texture);
     }
     if (this.useGlow) {
       this.glow = new GlowLayer("interactables-glow", this.scene, {
@@ -209,7 +209,7 @@ export class InteractableViews {
     if (!this.kit) return;
     this.time += dt;
     for (const tex of this.chevrons)
-      (tex as { vOffset: number }).vOffset = (-this.time * CHEVRON_SPEED) % 1; // flows toward +v: forward
+      tex.vOffset = (-this.time * CHEVRON_SPEED) % 1; // flows toward +v: forward
     const breathe = GLOW_IDLE + GLOW_PULSE * Math.sin(this.time * 4);
     const fade = Math.exp(-FLASH_DECAY * dt);
     for (const v of [...this.pads, ...this.paws]) {

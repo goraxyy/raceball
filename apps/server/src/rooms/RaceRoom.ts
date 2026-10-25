@@ -1,8 +1,11 @@
 import { randomBytes } from "node:crypto";
+import { NodeIO } from "@gltf-transform/core";
+import { TICK_DT, createRace, type Race } from "@raceball/game-core";
 import { Room, ServerError, type Client } from "colyseus";
 import {
   JoinError,
   MAX_PLAYERS,
+  PLANETS,
   PROTOCOL_VERSION,
   type InputMsg,
   type JoinOptions,
@@ -12,6 +15,8 @@ import {
   type WelcomeMsg,
 } from "@raceball/shared";
 import { claimRoomCode, releaseRoomCode } from "./room-code";
+import { inputForStep } from "./stale-input";
+import { trackBytes } from "./track-file";
 import { PlayerState, RaceState } from "./schema";
 
 const ROLES: readonly Role[] = ["host", "viewer", "pad"];
@@ -20,6 +25,12 @@ const MAX_NAME = 16;
 const NETSTAT_MS = 1000;
 /** Close code for a pad whose laptop player left */
 const PLAYER_GONE = 4100;
+/** One simulation step, ms */
+const TICK_MS = TICK_DT * 1000;
+/** Send a snapshot every Nth step: 1 = 60 Hz */
+const SNAP_EVERY = 1;
+/** After a stall (GC, slow host), catch up at most this many steps instead of spiralling */
+const MAX_CATCH_UP = 5;
 
 interface Seat {
   role: Role;
@@ -40,9 +51,20 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   private tokenOf = new Map<string, string>();
   /** playerId → latest input from their pad, and when it arrived (ms) */
   private padInputs = new Map<string, { msg: InputMsg; at: number }>();
+  /** The only simulation (game-core). Screens draw its snapshots */
+  private race!: Race;
+  /** Time not yet simulated, ms */
+  private acc = 0;
+  private tickCount = 0;
 
   async onCreate() {
     this.roomId = await claimRoomCode(this.presence);
+    this.race = await createRace(await trackBytes(), new NodeIO(), {
+      laps: this.state.laps,
+    });
+    // M1 vertical slice: drive freely from the start. The M2 lobby flow starts it from the host instead
+    this.race.start(0, this.state.laps);
+    this.state.phase = this.race.phase;
     this.onMessage("hello", (client) => {
       const seat = this.seats.get(client.sessionId);
       if (!seat?.playerId) return;
@@ -62,6 +84,8 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       this.padInputs.set(seat.playerId, { msg, at: Date.now() });
     });
     this.clock.setInterval(() => this.sendNetStats(), NETSTAT_MS);
+    // Check twice per step: coarse OS timers (15.6 ms on Windows) would otherwise skip snapshots
+    this.setSimulationInterval((dt) => this.tick(dt), TICK_MS / 2);
   }
 
   /** Runs before a seat is taken, so rejected clients never count against maxClients */
@@ -139,7 +163,42 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   }
 
   async onDispose() {
+    this.race?.dispose();
     await releaseRoomCode(this.presence, this.roomId);
+  }
+
+  /** Fixed 1/60 s steps however unevenly the timer fires, then one snapshot to the screens */
+  private tick(elapsedMs: number) {
+    this.acc = Math.min(this.acc + elapsedMs, MAX_CATCH_UP * TICK_MS);
+    let stepped = false;
+    while (this.acc >= TICK_MS) {
+      const now = Date.now();
+      this.state.players.forEach((_, id) => {
+        this.race.setInput(id, inputForStep(this.padInputs.get(id), now));
+      });
+      this.race.step(TICK_DT);
+      this.acc -= TICK_MS;
+      this.tickCount++;
+      stepped = true;
+    }
+    if (!stepped) return;
+    const events = this.race.drainEvents();
+    // Screens get every event for VFX; routing them to the right pads comes in M2
+    for (const evt of events) this.sendToScreens("evt", evt);
+    if (this.tickCount % SNAP_EVERY === 0) {
+      this.sendToScreens(
+        "snap",
+        this.race.snapshot(this.tickCount, Date.now()),
+      );
+    }
+  }
+
+  /** The big screen and laptops draw the race; pads don't need snapshots */
+  private sendToScreens(type: string, msg: unknown) {
+    for (const client of this.clients) {
+      const role = this.seats.get(client.sessionId)?.role;
+      if (role === "host" || role === "viewer") client.send(type, msg);
+    }
   }
 
   private addPlayer(opts: JoinOptions, phoneOnly: boolean): string {
@@ -154,10 +213,11 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     player.phoneOnly = phoneOnly;
     player.paired = phoneOnly; // a phone-only pad is its own controller
     this.state.players.set(playerId, player);
+    this.race.addPlayer(playerId, player.ball || PLANETS[slot]);
     return playerId;
   }
 
-  /** Latest input for the simulation loop (M1), with when it arrived */
+  /** Latest input from a player's pad, with when it arrived (tests) */
   latestInput(playerId: string) {
     return this.padInputs.get(playerId);
   }
@@ -178,6 +238,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   /** Remove a player and their pairing token, and disconnect their paired pad */
   private removePlayer(playerId: string) {
     this.state.players.delete(playerId);
+    this.race.removePlayer(playerId);
     this.padInputs.delete(playerId);
     const token = this.tokenOf.get(playerId);
     if (token) this.pairTokens.delete(token);

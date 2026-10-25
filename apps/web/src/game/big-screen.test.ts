@@ -83,7 +83,7 @@ describe("BigScreen", () => {
     vi.unstubAllGlobals();
   });
 
-  const players = (all: string[]): BigScreenPlayers => ({ all });
+  const players = (noLaptop: string[]): BigScreenPlayers => ({ noLaptop });
 
   it("splits the screen: every player gets a first-person view, drawn where the page framed it", () => {
     const big = new BigScreen(scene, overview);

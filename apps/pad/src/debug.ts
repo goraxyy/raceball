@@ -46,3 +46,9 @@ export function mountDebugOverlay() {
   };
   requestAnimationFrame(render);
 }
+
+/** In-page console for phones without a cable. Lazy-loaded so normal players never download it. */
+export async function loadEruda() {
+  const { default: eruda } = await import("eruda");
+  eruda.init();
+}

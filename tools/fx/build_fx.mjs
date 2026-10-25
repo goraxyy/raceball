@@ -1,4 +1,4 @@
-// Builds the VFX v1 and v2 particle systems and writes them to apps/web/public/assets/fx/ as
+// Builds the VFX v1, v2 and v3 (the interactables) particle systems and writes them to apps/web/public/assets/fx/ as
 // Babylon ParticleSystem JSON (the same format as `ps.serialize()` from the Inspector).
 //
 // Every effect draws from one atlas, fx_atlas.png (tools/fx/gen_fx_textures.py), and picks
@@ -91,9 +91,9 @@ function burst(ps) {
 
 /** Rolling dust: soft blobs and clouds kicked up behind a rolling ball. */
 function dust() {
-  const ps = system("fx_dust", 60, [C.blob, C.cloud]);
-  // 24 per second at top speed; code scales emitRate with speed (0 when airborne)
-  ps.emitRate = 24;
+  const ps = system("fx_dust", 90, [C.blob, C.cloud]);
+  // 30 per second at top speed; code scales emitRate with speed (0 when airborne)
+  ps.emitRate = 30;
   ps.createBoxEmitter(
     new Vector3(-0.6, 0.5, -0.6),
     new Vector3(0.6, 1.1, 0.6),
@@ -102,31 +102,33 @@ function dust() {
   );
   ps.minEmitPower = 0.4;
   ps.maxEmitPower = 1.0;
-  ps.minLifeTime = 0.35;
-  ps.maxLifeTime = 0.6;
+  ps.minLifeTime = 0.45;
+  ps.maxLifeTime = 0.75;
   ps.gravity = new Vector3(0, 0.8, 0);
-  ps.addSizeGradient(0, 0.4, 0.5);
-  ps.addSizeGradient(1, 1.0, 1.3);
+  // big and fairly solid: on the dark asphalt they read from the far end of a room
+  ps.addSizeGradient(0, 0.6, 0.8);
+  ps.addSizeGradient(1, 1.4, 1.8);
   ps.minAngularSpeed = -1;
   ps.maxAngularSpeed = 1;
-  ps.color1 = hex(LIMESTONE, 0.6);
-  ps.color2 = hex(PAPER, 0.5);
+  ps.color1 = hex(LIMESTONE, 0.78);
+  ps.color2 = hex(PAPER, 0.66);
   ps.colorDead = hex(LIMESTONE, 0);
   return ps;
 }
 
 /** Bump sparks: four-point stars that pop out of the contact point and fall. */
 function bumpSparks() {
-  const ps = burst(system("fx_bump_sparks", 24, [C.sparkle]));
+  const ps = burst(system("fx_bump_sparks", 40, [C.sparkle]));
+  ps.blendMode = ParticleSystem.BLENDMODE_ADD; // they light up, rather than sit on top
   ps.createSphereEmitter(0.25, 1);
-  ps.minEmitPower = 4;
-  ps.maxEmitPower = 8;
-  ps.minLifeTime = 0.3;
-  ps.maxLifeTime = 0.5;
+  ps.minEmitPower = 5;
+  ps.maxEmitPower = 10;
+  ps.minLifeTime = 0.35;
+  ps.maxLifeTime = 0.6;
   ps.gravity = new Vector3(0, -12, 0);
-  ps.addSizeGradient(0, 0.5, 0.75);
-  ps.addSizeGradient(0.6, 0.45, 0.65);
-  ps.addSizeGradient(1, 0.1, 0.15);
+  ps.addSizeGradient(0, 0.8, 1.1);
+  ps.addSizeGradient(0.6, 0.65, 0.9);
+  ps.addSizeGradient(1, 0.12, 0.18);
   ps.minAngularSpeed = -8;
   ps.maxAngularSpeed = 8;
   ps.color1 = hex(FLAG_YELLOW);
@@ -162,13 +164,13 @@ function respawnStars() {
   ps.worldOffset = new Vector3(0, 0.3, 0);
   ps.createSphereEmitter(0.4, 1);
   ps.minEmitPower = 3;
-  ps.maxEmitPower = 5;
-  ps.minLifeTime = 0.4;
-  ps.maxLifeTime = 0.6;
+  ps.maxEmitPower = 5.5;
+  ps.minLifeTime = 0.45;
+  ps.maxLifeTime = 0.7;
   ps.gravity = new Vector3(0, -6, 0);
-  ps.addSizeGradient(0, 0.45, 0.6);
-  ps.addSizeGradient(0.7, 0.45, 0.55);
-  ps.addSizeGradient(1, 0.1, 0.15);
+  ps.addSizeGradient(0, 0.65, 0.85);
+  ps.addSizeGradient(0.7, 0.6, 0.75);
+  ps.addSizeGradient(1, 0.12, 0.18);
   ps.minAngularSpeed = -6;
   ps.maxAngularSpeed = 6;
   // white until code sets color1/color2 to the player color and colorDead to it at alpha 0
@@ -195,11 +197,11 @@ function boostFlames() {
   );
   ps.minEmitPower = 2;
   ps.maxEmitPower = 3.5;
-  ps.minLifeTime = 0.16;
-  ps.maxLifeTime = 0.28;
-  ps.addSizeGradient(0, 0.45, 0.6);
-  ps.addSizeGradient(0.35, 0.8, 1.0);
-  ps.addSizeGradient(1, 0.2, 0.3);
+  ps.minLifeTime = 0.18;
+  ps.maxLifeTime = 0.3;
+  ps.addSizeGradient(0, 0.6, 0.8);
+  ps.addSizeGradient(0.35, 1.05, 1.3);
+  ps.addSizeGradient(1, 0.25, 0.35);
   // flames stay upright-ish: a little wobble, no spin
   ps.minInitialRotation = -0.35;
   ps.maxInitialRotation = 0.35;
@@ -399,6 +401,149 @@ function confetti() {
   return ps;
 }
 
+// ------------------------------------------------------------------ VFX v3: the interactables
+
+const CYAN = "#3FC4FF";
+const ICE_WHITE = "#EFFCFF";
+const PAD_BLUE = "#1E6FD9";
+
+/** A boost pad going off: a curtain of cyan streaks shooting up off the pad round the ball. */
+function padBurst() {
+  const ps = burst(system("fx_pad_burst", 60, [C.streak]));
+  ps.blendMode = ParticleSystem.BLENDMODE_ADD;
+  ps.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED;
+  ps.createDirectedCylinderEmitter(
+    1.6,
+    0.2,
+    0.6,
+    new Vector3(-0.25, 1, -0.25),
+    new Vector3(0.25, 1.6, 0.25),
+  );
+  ps.minEmitPower = 8;
+  ps.maxEmitPower = 13;
+  ps.minLifeTime = 0.25;
+  ps.maxLifeTime = 0.42;
+  ps.gravity = new Vector3(0, -10, 0);
+  ps.addSizeGradient(0, 0.6, 0.85);
+  ps.addSizeGradient(1, 0.15, 0.25);
+  ps.minInitialRotation = 0;
+  ps.maxInitialRotation = 0;
+  ps.color1 = hex(ICE_WHITE);
+  ps.color2 = hex(CYAN);
+  ps.colorDead = hex(PAD_BLUE, 0);
+  return ps;
+}
+
+/**
+ * The glimmer that always rises off a boost pad: sparkles drifting up from the whole 8 x 4 m panel. Its box is in
+ * the emitter's space: give it the pad's panel mesh as the emitter, so it turns with the pad.
+ */
+function padGlimmer() {
+  const ps = system("fx_pad_glimmer", 40, [C.sparkle]);
+  ps.blendMode = ParticleSystem.BLENDMODE_ADD;
+  ps.emitRate = 14;
+  ps.createBoxEmitter(
+    new Vector3(0, 1, 0),
+    new Vector3(0, 1.4, 0),
+    new Vector3(-3.6, 0.05, -1.8),
+    new Vector3(3.6, 0.15, 1.8),
+  );
+  ps.minEmitPower = 0.8;
+  ps.maxEmitPower = 1.6;
+  ps.minLifeTime = 0.6;
+  ps.maxLifeTime = 1.0;
+  ps.gravity = new Vector3(0, 0.4, 0);
+  ps.addSizeGradient(0, 0.2, 0.3);
+  ps.addSizeGradient(0.4, 0.4, 0.55);
+  ps.addSizeGradient(1, 0.05, 0.1);
+  ps.minAngularSpeed = -2;
+  ps.maxAngularSpeed = 2;
+  ps.color1 = hex(ICE_WHITE, 0.9);
+  ps.color2 = hex(CYAN, 0.9);
+  ps.colorDead = hex(PAD_BLUE, 0);
+  return ps;
+}
+
+/** A Creamery Scoop collected: a pop of gold and white sparkles (with the spill's sprinkles). */
+function scoopSparkle() {
+  const ps = burst(system("fx_scoop_sparkle", 30, [C.sparkle]));
+  ps.blendMode = ParticleSystem.BLENDMODE_ADD;
+  ps.createSphereEmitter(0.45, 1);
+  ps.minEmitPower = 3;
+  ps.maxEmitPower = 6;
+  ps.minLifeTime = 0.35;
+  ps.maxLifeTime = 0.55;
+  ps.gravity = new Vector3(0, -4, 0);
+  ps.addSizeGradient(0, 0.55, 0.75);
+  ps.addSizeGradient(1, 0.1, 0.15);
+  ps.minAngularSpeed = -6;
+  ps.maxAngularSpeed = 6;
+  ps.color1 = hex(FLAG_YELLOW);
+  ps.color2 = hex("#FFFFFF");
+  ps.colorDead = hex(FLAG_YELLOW, 0);
+  return ps;
+}
+
+/** Scoops knocked off a ball: blobs of vanilla and strawberry flung up, falling and bouncing away. */
+function scoopDrop() {
+  const ps = burst(system("fx_scoop_drop", 24, [C.splat]));
+  ps.createHemisphericEmitter(0.4, 1);
+  ps.minEmitPower = 4;
+  ps.maxEmitPower = 7;
+  ps.minLifeTime = 0.6;
+  ps.maxLifeTime = 0.9;
+  ps.gravity = new Vector3(0, -16, 0);
+  ps.addSizeGradient(0, 0.45, 0.6);
+  ps.addSizeGradient(1, 0.35, 0.5);
+  ps.minAngularSpeed = -4;
+  ps.maxAngularSpeed = 4;
+  ps.color1 = hex(VANILLA);
+  ps.color2 = hex(STRAWBERRY);
+  ps.colorDead = hex(VANILLA, 0);
+  return ps;
+}
+
+/** A Lion Paw kicking a ball off: one quick gold ring off the bumper. */
+function pawRing() {
+  const ps = burst(system("fx_paw_ring", 3, [C.ring]));
+  ps.worldOffset = new Vector3(0, 0.9, 0);
+  ps.createPointEmitter(Vector3.Zero(), Vector3.Zero());
+  ps.minEmitPower = 0;
+  ps.maxEmitPower = 0;
+  ps.minLifeTime = 0.24;
+  ps.maxLifeTime = 0.28;
+  ps.addSizeGradient(0, 1.2, 1.2);
+  ps.addSizeGradient(0.4, 3.6, 3.6);
+  ps.addSizeGradient(1, 4.6, 4.6);
+  ps.minAngularSpeed = 0;
+  ps.maxAngularSpeed = 0;
+  ps.color1 = hex(FLAG_YELLOW, 0.95);
+  ps.color2 = hex(FLAG_YELLOW, 0.95);
+  ps.colorDead = hex(FLAG_YELLOW, 0);
+  return ps;
+}
+
+/** ...and stars flying off it, like a pinball bumper's flash. */
+function pawStars() {
+  const ps = burst(system("fx_paw_stars", 24, [C.star]));
+  ps.blendMode = ParticleSystem.BLENDMODE_ADD;
+  ps.worldOffset = new Vector3(0, 1, 0);
+  ps.createSphereEmitter(0.7, 1);
+  ps.minEmitPower = 5;
+  ps.maxEmitPower = 9;
+  ps.minLifeTime = 0.35;
+  ps.maxLifeTime = 0.55;
+  ps.gravity = new Vector3(0, -8, 0);
+  ps.addSizeGradient(0, 0.6, 0.8);
+  ps.addSizeGradient(1, 0.12, 0.18);
+  ps.minAngularSpeed = -8;
+  ps.maxAngularSpeed = 8;
+  ps.color1 = hex(FLAG_YELLOW);
+  ps.color2 = hex("#FFFFFF");
+  ps.colorDead = hex(FLAG_YELLOW, 0);
+  return ps;
+}
+
 const V1 = [dust(), bumpSparks(), respawnPoof(), respawnStars()];
 const V2 = [
   boostFlames(),
@@ -411,8 +556,16 @@ const V2 = [
   snowPuff(),
   confetti(),
 ];
+const V3 = [
+  padBurst(),
+  padGlimmer(),
+  scoopSparkle(),
+  scoopDrop(),
+  pawRing(),
+  pawStars(),
+];
 
-for (const ps of [...V1, ...V2]) {
+for (const ps of [...V1, ...V2, ...V3]) {
   const file = new URL(`${ps.name}.json`, OUT);
   writeFileSync(file, `${JSON.stringify(ps.serialize(false), null, 2)}\n`);
   console.log(`wrote ${fileURLToPath(file).slice(fileURLToPath(root).length)}`);

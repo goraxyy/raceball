@@ -123,12 +123,20 @@ export function landing(
   };
 }
 
-/** How hard an event shakes your chase camera, 0…1: a bump you're in, by its strength. fx.ts can add more */
+/** How hard a Lion Paw bumper's kick shakes your camera, as a bump's strength */
+const PAW_SHAKE = 0.55;
+
+/**
+ * How hard an event shakes your chase camera, 0…1: a bump you're in, by its strength, or a Lion Paw kicking your
+ * ball. fx.ts can add more
+ */
 export function eventShake(
   event: GameEvent,
   ownId: string | null | undefined,
 ): number {
-  if (!ownId || event.type !== "bump") return 0;
+  if (!ownId) return 0;
+  if (event.type === "bounce") return event.player === ownId ? PAW_SHAKE : 0; // a Lion Paw's kick
+  if (event.type !== "bump") return 0;
   return event.a === ownId || event.b === ownId ? event.strength : 0;
 }
 

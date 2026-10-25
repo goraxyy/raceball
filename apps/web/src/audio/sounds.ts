@@ -170,6 +170,31 @@ export const SOUNDS = {
     caption: "Snow Day!",
   },
 
+  // the interactables: boost pads, Creamery Scoops, Lion Paw bumpers (tools/audio/gen_sfx.py)
+  padWhoosh: {
+    files: sfx("sfx_pad_whoosh.mp3"),
+    bus: "sfx",
+    gain: { big: 0.75, laptop: 0.8 },
+    spread: 0.04,
+  },
+  scoop: {
+    files: sfx("sfx_scoop_pop.mp3"),
+    bus: "sfx",
+    gain: { big: 0.6, laptop: 0.75 },
+  },
+  scoopDrop: {
+    files: sfx("sfx_scoop_drop.mp3"),
+    bus: "sfx",
+    gain: { big: 0.7, laptop: 0.8 },
+    spread: 0.05,
+  },
+  pawBoing: {
+    files: sfx("sfx_paw_boing.mp3"),
+    bus: "sfx",
+    gain: { big: 0.8, laptop: 0.85 },
+    spread: 0.06,
+  },
+
   // the crowd (big screen only)
   crowdCheer: {
     files: sfx("sfx_crowd_cheer.mp3"),
@@ -255,4 +280,8 @@ export const EVENT_SOUNDS: Record<string, SoundId[]> = {
   roar: ["lionRoar", "roarWhoomp"],
   spill: ["spill"],
   snowday: ["snowDay"],
+  pad: ["padWhoosh"],
+  scoop: ["scoop"],
+  scoopDrop: ["scoopDrop"],
+  bounce: ["pawBoing"],
 };

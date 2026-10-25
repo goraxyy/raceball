@@ -128,7 +128,7 @@ A rolling ball has momentum, which hides latency far better than a twitchy kart 
 ## Protocol v1 (draft, lives in `packages/shared/src/protocol.ts`)
 
 ```ts
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -181,7 +181,11 @@ export type GameEvent =
   | { type: "overtake"; player: string; passed: string; section: string } // position change
   | { type: "lap"; player: string; lap: number }
   | { type: "finish"; player: string; place: number }
-  | { type: "respawn"; player: string };
+  | { type: "respawn"; player: string }
+  | { type: "pad"; player: string; pos: [number, number, number] } // over a boost pad; pos = the pad
+  | { type: "scoop"; player: string; count: number; pos: [number, number, number] } // collected a Creamery Scoop; count = now held
+  | { type: "drop"; player: string; lost: number; pos: [number, number, number] } // scoops knocked off (hard bump, Lion Roar, respawn)
+  | { type: "bounce"; player: string; pos: [number, number, number] }; // kicked by a Lion Paw bumper; pos = its base
 
 /**
  * Which player slot is yours. Send "hello" (no payload) once your message handlers are
@@ -259,10 +263,11 @@ export interface SetProfileMsg {
 Colyseus schema (synced automatically):
 
 ```
-RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[], puddles: Puddle[] }
+RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[], puddles: Puddle[],
+             scoops: ItemBox[] }
 PlayerState{ name, ball, color, shape, phoneOnly, bot, paired, calibrated, assetsLoaded, ready,
-             lap, checkpoint, place, finishedAt, connected, wins, bestLap }
-ItemBox    { id, x, y, z, active }   // x, y, z = the box's center; inactive for a few seconds after a hit
+             lap, checkpoint, place, finishedAt, connected, wins, bestLap, scoops }
+ItemBox    { id, x, y, z, active }   // x, y, z = the box's center; inactive for a few seconds after a hit (scoops reuse it)
 Puddle     { id, x, y, z, radius }   // a Creamery Spill on the road, gone after spillSeconds
 ```
 

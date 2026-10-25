@@ -7,8 +7,21 @@ export {
   type PuddleState,
   type Race,
   type RaceConfig,
+  type ScoopState,
   type Standing,
 } from "./race";
+export {
+  createGround,
+  groundStrips,
+  HAPPY_VALLEY_GROUND,
+  insidePoly,
+  solidAt,
+  type GroundDef,
+} from "./ground";
+export {
+  HAPPY_VALLEY_INTERACTABLES,
+  type InteractablesDef,
+} from "./interactables";
 export { ITEM_ODDS, oddsRow, rollItem } from "./items";
 export { KeyboardInput, NEUTRAL_INPUT, type KeyState } from "./input";
 export { headingAt, makePath, pointAt, project, type TrackPath } from "./path";
@@ -18,8 +31,10 @@ export {
   createFlatTrack,
   FLAT_GROUND_HALF_SIZE,
   loadTrack,
+  readBoostPads,
   readRoute,
   type BoostPad,
+  type BoostPadMark,
   type CameraSpot,
   type Checkpoint,
   type Respawn,

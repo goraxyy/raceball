@@ -37,8 +37,8 @@ interface Shelf {
   rings?: boolean;
   /** Camera radius when you click a model to look closer */
   close: number;
-  /** A kit file holds every prop at the origin: place its root nodes by name, [x, z, turn] */
-  place?: Record<string, [number, number, number?]>;
+  /** A kit file holds every prop at the origin: place its root nodes by name, [x, z, turn, height] */
+  place?: Record<string, [number, number, number?, number?]>;
   /** Where the camera looks, m */
   target?: [number, number, number];
   /** The map: load the landmarks over it as the game does (game/landmarks.ts) */
@@ -74,6 +74,23 @@ const SHELVES: Shelf[] = [
       prop_crowd_card_a: [-5.2, -1.5, Math.PI],
       prop_crowd_card_b: [-4.2, -1.8, Math.PI],
       prop_crowd_card_c: [-3.2, -1.5, Math.PI],
+    },
+  },
+  {
+    // what you drive into (game/interactables.ts): a boost pad, the Lion Paw bumper and the three scoop flavours
+    label: "Interactables",
+    files: ["models/kit_interactables.glb"],
+    gap: 0,
+    radius: 13,
+    close: 4,
+    target: [0, 0.8, 1],
+    place: {
+      prop_boost_pad: [0, -1],
+      prop_paw_bumper: [-3.2, 4],
+      // floating at a ball's height, as on the road
+      prop_scoop_vanilla: [1.4, 3.4, 0, 0.9],
+      prop_scoop_strawberry: [3, 4.4, 0, 0.9],
+      prop_scoop_chocolate: [4.6, 3.4, 0, 0.9],
     },
   },
   {
@@ -171,10 +188,12 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
         root.position.x = i * shelf.gap - width / 2;
         roots.push(root);
         for (const node of container.rootNodes) node.parent = root;
-        for (const [name, [x, z, turn]] of Object.entries(shelf.place ?? {})) {
+        for (const [name, [x, z, turn, y]] of Object.entries(
+          shelf.place ?? {},
+        )) {
           const prop = scene.getTransformNodeByName(name);
           if (!prop) continue;
-          prop.position.set(x, 0, z);
+          prop.position.set(x, y ?? 0, z);
           prop.rotationQuaternion = null;
           prop.rotation.y = turn ?? 0;
           roots.push(prop); // click a prop to look closer

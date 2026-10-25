@@ -28,6 +28,8 @@ export interface PlayerView {
   /** Session stats: races won, and the fastest lap in ms (0 until one is completed) */
   wins: number;
   bestLap: number;
+  /** Creamery Scoops held, each a little more top speed (optional in hand-made views) */
+  scoops?: number;
 }
 
 export interface ItemBoxView {
@@ -57,6 +59,8 @@ export interface RaceStateView {
   players: Record<string, PlayerView>;
   itemBoxes: ItemBoxView[];
   puddles: PuddleView[];
+  /** Creamery Scoops: fixed spots like item boxes (optional in hand-made views) */
+  scoops?: ItemBoxView[];
 }
 
 /** Planets other players already have, for greying them out in the pickers */

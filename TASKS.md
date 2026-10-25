@@ -208,6 +208,7 @@ Nothing right now. Add new questions here.
 - [x] Planet balls 5–8: Mercury, Venus, Uranus, Neptune ([your guide](docs/team/nuris-art-ui.md#planet-balls-58)) (in `PLANET_MODELS`; review at `/ui` > models)
 - [x] Animated props: item boxes, flags, arch, crowd cards ([your guide](docs/team/nuris-art-ui.md#animated-props)) (`models/kit_animated.glb`, animation names in [ASSETS.md](docs/ASSETS.md#animated-props-modelskit_animatedglb); review at `/ui` > models > Props)
 - [x] Landmarks: Beaver Stadium bowl + scoreboard prop, Mount Nittany backdrop (budgets in [Ali's guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Ali checks that anything a ball touches still matches the collision (a separate layer, `maps/happy_valley_landmarks.glb`, loaded over the map; nothing in it reaches a road or rail; [ASSETS.md](docs/ASSETS.md#landmarks-beaver-stadium-and-mount-nittany))
+- [x] **Polish pass** (playtest notes: plain materials, the void everywhere, boost pads and particles going unnoticed): a grass board round the track with two chasms left for danger, a sky with clouds and haze, a textured road with kerbs, buildings over the last greybox blocks, glowing boost pads, bigger particles, and two things you drive into with no button: **Creamery Scoops** (Mario Kart's coins) and **Lion Paw bumpers**. Protocol v7; game-core gets the ground and the interactables (Ali: please review `ground.ts`, `interactables.ts` and the `race.ts` changes). [ASSETS.md](docs/ASSETS.md#the-world-the-road-and-the-interactables)
 
 ---
 

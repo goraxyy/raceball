@@ -47,6 +47,8 @@ PALETTE = {
     # supporting colors for props
     "bark": "#6B4429", "chocolate": "#5B3A29", "lamp": "#FFE6A8", "white": "#FFFFFF",
     "chalk": "#E9ECEA", "maple_dark": "#C85A1E", "gold_dark": "#D9962A", "pine_dark": "#244A2E",
+    # added for the world (tools/models/build_world.py): the Creamery's kerbs
+    "strawberry": "#EE8FAE",
 }
 CHECKER_ROWS = 2  # the bottom two rows of the grid hold a black and white checkerboard
 

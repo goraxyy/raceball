@@ -107,6 +107,37 @@ describe("cueFor", () => {
       ),
     ).toMatchObject({ name: "spill", pos: [4, 1, 2] }); // the splat goes where the puddle is
   });
+
+  it("plays the interactables where they are, a scoop's pop climbing with every one held", () => {
+    const at: [number, number, number] = [5, 1, 9];
+    expect(
+      cueFor({ type: "pad", player: "ali", pos: at }, world("big")),
+    ).toMatchObject({ name: "pad", pos: at });
+    const first = cueFor(
+      { type: "scoop", player: "ali", count: 1, pos: at },
+      world("big"),
+    );
+    const tenth = cueFor(
+      { type: "scoop", player: "ali", count: 10, pos: at },
+      world("big"),
+    );
+    expect(first).toMatchObject({ name: "scoop", pos: at, rate: 1 });
+    expect(tenth!.rate!).toBeGreaterThan(first!.rate!);
+    expect(
+      cueFor({ type: "drop", player: "ali", lost: 3, pos: at }, world("big")),
+    ).toMatchObject({ name: "scoopDrop", strength: 3 }); // more scoops, more blobs
+    expect(
+      cueFor({ type: "bounce", player: "ali", pos: at }, world("big")),
+    ).toMatchObject({ name: "bounce", pos: at });
+  });
+
+  it("keeps someone else's scoops off your laptop's speakers", () => {
+    const scoop = cueFor(
+      { type: "scoop", player: "ali", count: 2, pos: [0, 0, 0] },
+      world("laptop", "nuris"),
+    )!;
+    expect(cueLevel(scoop, world("laptop", "nuris"), () => 1)).toBe(0);
+  });
 });
 
 describe("cueLevel", () => {

@@ -2,7 +2,6 @@ import {
   ArcRotateCamera,
   type AssetContainer,
   Color3,
-  Color4,
   CubeTexture,
   DirectionalLight,
   DynamicTexture,
@@ -15,7 +14,10 @@ import {
   Texture,
   Vector3,
 } from "@babylonjs/core";
-import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
+import {
+  FLAT_GROUND_HALF_SIZE,
+  HAPPY_VALLEY_INTERACTABLES,
+} from "@raceball/game-core";
 import { COUNTDOWN_MS, type GameEvent } from "@raceball/shared";
 import type { Mixer } from "../audio/mixer";
 import { BallViews, type BallFeed, type BallPose } from "./balls";
@@ -23,9 +25,12 @@ import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera, eventShake, swoopProgress } from "./cameras";
 import { GameFx, type FxEvent } from "./fx";
 import { loadLandmarks } from "./landmarks";
+import { GREYBOX_PADS, InteractableViews } from "./interactables";
 import { ItemViews } from "./items";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
+import { loadBoostPads } from "./route";
+import { createSky, finishGreybox, loadWorld, tintLights } from "./world";
 
 export type GameMode = "local" | "viewer" | "host";
 
@@ -92,7 +97,6 @@ export function createGame(
       ...status,
       stats: local ? { ...local.stats } : undefined,
     });
-  scene.clearColor = new Color4(0.62, 0.8, 0.95, 1);
   const sky = new HemisphericLight("sky", new Vector3(0, 1, 0), scene);
   sky.intensity = 0.3;
   const sun = new DirectionalLight("sun", new Vector3(-0.4, -1, 0.35), scene);
@@ -100,10 +104,17 @@ export function createGame(
   sun.intensity = 0.9;
   const shadows = new ShadowGenerator(1024, sun); // only balls cast, so the shadow map stays tight around them
   shadows.usePercentageCloserFiltering = true;
+  tintLights(sun, sky);
+  const heavens = createSky(scene); // the dome, haze and clouds (world.ts)
 
   if (map === "flat") createFlatGround(scene);
   const balls = new BallViews(scene, shadows);
   const items = new ItemViews(scene);
+  void items.load().catch((error: unknown) => {
+    if (!disposed) console.warn("Item box model failed to load", error);
+  });
+  // boost pads, Lion Paw bumpers and Creamery Scoops; the glow is too dear for the big screen's tiles
+  const toys = new InteractableViews(scene, { glow: mode !== "host" });
   const chase = new ChaseCamera(scene);
   scene.activeCamera = chase.camera;
   const overview = new ArcRotateCamera(
@@ -140,6 +151,7 @@ export function createGame(
   let disposed = false;
   let container: AssetContainer | undefined;
   let landmarks: { dispose(): void } | undefined;
+  let world: AssetContainer | undefined;
   let publishAfter = 0;
   let countdown = 0; // s into the countdown, for the grid swoop
   const abort = new AbortController();
@@ -150,6 +162,7 @@ export function createGame(
   const onEvent = (event: GameEvent) => {
     chase.shake(eventShake(event, feed?.ownId));
     fx.play(event); // particles, sound and caption, on the next frame when the poses are current
+    toys.onEvent(event); // the pad or paw that was hit lights up
   };
   const applyCamera = () => {
     scene.activeCamera = status.overview ? overview : chase.camera;
@@ -248,6 +261,23 @@ export function createGame(
   /** Adds the map to the scene, freezes it (it never moves) and frames the overview camera on it */
   function showMap(assets: AssetContainer): void {
     assets.addAllToScene();
+    finishGreybox(assets);
+    // the grass board, its chasms and the causeways under the raised road, from the same JSON as the ground colliders
+    void loadWorld(scene, () => disposed)
+      .then((layer) => (world = layer))
+      .catch((error: unknown) => {
+        if (!disposed) console.warn("World failed to load", error);
+      });
+    // the boost pads (from the collision track's markers), paws and scoops; the greybox pads go once they're in
+    void (local ? Promise.resolve(local.pads) : loadBoostPads())
+      .then((pads) => toys.load(pads, HAPPY_VALLEY_INTERACTABLES.paws))
+      .then((loaded) => {
+        if (loaded)
+          assets.meshes.find((m) => m.name === GREYBOX_PADS)?.setEnabled(false);
+      })
+      .catch((error: unknown) => {
+        if (!disposed) console.warn("Interactables failed to load", error);
+      });
     // the landmarks (and the animated arch and flags) go over the greybox once they're in; the race doesn't wait
     void loadLandmarks(scene, assets, () => disposed)
       .then((layer) => (landmarks = layer))
@@ -355,7 +385,9 @@ export function createGame(
 
   return {
     update(dt) {
-      if (disposed || status.state !== "ready") return;
+      if (disposed) return;
+      heavens.update(dt);
+      if (status.state !== "ready") return;
       local?.advance(dt);
       if (!feed) return;
       const poses = feed.sample(performance.now());
@@ -386,9 +418,22 @@ export function createGame(
         poses,
         status.overview || !own ? overview.target : Vector3.FromArray(own.p),
       );
-      if (local) items.sync(local.itemBoxes(), local.puddles());
-      else if (options.session) {
-        const { itemBoxes = [], puddles = [] } = options.session.state;
+      if (local) {
+        items.sync(local.itemBoxes(), local.puddles());
+        toys.syncScoops(local.scoops());
+      } else if (options.session) {
+        const {
+          itemBoxes = [],
+          puddles = [],
+          scoops = [],
+        } = options.session.state;
+        toys.syncScoops(
+          scoops.map((b) => ({
+            id: b.id,
+            pos: [b.x, b.y, b.z],
+            active: b.active,
+          })),
+        );
         items.sync(
           itemBoxes.map((b) => ({
             id: b.id,
@@ -403,6 +448,7 @@ export function createGame(
         );
       }
       items.update(dt);
+      toys.update(dt);
       if (big && net) {
         if (big.update(poses, net, dt)) {
           status.tiles = big.tileIds;
@@ -440,10 +486,14 @@ export function createGame(
       container = undefined;
       landmarks?.dispose();
       landmarks = undefined;
+      world?.dispose();
+      world = undefined;
+      heavens.dispose();
       big?.dispose();
       fx.dispose();
       balls.dispose();
       items.dispose();
+      toys.dispose();
       overview.dispose();
       chase.camera.dispose();
       shadows.dispose();

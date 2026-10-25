@@ -1464,6 +1464,34 @@
   rotate: -3deg;
 }
 
+/* under the item: the Creamery Scoops held, one pip each; full at 10 */
+.hud-scoops {
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  gap: 4px;
+  padding: 5px 7px;
+  border: var(--line) solid var(--ink);
+  border-radius: 10px;
+  background: rgb(28 27 36 / 0.7);
+}
+
+.hud-scoops i {
+  width: 13px;
+  height: 13px;
+  border: 2px dashed var(--paper-3);
+  border-radius: 50%;
+}
+
+.hud-scoops i.is-held {
+  border: 2px solid var(--ink);
+  background: #ee8fae;
+  box-shadow: inset -2px -2px 0 rgb(0 0 0 / 0.18);
+}
+
+.hud-scoops[data-full="true"] {
+  animation: hud-item-wiggle 1.4s ease-in-out infinite;
+}
+
 /* bottom right: a chunky toy speedometer */
 .hud-speed {
   position: absolute;

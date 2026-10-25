@@ -31,6 +31,8 @@ export const PlayerState = schema(
     wins: t.uint16().default(0),
     /** Fastest lap this session, ms; 0 until they complete one */
     bestLap: t.number().default(0),
+    /** Creamery Scoops held, each a little more top speed */
+    scoops: t.uint8().default(0),
   },
   "PlayerState",
 );
@@ -71,6 +73,8 @@ export const RaceState = schema(
     players: t.map(PlayerState),
     itemBoxes: t.array(ItemBox),
     puddles: t.array(Puddle),
+    /** Creamery Scoops: same fields as an item box (center, active) */
+    scoops: t.array(ItemBox),
   },
   "RaceState",
 );

@@ -1,6 +1,6 @@
 // Protocol v1: the contract between game-core, server, screens and pads.
 // To change it: bump PROTOCOL_VERSION and update docs/ARCHITECTURE.md (see docs/WORKFLOW.md).
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -71,7 +71,21 @@ export type GameEvent =
   | { type: "overtake"; player: string; passed: string; section: string } // position change
   | { type: "lap"; player: string; lap: number }
   | { type: "finish"; player: string; place: number }
-  | { type: "respawn"; player: string };
+  | { type: "respawn"; player: string }
+  | { type: "pad"; player: string; pos: [number, number, number] } // over a boost pad; pos = the pad
+  | {
+      type: "scoop";
+      player: string;
+      count: number;
+      pos: [number, number, number];
+    } // collected a Creamery Scoop; count = scoops now held, pos = the scoop
+  | {
+      type: "drop";
+      player: string;
+      lost: number;
+      pos: [number, number, number];
+    } // scoops knocked off by a hard bump, a Lion Roar or a respawn; pos = where the ball was
+  | { type: "bounce"; player: string; pos: [number, number, number] }; // kicked by a Lion Paw bumper; pos = its base
 
 /**
  * Which player slot is yours. Send "hello" (no payload) once your message handlers are

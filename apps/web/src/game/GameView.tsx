@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Engine, Scene } from "@babylonjs/core";
 import { PLANETS } from "@raceball/shared";
+import { tuning } from "@raceball/game-core";
 import "@babylonjs/loaders/glTF";
 import { Mixer } from "../audio/mixer";
 import { Captions } from "../ui/Captions";
@@ -229,8 +230,15 @@ export function GameView({
                 <p className="local-item" data-item={status.stats.item ?? ""}>
                   {status.stats.item
                     ? `${ITEM_NAMES[status.stats.item]} · Space to fire`
-                    : "No item: drive through a blue box"}
+                    : "No item: drive through a yellow item box"}
                 </p>
+                {status.map !== "flat" && (
+                  <p className="local-scoops" data-scoops={status.stats.scoops}>
+                    {status.stats.scoops
+                      ? `Scoops ${status.stats.scoops}/${tuning.scoopMax} · top speed +${Math.round(status.stats.scoops * tuning.scoopTopSpeed * 100)}%`
+                      : "No scoops: roll through the ice creams"}
+                  </p>
+                )}
                 {status.map !== "flat" && (
                   <p className="local-lap-info">
                     {status.stats.lapElapsed === null

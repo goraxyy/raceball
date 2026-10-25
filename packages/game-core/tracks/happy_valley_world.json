@@ -1,0 +1,33 @@
+{
+  "note": "The ground under Happy Valley, read by game-core (physics: leaving the road onto grass respawns you) and by tools/models/build_world.py (the visible board). Map meters, x east, z south. Voids are the dangerous places: holes in the board, kept clear of the road and its rails.",
+  "groundY": -0.3,
+  "cell": 4,
+  "board": [-132, -212, 372, 392],
+  "voids": [
+    {
+      "name": "arboretum_gorge",
+      "poly": [
+        [92, -36],
+        [108, -36],
+        [111, -10],
+        [111, 14],
+        [106, 30],
+        [97, 40],
+        [91, 36],
+        [91, 10]
+      ]
+    },
+    {
+      "name": "college_cliff",
+      "poly": [
+        [-132, -212],
+        [80, -212],
+        [80, -98],
+        [58, -91],
+        [20, -91],
+        [-14, -95],
+        [-132, -95]
+      ]
+    }
+  ]
+}

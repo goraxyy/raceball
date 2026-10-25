@@ -519,13 +519,20 @@ Notes:
 
 ### Section mechanics
 
-| Section | How to build it |
+**Done.** The geometry is in the greybox generator, and the logic is in `race.ts`:
+- **Surfaces:** a ball inside a `surface` volume takes its grip; if it's in more than one, the lowest wins. Snow also drags like a light brake (`snowDrag`).
+- **Boost pads:** crossing one adds `boostPadSpeed` × the pad's `power` along the pad's facing, and raises the top speed by `boostMaxSpeedMul` for `boostSeconds`.
+- **Respawning** clears both effects.
+
+On the real map, the bot's laps drop from about 64 s to about 61 s. The two start-straight pads stack, so top speed reaches about 38 m/s. Lower `boostPadSpeed` if that feels too wild in a playtest.
+
+| Section | How it's built |
 |---|---|
-| Library steps | Real step geometry in the collision mesh, plus higher restitution on that collider |
+| Library steps | Real step geometry in the collision mesh, plus `restitution = 0.5` on that collider |
 | Lion Shrine hairpin | A banked collision mesh. The jump is just a ramp, with a checkpoint on the landing so it stays legal |
 | Creamery cone | A ramp in the collision mesh. Puddles are `surface` markers (`grip = 0.2`) |
 | Beaver Stadium | Geometry only. Its checkpoint has `section = "stadium"` |
-| Snowy Arboretum | `surface` markers: snow (`grip = 0.6`, plus extra damping) and ice (`grip = 0.1`) |
+| Snowy Arboretum | `surface` markers: snow (`grip = 0.6`, plus `snowDrag`) and ice (`grip = 0.1`) |
 | College Ave | `boost` markers: a sensor that adds an impulse along the pad's forward direction |
 
 ### Hooking up assets, VFX and audio

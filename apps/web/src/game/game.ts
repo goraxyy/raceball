@@ -1,9 +1,12 @@
 import {
+  ArcRotateCamera,
+  type AssetContainer,
   Color3,
   Color4,
   DirectionalLight,
   DynamicTexture,
   HemisphericLight,
+  LoadAssetContainerAsync,
   MeshBuilder,
   Scene,
   ShadowGenerator,
@@ -14,17 +17,50 @@ import {
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
 import { BallViews, type BallFeed } from "./balls";
 import { ChaseCamera } from "./cameras";
-import { LocalSession } from "./local";
+import { LocalSession, type LocalMap, type LocalStats } from "./local";
 
 export type GameMode = "local" | "viewer" | "host";
 
 export interface Game {
   update(dt: number): void;
+  reset(): void;
+  toggleOverview(): void;
   dispose(): void;
 }
 
+export interface GameStatus {
+  state: "loading" | "ready" | "error";
+  map: LocalMap;
+  message: string;
+  overview: boolean;
+  stats?: LocalStats;
+}
+
+interface GameOptions {
+  map?: LocalMap;
+  overview?: boolean;
+  onStatus?: (status: GameStatus) => void;
+}
+
 /** Builds the 3D scene for one screen and updates it from a ball feed every frame. */
-export function createGame(scene: Scene, mode: GameMode): Game {
+export function createGame(
+  scene: Scene,
+  mode: GameMode,
+  options: GameOptions = {},
+): Game {
+  const map = options.map ?? "happy_valley";
+  const status: GameStatus = {
+    state: "loading",
+    map,
+    message:
+      map === "flat" ? "Preparing flat test ground…" : "Loading Happy Valley…",
+    overview: options.overview ?? false,
+  };
+  const publish = () =>
+    options.onStatus?.({
+      ...status,
+      stats: local ? { ...local.stats } : undefined,
+    });
   scene.clearColor = new Color4(0.62, 0.8, 0.95, 1);
   const sky = new HemisphericLight("sky", new Vector3(0, 1, 0), scene);
   sky.intensity = 0.65;
@@ -34,34 +70,185 @@ export function createGame(scene: Scene, mode: GameMode): Game {
   const shadows = new ShadowGenerator(1024, sun); // only balls cast, so the shadow map stays tight around them
   shadows.usePercentageCloserFiltering = true;
 
-  createFlatGround(scene);
+  if (map === "flat" || mode !== "local") createFlatGround(scene);
   const balls = new BallViews(scene, shadows);
   const chase = new ChaseCamera(scene);
   scene.activeCamera = chase.camera;
+  const overview = new ArcRotateCamera(
+    "map-overview",
+    -Math.PI / 2,
+    0.65,
+    180,
+    Vector3.Zero(),
+    scene,
+  );
+  overview.minZ = 0.1;
+  overview.maxZ = 3000;
+  overview.lowerRadiusLimit = 20;
+  overview.upperRadiusLimit = 1000;
+  overview.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
 
   let local: LocalSession | undefined;
   let feed: BallFeed | undefined; // viewer/host: Rasim's net library plugs in here
   let disposed = false;
+  let container: AssetContainer | undefined;
+  let publishAfter = 0;
+  const abort = new AbortController();
+  const applyCamera = () => {
+    scene.activeCamera = status.overview ? overview : chase.camera;
+    if (status.overview) overview.attachControl(true);
+    else overview.detachControl();
+  };
+  const toggleOverview = () => {
+    status.overview = !status.overview;
+    applyCamera();
+    publish();
+  };
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (
+      event.code !== "KeyV" ||
+      event.repeat ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey
+    )
+      return;
+    if (
+      (event.target as HTMLElement | null)?.closest?.(
+        "input, textarea, select, button, .lil-gui",
+      )
+    )
+      return;
+    event.preventDefault();
+    toggleOverview();
+  };
+  addEventListener("keydown", onKeyDown);
+  applyCamera();
   if (mode === "local") {
-    void LocalSession.start().then((s) => {
-      if (disposed) return s.dispose(); // React StrictMode unmounted us while Rapier was loading
-      local = feed = s;
+    publish();
+    void loadLocal().catch((error: unknown) => {
+      if (disposed) return;
+      local?.dispose();
+      local = feed = undefined;
+      container?.dispose();
+      container = undefined;
+      status.state = "error";
+      status.message = error instanceof Error ? error.message : String(error);
+      publish();
     });
+  }
+
+  async function loadLocal(): Promise<void> {
+    const results = await Promise.allSettled([
+      LocalSession.start(map, abort.signal).then((session) => {
+        if (disposed) {
+          session.dispose();
+          throw new DOMException("Local load cancelled", "AbortError");
+        }
+        local = session;
+        return session;
+      }),
+      map === "happy_valley"
+        ? LoadAssetContainerAsync(
+            `${import.meta.env.BASE_URL}assets/maps/happy_valley.glb`,
+            scene,
+          ).then((assets) => {
+            if (disposed) {
+              assets.dispose();
+              throw new DOMException("Map load cancelled", "AbortError");
+            }
+            container = assets;
+            return assets;
+          })
+        : Promise.resolve(undefined),
+    ]);
+    const [sessionResult, visualResult] = results;
+    const error = results.find((result) => result.status === "rejected");
+    if (disposed || error) {
+      local?.dispose();
+      local = undefined;
+      container?.dispose();
+      container = undefined;
+      if (!disposed && error?.status === "rejected") {
+        status.state = "error";
+        status.message =
+          error.reason instanceof Error
+            ? error.reason.message
+            : String(error.reason);
+        publish();
+      }
+      return;
+    }
+    if (
+      sessionResult.status !== "fulfilled" ||
+      visualResult.status !== "fulfilled"
+    )
+      return;
+    local = feed = sessionResult.value;
+    container = visualResult.value;
+    if (container) {
+      container.addAllToScene();
+      const meshes = container.meshes.filter(
+        (mesh) => mesh.getTotalVertices() > 0,
+      );
+      for (const mesh of meshes) {
+        mesh.receiveShadows = true;
+        mesh.computeWorldMatrix(true);
+        mesh.freezeWorldMatrix();
+      }
+      const bounds = meshes.map((mesh) => mesh.getBoundingInfo().boundingBox);
+      if (bounds.length) {
+        const min = bounds.reduce(
+          (value, box) => Vector3.Minimize(value, box.minimumWorld),
+          bounds[0].minimumWorld.clone(),
+        );
+        const max = bounds.reduce(
+          (value, box) => Vector3.Maximize(value, box.maximumWorld),
+          bounds[0].maximumWorld.clone(),
+        );
+        overview.setTarget(min.add(max).scale(0.5));
+        overview.radius = Math.max(max.x - min.x, max.z - min.z) * 1.1;
+      }
+    }
+    status.state = "ready";
+    status.message = "Ready";
+    publish();
   }
 
   return {
     update(dt) {
+      if (disposed || (mode === "local" && status.state !== "ready")) return;
       local?.advance(dt);
       if (!feed) return;
       const poses = feed.sample(performance.now());
       balls.sync(poses);
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
+      publishAfter -= dt;
+      if (publishAfter <= 0) {
+        publishAfter = 0.1;
+        publish();
+      }
     },
+    reset() {
+      void local?.reset();
+    },
+    toggleOverview,
     dispose() {
+      if (disposed) return;
       disposed = true;
+      abort.abort();
+      removeEventListener("keydown", onKeyDown);
       local?.dispose();
+      local = feed = undefined;
+      container?.dispose();
+      container = undefined;
       balls.dispose();
+      overview.dispose();
+      chase.camera.dispose();
+      shadows.dispose();
+      sky.dispose();
+      sun.dispose();
     },
   };
 }

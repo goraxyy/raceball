@@ -1,7 +1,9 @@
 import GUI from "lil-gui";
+import { WebIO } from "@gltf-transform/core";
 import type { SnapMsg } from "@raceball/shared";
 import {
   createFlatRace,
+  createRace,
   KeyboardInput,
   TICK_DT,
   tuning,
@@ -9,6 +11,25 @@ import {
   type Race,
 } from "@raceball/game-core";
 import type { BallFeed, BallPose } from "./balls";
+import { LocalLapTimer, type TimingGate } from "./local-timing";
+import collisionUrl from "../../../../packages/game-core/tracks/happy_valley_col.glb?url";
+
+export type LocalMap = "happy_valley" | "flat";
+
+export interface LocalStats {
+  speed: number;
+  phase: string;
+  elapsed: number;
+  lapElapsed: number | null;
+  lap: number;
+  checkpoint: number;
+  section: string;
+  lastLap: number | null;
+  bestLap: number | null;
+  error: string | null;
+  position: [number, number, number];
+  heading: number;
+}
 
 const OWN_ID = "local";
 
@@ -43,11 +64,34 @@ export class LocalSession implements BallFeed {
   private prev: SnapMsg;
   private curr: SnapMsg;
   private gui: GUI;
-  private stats = { speed: 0, phase: "lobby" };
+  readonly stats: LocalStats = {
+    speed: 0,
+    phase: "lobby",
+    elapsed: 0,
+    lapElapsed: null,
+    lap: 0,
+    checkpoint: 0,
+    section: "start",
+    lastLap: null,
+    bestLap: null,
+    error: null,
+    position: [0, 0, 0],
+    heading: 0,
+  };
   private race: Race;
+  private readonly makeRace: () => Promise<Race>;
+  private readonly timer: LocalLapTimer;
+  private disposed = false;
+  private resetting = false;
 
-  private constructor(race: Race) {
+  private constructor(
+    race: Race,
+    makeRace: () => Promise<Race>,
+    gates: TimingGate[],
+  ) {
     this.race = race;
+    this.makeRace = makeRace;
+    this.timer = new LocalLapTimer(gates);
     this.prev = this.curr = race.snapshot(0, 0);
     addEventListener("keydown", this.onKeyDown);
     addEventListener("keyup", this.onKeyUp);
@@ -55,12 +99,32 @@ export class LocalSession implements BallFeed {
     this.gui = createTuningPanel(this.stats, () => void this.reset());
   }
 
-  static async start(): Promise<LocalSession> {
-    return new LocalSession(await newRace());
+  static async start(
+    map: LocalMap,
+    signal: AbortSignal,
+  ): Promise<LocalSession> {
+    let bytes: Uint8Array | undefined;
+    if (map === "happy_valley") {
+      const response = await fetch(collisionUrl, { signal });
+      if (!response.ok)
+        throw new Error(
+          `Happy Valley collision failed to load (${response.status}).`,
+        );
+      bytes = new Uint8Array(await response.arrayBuffer());
+    }
+    const gates = bytes ? await timingGates(bytes) : [];
+    const makeRace = () => newRace(bytes);
+    const race = await makeRace();
+    if (signal.aborted) {
+      race.dispose();
+      throw new DOMException("Local load cancelled", "AbortError");
+    }
+    return new LocalSession(race, makeRace, gates);
   }
 
   /** Runs as many fixed 1/60 s steps as the frame time covers. */
   advance(frameDt: number): void {
+    if (this.disposed || this.resetting) return;
     this.acc += Math.min(frameDt, 0.25); // after a stall, skip ahead instead of spiralling
     while (this.acc >= TICK_DT) {
       this.race.setInput(OWN_ID, this.kb.next(this.keys, TICK_DT));
@@ -68,8 +132,15 @@ export class LocalSession implements BallFeed {
       this.tick++;
       this.prev = this.curr;
       this.curr = this.race.snapshot(this.tick, this.tick * TICK_DT * 1000);
-      for (const e of this.race.drainEvents())
+      let respawned = false;
+      for (const e of this.race.drainEvents()) {
+        if (e.type === "respawn" && e.player === OWN_ID) respawned = true;
         console.debug("[local] event", e);
+      }
+      const from = this.prev.balls.find((b) => b.id === OWN_ID);
+      const to = this.curr.balls.find((b) => b.id === OWN_ID);
+      if (from && to && !respawned)
+        this.timer.advance(from.p, to.p, this.tick * TICK_DT, TICK_DT);
       this.acc -= TICK_DT;
     }
     const own = this.curr.balls.find((b) => b.id === OWN_ID);
@@ -77,6 +148,17 @@ export class LocalSession implements BallFeed {
       ? Math.round(Math.hypot(own.v[0], own.v[2]) * 10) / 10
       : 0;
     this.stats.phase = this.race.phase;
+    this.stats.elapsed = this.tick * TICK_DT;
+    this.stats.lapElapsed = this.timer.elapsed(this.stats.elapsed);
+    this.stats.lap = this.timer.laps;
+    this.stats.checkpoint = this.timer.nextCheckpoint;
+    this.stats.section = this.timer.section;
+    this.stats.lastLap = this.timer.lastLap;
+    this.stats.bestLap = this.timer.bestLap;
+    if (own) {
+      this.stats.position = own.p;
+      this.stats.heading = own.h;
+    }
   }
 
   /** Blends the last two ticks, so motion stays smooth on displays faster than 60 Hz. */
@@ -99,6 +181,8 @@ export class LocalSession implements BallFeed {
   }
 
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     removeEventListener("keydown", this.onKeyDown);
     removeEventListener("keyup", this.onKeyUp);
     removeEventListener("blur", this.onBlur);
@@ -106,18 +190,58 @@ export class LocalSession implements BallFeed {
     this.race.dispose();
   }
 
-  private async reset(): Promise<void> {
-    const next = await newRace();
-    this.race.dispose();
-    this.race = next;
-    this.prev = this.curr = next.snapshot(0, 0);
-    this.tick = 0;
+  async reset(): Promise<void> {
+    if (this.disposed || this.resetting) return;
+    this.resetting = true;
+    this.stats.error = null;
+    try {
+      const next = await this.makeRace();
+      if (this.disposed) {
+        next.dispose();
+        return;
+      }
+      this.race.dispose();
+      this.race = next;
+      this.prev = this.curr = next.snapshot(0, 0);
+      this.tick = this.acc = 0;
+      this.timer.reset();
+      this.kb = new KeyboardInput();
+      this.onBlur();
+      Object.assign(this.stats, {
+        speed: 0,
+        phase: next.phase,
+        elapsed: 0,
+        lapElapsed: null,
+        lap: 0,
+        checkpoint: 0,
+        section: "start",
+        lastLap: null,
+        bestLap: null,
+      });
+    } catch (error) {
+      if (!this.disposed)
+        this.stats.error =
+          error instanceof Error ? error.message : String(error);
+    } finally {
+      this.resetting = false;
+    }
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
+    if (e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (
+      (e.target as HTMLElement | null)?.closest?.(
+        "input, textarea, select, button, .lil-gui",
+      )
+    )
+      return;
+    if (e.code === "KeyR" && !e.repeat) {
+      e.preventDefault();
+      void this.reset();
+      return;
+    }
     const key = KEY_CODES[e.code];
-    if (!key || e.shiftKey || e.metaKey || e.ctrlKey) return;
-    if ((e.target as HTMLElement | null)?.closest?.(".lil-gui")) return; // typing a value in the panel
+    if (!key) return;
     e.preventDefault(); // arrows and Space would scroll the page
     this.keys[key] = true;
   };
@@ -138,11 +262,30 @@ export class LocalSession implements BallFeed {
   };
 }
 
-async function newRace(): Promise<Race> {
-  const race = await createFlatRace({ laps: 3 });
+async function newRace(bytes?: Uint8Array): Promise<Race> {
+  const race = bytes
+    ? await createRace(bytes, new WebIO(), { laps: 3 })
+    : await createFlatRace({ laps: 3 });
   race.addPlayer(OWN_ID, "lion");
   race.start(0, 3);
   return race;
+}
+
+async function timingGates(bytes: Uint8Array): Promise<TimingGate[]> {
+  const doc = await new WebIO().readBinary(bytes);
+  return doc
+    .getRoot()
+    .listNodes()
+    .filter((node) => node.getExtras().rb === "checkpoint")
+    .map((node) => ({
+      index: Number(node.getExtras().index),
+      section: String(node.getExtras().section ?? ""),
+      position: node.getWorldTranslation(),
+      rotation: node.getWorldRotation(),
+      halfExtents: node
+        .getWorldScale()
+        .map(Math.abs) as TimingGate["halfExtents"],
+    }));
 }
 
 /** lil-gui sliders over the live tuning object. "Copy tuning" puts the values on the clipboard for tuning.ts. */
@@ -155,6 +298,7 @@ function createTuningPanel(
   gui.add(stats, "phase").listen().disable();
 
   const folder = gui.addFolder("tuning.ts");
+  folder.close();
   for (const key of Object.keys(tuning) as (keyof typeof tuning)[]) {
     const v = tuning[key];
     if (v < 0) folder.add(tuning, key, v * 3, 0);

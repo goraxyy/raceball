@@ -1,5 +1,12 @@
 import { describe, expect, test } from "vitest";
-import { Calibrator, LEVEL_MS, TURN, circularMean } from "./calibrate";
+import {
+  Calibrator,
+  HOLD_MS,
+  LEVEL_MS,
+  TURN,
+  WRONG_WAY_MS,
+  circularMean,
+} from "./calibrate";
 
 const G = 9.81;
 const deg = (d: number) => (d * Math.PI) / 180;
@@ -40,13 +47,38 @@ describe("Calibrator", () => {
     expect(cal.progress).toBe(0);
   });
 
-  test("turning right in either direction sets the sign", () => {
-    for (const dir of [1, -1]) {
-      const cal = new Calibrator();
-      const { t } = hold(cal, deg(90), LEVEL_MS + 50);
-      const { result } = hold(cal, deg(90) + dir * (TURN + 0.01), 50, t);
-      expect(result).toEqual({ neutral: expect.closeTo(deg(90)), sign: dir });
-    }
+  test("a right turn has to be held before it counts", () => {
+    const cal = new Calibrator();
+    const { t } = hold(cal, deg(90), LEVEL_MS + 50);
+    const passing = hold(cal, deg(90) + TURN + 0.05, HOLD_MS / 2, t);
+    expect(passing.result).toBeUndefined();
+    const held = hold(cal, deg(90) + TURN + 0.05, HOLD_MS, passing.t);
+    expect(held.result).toEqual({ neutral: expect.closeTo(deg(90)), sign: 1 });
+  });
+
+  test("a left turn shows a hint instead of finishing", () => {
+    const cal = new Calibrator();
+    const { t } = hold(cal, deg(90), LEVEL_MS + 50);
+    const left = hold(cal, deg(90) - TURN - 0.05, 1000, t);
+    expect(left.result).toBeUndefined();
+    expect(cal.wrongWay).toBe(true);
+    expect(cal.progress).toBe(0);
+  });
+
+  test("turning back right after a wrong turn still works", () => {
+    const cal = new Calibrator();
+    const { t } = hold(cal, deg(90), LEVEL_MS + 50);
+    const left = hold(cal, deg(90) - TURN - 0.05, 500, t);
+    const right = hold(cal, deg(90) + TURN + 0.05, HOLD_MS + 50, left.t);
+    expect(right.result?.sign).toBe(1);
+    expect(cal.wrongWay).toBe(false);
+  });
+
+  test("a long-held left turn is accepted, for phones with mirrored axes", () => {
+    const cal = new Calibrator();
+    const { t } = hold(cal, deg(90), LEVEL_MS + 50);
+    const left = hold(cal, deg(90) - TURN - 0.05, WRONG_WAY_MS + 50, t);
+    expect(left.result?.sign).toBe(-1);
   });
 
   test("neutral near ±π works (the other landscape)", () => {
@@ -54,7 +86,7 @@ describe("Calibrator", () => {
     const { t } = hold(cal, deg(179), LEVEL_MS + 50);
     const { result } = hold(cal, deg(-170), 50, t); // 11° past 180 counts as +, but under TURN
     expect(result).toBeUndefined();
-    const done = hold(cal, deg(-155), 50, t + 100).result; // 26° past neutral
+    const done = hold(cal, deg(-150), HOLD_MS + 50, t + 100).result; // 31° past neutral, held
     expect(done?.sign).toBe(1);
   });
 });

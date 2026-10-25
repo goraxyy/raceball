@@ -128,8 +128,8 @@ Nothing right now. Add new questions here.
 - [x] Pairing: viewer gets a `pairToken`, its QR opens the pad with the token, and the pad is bound to that player
 - [x] `apps/web/src/net`: client, clock sync, snapshot buffer, interpolation, own-ball extrapolation, `useRaceState` / `usePairing` hooks
 - [x] Pad steering: device-frame gravity, One Euro filter, dead zone + curve, `steer` from -1 to 1
-- [ ] Pad 2-step calibration (+ Flip button); hold-to-gas on the right half, brake on the left; input sent at 60 Hz and on change
-- [ ] Rotation fix v1: Android lock; iPhone Portrait Lock onboarding + self-rotated UI; counter-rotation fallback
+- [x] Pad 2-step calibration (+ Flip button); hold-to-gas on the right half, brake on the left; input sent at 60 Hz and on change (tested on iPhone 18 Pro)
+- [x] Rotation fix v1: Android lock; iPhone Portrait Lock onboarding + self-rotated UI; counter-rotation fallback (works on iPhone 18 Pro. Known bug, parked: the pad sometimes switches to portrait. Android untested)
 - [x] Wake Lock; block zoom, scroll and selection
 - [x] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 

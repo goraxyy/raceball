@@ -1,5 +1,6 @@
 import type { GameEvent } from "@raceball/shared";
 import { play } from "./audio";
+import { SCOOP_MAX } from "./screens";
 
 // Sound + visual cue on the pad for each race event (no vibration: docs/CONTROLLER.md).
 // The visuals are Nuris's: data-cue on .racing, and a .cue-text banner (apps/pad/screens.html).
@@ -39,6 +40,24 @@ function setItemButton(racing: HTMLElement, item: string) {
   btn.disabled = !item;
 }
 
+/** The scoop meter: one pip lit per Creamery Scoop held, popping on a change */
+function setScoops(racing: HTMLElement, count: number) {
+  const meter = racing.querySelector<HTMLElement>(".scoops");
+  if (!meter) return;
+  const n = Math.max(0, Math.min(SCOOP_MAX, count));
+  meter.removeAttribute("data-change");
+  void meter.offsetWidth;
+  meter.dataset.change = n > Number(meter.dataset.count) ? "up" : "down";
+  meter.dataset.count = String(n);
+  meter.setAttribute("aria-label", `${n} scoops`);
+  meter
+    .querySelectorAll("i")
+    .forEach((pip, i) => pip.classList.toggle("is-held", i < n));
+}
+
+/** Each scoop held raises the next one's pop a little, as on the screens (fx.ts) */
+const SCOOP_STEP = 0.05;
+
 /** React to an event about our player (the server only sends us those) */
 export function showEvent(evt: GameEvent, me: string, laps: number) {
   const racing = document.querySelector<HTMLElement>(".screen.racing");
@@ -55,7 +74,34 @@ export function showEvent(evt: GameEvent, me: string, laps: number) {
       }
       break;
     case "fire":
+      if (evt.item === "boost") {
+        play("boost");
+        if (racing) cue(racing, "boost", "Boost!");
+      }
       if (racing) setItemButton(racing, "");
+      break;
+    case "pad": // over a boost pad
+      play("pad", 0.9);
+      if (racing) cue(racing, "boost", "Boost!");
+      break;
+    case "scoop":
+      play("scoop", 0.8, 0, 0, 1 + SCOOP_STEP * (evt.count - 1));
+      if (racing) {
+        cue(racing, "scoop");
+        setScoops(racing, evt.count);
+      }
+      break;
+    case "drop": {
+      play("scoopDrop");
+      if (!racing) break;
+      cue(racing, "bump");
+      const meter = racing.querySelector<HTMLElement>(".scoops");
+      setScoops(racing, Number(meter?.dataset.count ?? 0) - evt.lost);
+      break;
+    }
+    case "bounce": // a Lion Paw bumper kicked us
+      play("paw");
+      if (racing) cue(racing, "bump");
       break;
     case "lap": {
       const final = evt.lap >= laps;

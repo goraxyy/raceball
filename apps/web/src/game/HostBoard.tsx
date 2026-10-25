@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { TrackPath } from "@raceball/game-core";
 import { useRaceState } from "../net";
 import {
@@ -14,20 +14,24 @@ import type { SnapshotSource } from "./net-feed";
 const MAP_EVERY = 100;
 
 /**
- * The big screen's race board: the live 2D map and the timing tower (place, lap, gap to the leader).
- * In the split screen it sits in the middle, where the views meet; in the global view it moves to the side.
+ * The big screen's race board: the live 2D map and the timing tower (place, lap, gap to the leader), with the host's
+ * buttons on top. In the split screen it fills its own cell or column of the grid (TileFrames), so it never covers a
+ * player's view; with no views yet it sits at the side.
  */
 export function HostBoard({
   session,
   path,
   positions,
   layout,
+  controls,
 }: {
   session: SnapshotSource;
   path: TrackPath;
   /** Every ball's [x, z] this frame */
   positions: () => Map<string, [number, number]>;
-  layout: "center" | "side";
+  layout: "slot" | "side";
+  /** The host's buttons (rematch), clickable */
+  controls?: ReactNode;
 }) {
   const state = useRaceState(session);
   const [spots, setSpots] = useState(positions);
@@ -72,6 +76,7 @@ export function HostBoard({
       data-layout={layout}
       aria-label="Live map and standings"
     >
+      {controls && <div className="host-board-controls">{controls}</div>}
       <div className="map-card">
         <TrackMap path={path.points} players={markers} />
       </div>

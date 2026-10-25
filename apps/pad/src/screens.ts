@@ -164,6 +164,9 @@ export const readyHtml = (look: Look) => `
     </div>
   </section>`;
 
+/** Creamery Scoops a racer can hold (game-core's tuning.scoopMax): one pip each on the pad */
+export const SCOOP_MAX = 10;
+
 export const racingHtml = (look: Look, laps: number) => `
   <section class="screen racing" style="--player: ${look.color}">
     <div class="zone zone-left">
@@ -184,6 +187,9 @@ export const racingHtml = (look: Look, laps: number) => `
       <button class="item-btn" type="button" data-item="" disabled>
         <span>No item</span>
       </button>
+      <div class="scoops" data-count="0" aria-label="0 scoops">
+        ${"<i></i>".repeat(SCOOP_MAX)}
+      </div>
     </div>
     <div class="wrong-way" hidden>Wrong way</div>
     <div class="cue"></div>

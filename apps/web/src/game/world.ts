@@ -260,6 +260,12 @@ export const ROAD_SURFACE = ["road_", "kerbs", "start_line"];
  */
 const ROAD_PULL = -4;
 
+/**
+ * Past this distance a tree is a few pixels, and there are hundreds of them: they stop drawing (the haze and the
+ * hills behind fill in), m
+ */
+const TREE_DRAW_DISTANCE = 220;
+
 /** Loads the ground board, causeways, hills and the road's surface into the scene, frozen (the world never moves) */
 export async function loadWorld(
   scene: Scene,
@@ -277,6 +283,8 @@ export async function loadWorld(
   const pulled = new Map<Material, Material>();
   for (const mesh of world.meshes) {
     if (mesh.getTotalVertices() === 0) continue;
+    if (mesh instanceof Mesh && /^tree_/.test(mesh.name))
+      mesh.addLODLevel(TREE_DRAW_DISTANCE, null); // their instances follow the mesh they copy
     if (mesh.material && ROAD_SURFACE.some((p) => mesh.name.startsWith(p))) {
       // the kerbs share the trees' palette material: they get a copy of their own to pull
       let mat = pulled.get(mesh.material);

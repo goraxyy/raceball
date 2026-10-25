@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Engine, Scene } from "@babylonjs/core";
 import { PLANETS } from "@raceball/shared";
 import { tuning } from "@raceball/game-core";
@@ -27,17 +33,14 @@ export function GameView({
   mode,
   session,
   onLoaded,
-  view = "split",
-  onFallback,
+  hostControls,
 }: {
   mode: GameMode;
   session?: SnapshotSource;
   /** Once the map is in and the race can be drawn (a laptop tells the server its assets loaded) */
   onLoaded?: () => void;
-  /** Host: a view per player with the race board in the middle, or the whole map from above */
-  view?: "split" | "global";
-  /** Host: the screen was too slow for the split screen and switched to the global view on its own */
-  onFallback?: () => void;
+  /** Host: the host's race buttons, shown on the race board */
+  hostControls?: ReactNode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -51,11 +54,6 @@ export function GameView({
     (rects: Map<string, TileRect>) => gameRef.current?.setTileRects(rects),
     [],
   );
-  const viewRef = useRef(view);
-  useEffect(() => {
-    viewRef.current = view;
-    gameRef.current?.setGlobalView(view === "global");
-  }, [view]);
   // wheel indicators by player id, turned every frame straight from the poses (no React render)
   const wheels = useRef(new Map<string, HTMLElement>());
   const wheel = useCallback((id: string, el: HTMLElement | null) => {
@@ -65,14 +63,6 @@ export function GameView({
   const spots = useRef(new Map<string, [number, number]>());
   const positions = useCallback(() => spots.current, []);
   const path = useRoute(mode === "host");
-  const onFallbackRef = useRef(onFallback);
-  useEffect(() => {
-    onFallbackRef.current = onFallback;
-  });
-  const fellBack = !!status?.nameTags;
-  useEffect(() => {
-    if (fellBack) onFallbackRef.current?.();
-  }, [fellBack]);
 
   useEffect(() => {
     let active = true;
@@ -125,7 +115,6 @@ export function GameView({
       },
     });
     gameRef.current = game;
-    game.setGlobalView(viewRef.current === "global");
     const removeInspector = installInspectorToggle(scene);
     engine.runRenderLoop(() => {
       game.update(engine.getDeltaTime() / 1000);
@@ -170,16 +159,33 @@ export function GameView({
           session={session}
           onRects={onTileRects}
           wheel={wheel}
+          board={
+            path &&
+            status.state === "ready" && (
+              <HostBoard
+                session={session}
+                path={path}
+                positions={positions}
+                layout="slot"
+                controls={hostControls}
+              />
+            )
+          }
         />
       )}
-      {mode === "host" && session && path && status?.state === "ready" && (
-        <HostBoard
-          session={session}
-          path={path}
-          positions={positions}
-          layout={status.tiles?.length ? "center" : "side"}
-        />
-      )}
+      {mode === "host" &&
+        session &&
+        path &&
+        status?.state === "ready" &&
+        !status.tiles?.length && (
+          <HostBoard
+            session={session}
+            path={path}
+            positions={positions}
+            layout="side"
+            controls={hostControls}
+          />
+        )}
       {mode === "viewer" && status?.state === "ready" && (
         <SteerWheel className="own-wheel" wheelRef={(el) => wheel(OWN, el)} />
       )}

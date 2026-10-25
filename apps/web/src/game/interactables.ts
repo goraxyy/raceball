@@ -3,7 +3,7 @@ import {
   type AssetContainer,
   GlowLayer,
   LoadAssetContainerAsync,
-  type Mesh,
+  Mesh,
   ParticleSystem,
   PBRMaterial,
   type Scene,
@@ -42,6 +42,8 @@ const GLOW_PULSE = 0.35; // …breathing this much…
 const GLOW_FLASH = 4; // …and this much more on a hit
 /** A hit counts for the pad or paw within this distance of the event's position, m */
 const NEAR = 4;
+/** Scoops and paws past this distance are a few pixels: they stop drawing, m (pads stay: they're on the road) */
+const PROP_DRAW_DISTANCE = 160;
 
 export interface ScoopLike {
   id: string;
@@ -116,6 +118,8 @@ export class InteractableViews {
       for (const mesh of node.getChildMeshes()) {
         mesh.isVisible = false;
         mesh.receiveShadows = true;
+        if (!node.name.startsWith("prop_boost_pad") && mesh instanceof Mesh)
+          mesh.addLODLevel(PROP_DRAW_DISTANCE, null); // the instances follow it
       }
     }
     for (const mat of kit.materials) {

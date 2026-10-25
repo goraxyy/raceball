@@ -476,14 +476,14 @@ Bigger and brighter all round: the dust is larger and more solid (it reads on th
 - **Loops ship as WAV, not MP3.** MP3 adds a little silence at both ends, which leaves an audible gap every time a loop repeats. Loops are short mono 22 kHz WAVs instead (a 4 s loop is about 170 KB), and they repeat cleanly in every browser.
 - **Rolling loop in code:** play `sfx_roll_loop.wav` with `loop = true`, and drive its playback rate (about 0.6 at a crawl to 1.6 at top speed) and volume from the ball's speed.
 - **Bumps:** pick one of `sfx_bump_01–03` at random, set the volume from the event's `strength`, and vary the playback rate by ±5%, so repeated bumps don't sound identical.
-- **Music:** `tools/audio/gen_music.py` composes both loops from scratch, so they're original and match the pizzicato and steel-drum jingles. Listen at `/ui` > music.
+- **Music:** `tools/audio/gen_music.py` composes both loops from scratch, so they're original (band-limited synths, FM keys and bells, and drums, all synthesized). Listen at `/ui` > music.
 
   | File | Feel | Length |
   |---|---|---|
-  | `mus/mus_lobby_loop.wav` | Swung toy-box groove, 100 BPM, F major: marimba, plucked bass, glockenspiel, brushes, shaker | 8 bars, 19.2 s, −18 LUFS |
-  | `mus/mus_race_loop.wav` | Driving, 148 BPM, G major: steel-drum hook, plucked bass with a sub, offbeat marimba, kick/clap/hats, a fill into the loop | 8 bars, 13.0 s, −16 LUFS |
+  | `mus/mus_lobby_loop.wav` | "Old Main Afternoon": a relaxed, swung 96 BPM in F major. Electric-piano chords (maj7 and 9ths) with a slow tremolo, a vibraphone tune that comes back an octave up, a round bass, lo-fi kick, rim and brushes, a warm pad in the second half | 16 bars, 40.0 s, −18 LUFS |
+  | `mus/mus_race_loop.wav` | "Happy Valley Rush": 150 BPM in C major. A pulse-wave lead with glide and vibrato on a hook and its answer, then a lift (four on the floor, a pumping supersaw pad, a sparkly FM bell arpeggio). Supersaw stabs, an acid-ish synth bass with a sub, a tom fill, crashes and a riser into the loop point | 16 bars, 25.6 s, −16 LUFS |
 
-  - **Play them looped** (`AudioBufferSourceNode` with `loop = true`). They're stereo 32 kHz WAVs (2.5 MB and 1.7 MB) for the same reason as the other loops, and each one is rendered three times with the middle copy kept, so note and reverb tails wrap around and there's no seam.
+  - **Play them looped** (`AudioBufferSourceNode` with `loop = true`). They're stereo 32 kHz WAVs (5.1 MB and 3.3 MB) for the same reason as the other loops, and each one is rendered three times with the middle copy kept, so note and reverb tails wrap around and there's no seam. The pumping parts duck under the kick in every copy, so the duck wraps too.
   - **Final lap:** ramp the race loop's `playbackRate` to **1.06** over about half a second. That lifts it about a semitone and a touch faster, the classic kart-racer cue.
   - **Lobby → race:** crossfade over about 1 s when the countdown starts, so the music never stops dead.
   - **Mix:** the big screen plays music at full level. Laptops play it **8 dB quieter** (gain ≈ 0.4), so their own ball's sounds stay on top.

@@ -55,18 +55,17 @@ describe("FpsGuard", () => {
     return verdict;
   };
 
-  it("lowers the resolution after 3 s under 30 fps, step by step, before it gives up", () => {
+  it("lowers the resolution after 3 s under 30 fps, step by step, and stays at the lowest", () => {
     const guard = new FpsGuard();
     expect(run(guard, 10, 3)).toBe("keep"); // grace: shaders compiling
     expect(run(guard, 20, 2.5)).toBe("keep");
     expect(run(guard, 20, 0.7)).toBe("lower");
-    expect(RESOLUTION_STEPS[guard.step]).toBe(1.5);
+    expect(RESOLUTION_STEPS[guard.step]).toBe(1.25);
     expect(run(guard, 20, 6.5)).toBe("lower"); // grace again, then 3 s more
-    expect(RESOLUTION_STEPS[guard.step]).toBe(2);
-    expect(guard.tripped).toBe(false);
-    expect(run(guard, 20, 6.5)).toBe("trip"); // the lowest resolution is still too slow
-    expect(guard.tripped).toBe(true);
-    expect(guard.update(1 / 60)).toBe("trip"); // stays tripped
+    expect(RESOLUTION_STEPS[guard.step]).toBe(1.5);
+    for (let i = 0; i < 3; i++) run(guard, 20, 6.5);
+    expect(guard.step).toBe(RESOLUTION_STEPS.length - 1);
+    expect(run(guard, 10, 60)).toBe("keep"); // still too slow: it never gives up the views
   });
 
   it("is happy at 30 fps and up", () => {
@@ -96,15 +95,6 @@ describe("FpsGuard", () => {
     for (let i = 0; i < 20; i++) expect(guard.update(0.1, true)).toBe("keep");
     expect(run(guard, 60, 10)).toBe("keep");
     expect(guard.step).toBe(0);
-  });
-
-  it("once the host overrides a trip, it never trips again", () => {
-    const guard = new FpsGuard();
-    run(guard, 10, 30);
-    expect(guard.tripped).toBe(true);
-    guard.override();
-    expect(run(guard, 10, 30)).toBe("keep");
-    expect(guard.tripped).toBe(false);
   });
 });
 
@@ -149,12 +139,7 @@ describe("BigScreen", () => {
     vi.unstubAllGlobals();
   });
 
-  const players = (all: string[]): BigScreenPlayers => ({
-    all,
-    phoneOnly: [],
-    name: (id) => `Name ${id}`,
-    look: () => ({ ball: "earth", color: 1 }),
-  });
+  const players = (all: string[]): BigScreenPlayers => ({ all });
 
   it("splits the screen: every player gets a first-person view, drawn where the page framed it", () => {
     const big = new BigScreen(scene, overview);
@@ -216,7 +201,7 @@ describe("BigScreen", () => {
     big.dispose();
   });
 
-  it("the host's global view swaps the split screen for the overview with name tags, and back", () => {
+  it("never leaves the split screen during a race, however slow the screen: it only draws softer", () => {
     const big = new BigScreen(scene, overview);
     const poses = new Map([
       ["a", at(0, 0)],
@@ -224,81 +209,19 @@ describe("BigScreen", () => {
     ]);
     const all = players(["a", "b"]);
     big.update(poses, all, 1 / 60);
+    big.setRects(
+      new Map([
+        ["a", { left: 0, top: 0, width: 640, height: 720 }],
+        ["b", { left: 640, top: 0, width: 640, height: 720 }],
+      ]),
+    );
+    let changed = false;
+    for (let t = 0; t < 60; t += 0.1)
+      changed = big.update(poses, all, 0.1) || changed; // 10 fps for a minute
+    expect(changed).toBe(false);
     expect(big.tileIds).toEqual(["a", "b"]);
-
-    big.setGlobal(true);
-    expect(big.update(poses, all, 1 / 60)).toBe(true);
-    expect(big.tileIds).toEqual([]);
-    expect(scene.activeCameras).toHaveLength(0); // the overview fills the screen
-    expect(scene.getMeshByName("tag-a")).toBeTruthy();
-
-    big.setGlobal(false);
-    expect(big.update(poses, all, 1 / 60)).toBe(true);
-    expect(big.tileIds).toEqual(["a", "b"]);
-    expect(scene.getMeshByName("tag-a")).toBeNull(); // the views show who's who again
-    big.dispose();
-  });
-
-  it("lowers the resolution first, then swaps the split screen for the overview with name tags when the fps can't keep up", () => {
-    const big = new BigScreen(scene, overview);
-    const poses = new Map([
-      ["a", at(0, 0)],
-      ["b", at(5, 0)],
-    ]);
-    const phones = players(["b"]);
-    big.update(poses, phones, 1 / 60);
-    big.setRects(
-      new Map([["b", { left: 18, top: 18, width: 320, height: 200 }]]),
-    );
-    const slow = (seconds: number) => {
-      let changed = false;
-      for (let t = 0; t < seconds; t += 0.1)
-        changed = big.update(poses, phones, 0.1) || changed; // 10 fps
-      return changed;
-    };
-    expect(slow(6.2)).toBe(false);
-    expect(big.resolution).toBe(1.5); // the views stay, a little softer
-    expect(big.tileIds).toEqual(["b"]);
-    slow(6.2);
-    expect(big.resolution).toBe(2);
-    expect(slow(6.2)).toBe(true);
-    expect(big.nameTags).toBe(true);
-    expect(big.tileIds).toEqual([]);
-    expect(big.resolution).toBe(1); // one pass: full resolution again
-    expect(scene.activeCameras).toHaveLength(0);
-    expect(scene.getMeshByName("tag-a")).toBeTruthy();
-    expect(scene.getMeshByName("tag-b")).toBeTruthy();
-
-    // a player who leaves loses their tag; tiles don't come back on their own
-    big.update(new Map([["b", at(5, 0)]]), phones, 1 / 60);
-    expect(scene.getMeshByName("tag-a")).toBeNull();
-    expect(big.tileIds).toEqual([]);
-    big.dispose();
-    expect(scene.getMeshByName("tag-b")).toBeNull();
-  });
-
-  it("the host's Split screen button brings the views back after a fallback, for good", () => {
-    const big = new BigScreen(scene, overview);
-    const poses = new Map([["a", at(0, 0)]]);
-    const all = players(["a"]);
-    big.update(poses, all, 1 / 60);
-    big.setRects(
-      new Map([["a", { left: 0, top: 0, width: 1280, height: 720 }]]),
-    );
-    for (let t = 0; t < 30; t += 0.1) big.update(poses, all, 0.1);
-    expect(big.nameTags).toBe(true);
-    big.setGlobal(true); // the page follows the fallback: the button now offers the split screen
-
-    big.setGlobal(false);
-    expect(big.update(poses, all, 1 / 60)).toBe(true);
-    expect(big.nameTags).toBe(false);
-    expect(big.tileIds).toEqual(["a"]);
-    big.setRects(
-      new Map([["a", { left: 0, top: 0, width: 1280, height: 720 }]]),
-    );
-    for (let t = 0; t < 30; t += 0.1) big.update(poses, all, 0.1);
-    expect(big.tileIds).toEqual(["a"]); // still slow, but the host chose it
-    expect(big.resolution).toBe(2); // at the lowest resolution
+    expect(scene.activeCameras).toHaveLength(2);
+    expect(big.resolution).toBe(RESOLUTION_STEPS.at(-1));
     big.dispose();
   });
 

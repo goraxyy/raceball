@@ -59,6 +59,15 @@ describe("RaceRoom", () => {
     expect(room.roomId).toMatch(/^[A-HJ-NP-Z]{4}$/);
   });
 
+  test("syncs the track's item boxes into the state, all active", () => {
+    // Happy Valley has a row of five on Pollock Road
+    expect(room.state.itemBoxes.length).toBe(5);
+    for (const box of room.state.itemBoxes) {
+      expect(box.id).toMatch(/^box\d$/);
+      expect(box.active).toBe(true);
+    }
+  });
+
   test("rejects an old client", async () => {
     expect(
       await rejectCode({ role: "viewer", protocol: PROTOCOL_VERSION - 1 }),

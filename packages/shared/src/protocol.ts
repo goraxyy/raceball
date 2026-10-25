@@ -1,6 +1,6 @@
 // Protocol v1: the contract between game-core, server, screens and pads.
 // To change it: bump PROTOCOL_VERSION and update docs/ARCHITECTURE.md (see docs/WORKFLOW.md).
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -57,7 +57,13 @@ export interface BallSnap {
 /** server → pad + viewer + host */
 export type GameEvent =
   | { type: "bump"; a: string; b: string; strength: number } // strength 0 … 1
-  | { type: "item"; player: string; item: ItemId }
+  | { type: "item"; player: string; item: ItemId } // picked up from an item box
+  | {
+      type: "fire";
+      player: string;
+      item: ItemId;
+      pos: [number, number, number];
+    } // used; pos = where it happens (the puddle for a spill)
   | { type: "overtake"; player: string; passed: string; section: string } // position change
   | { type: "lap"; player: string; lap: number }
   | { type: "finish"; player: string; place: number }

@@ -16,6 +16,7 @@ class FakeSession {
       trackId: "happy_valley",
       players: {},
       itemBoxes: [],
+      puddles: [],
     };
   }
 }

@@ -36,6 +36,15 @@ export interface ItemBoxView {
   active: boolean;
 }
 
+/** A Creamery Spill puddle on the road, for screens to draw */
+export interface PuddleView {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  radius: number;
+}
+
 export interface RaceStateView {
   phase: Phase;
   laps: number;
@@ -45,6 +54,7 @@ export interface RaceStateView {
   /** By playerId */
   players: Record<string, PlayerView>;
   itemBoxes: ItemBoxView[];
+  puddles: PuddleView[];
 }
 
 /** Planets other players already have, for greying them out in the pickers */

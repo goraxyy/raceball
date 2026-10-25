@@ -3,10 +3,13 @@ export { initPhysics, TICK_DT } from "./physics";
 export {
   createRace,
   createFlatRace,
+  type ItemBoxState,
+  type PuddleState,
   type Race,
   type RaceConfig,
   type Standing,
 } from "./race";
+export { ITEM_ODDS, oddsRow, rollItem } from "./items";
 export { KeyboardInput, NEUTRAL_INPUT, type KeyState } from "./input";
 export { makePath, pointAt, project, type TrackPath } from "./path";
 export { BALL_RADIUS } from "./ball";

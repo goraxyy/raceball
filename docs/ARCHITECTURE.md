@@ -65,7 +65,7 @@ A phone-only player picks their name and ball on the pad itself. During the race
 | `input` | pad → server | 60 Hz, plus immediately on any button change | Latest wins. The server drops older `seq` values |
 | *(schema state)* | server → all | Colyseus patches (~20 Hz) | Lobby and race state: players, ready, lap, place, phase, countdown, item boxes |
 | `snap` | server → host + viewers | **60 Hz** (start at 30 Hz while debugging) | Ball transforms go in this custom message, **not** in the schema |
-| `evt` | server → pad + viewer + host | On event | bump / item / overtake / lap / finish / respawn, for pad sounds and visuals, screen VFX and standings animations |
+| `evt` | server → pad + viewer + host | On event | bump / item / fire / overtake / lap / finish / respawn, for pad sounds and visuals, screen VFX and standings animations |
 | `ping` / `pong` | both ways | 1 Hz | Measures round-trip time and the server clock offset |
 | `start { laps }`, `addBot`, `removeBot { id }`, `rematch` | host → server | On click | Only the host may send these. `laps` is 1 (demo) or 3 (default). `start` only works in the lobby once every player is `readyToRace()` |
 | `status { calibrated?, assetsLoaded?, ready? }` | pad / laptop → server | On change | For the sender's own player. Phone-only players have no assets to load |
@@ -128,7 +128,7 @@ A rolling ball has momentum, which hides latency far better than a twitchy kart 
 ## Protocol v1 (draft, lives in `packages/shared/src/protocol.ts`)
 
 ```ts
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -174,7 +174,8 @@ export interface BallSnap {
 /** server → pad + viewer + host */
 export type GameEvent =
   | { type: "bump"; a: string; b: string; strength: number }  // strength 0 … 1
-  | { type: "item"; player: string; item: ItemId }
+  | { type: "item"; player: string; item: ItemId } // picked up from an item box
+  | { type: "fire"; player: string; item: ItemId; pos: [number, number, number] } // used; pos = where it happens (the puddle for a spill)
   | { type: "overtake"; player: string; passed: string; section: string } // position change
   | { type: "lap"; player: string; lap: number }
   | { type: "finish"; player: string; place: number }
@@ -256,10 +257,11 @@ export interface SetProfileMsg {
 Colyseus schema (synced automatically):
 
 ```
-RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[] }
+RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[], puddles: Puddle[] }
 PlayerState{ name, ball, color, shape, phoneOnly, bot, paired, calibrated, assetsLoaded, ready,
              lap, checkpoint, place, finishedAt, connected, wins, bestLap }
-ItemBox    { id, x, y, z, active }
+ItemBox    { id, x, y, z, active }   // x, y, z = the box's center; inactive for a few seconds after a hit
+Puddle     { id, x, y, z, radius }   // a Creamery Spill on the road, gone after spillSeconds
 ```
 
 Snapshots are quantized on the wire (`packSnap` in `packages/shared/src/snap.ts`): positions and velocities in centimeters, quaternions × 32767, heading in milliradians, all as integer arrays.

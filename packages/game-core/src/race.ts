@@ -1,8 +1,15 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import type { PlatformIO } from "@gltf-transform/core";
-import type { GameEvent, InputMsg, Phase, SnapMsg } from "@raceball/shared";
+import type {
+  GameEvent,
+  InputMsg,
+  ItemId,
+  Phase,
+  SnapMsg,
+} from "@raceball/shared";
 import { addBall, applyControls, BALL_RADIUS, type PlayerSim } from "./ball";
 import { NEUTRAL_INPUT } from "./input";
+import { rollItem } from "./items";
 import { pointAt, project } from "./path";
 import { createWorld, initPhysics, TICK_DT } from "./physics";
 import {
@@ -17,6 +24,8 @@ import { tuning, type Tuning } from "./tuning";
 
 export interface RaceConfig {
   laps: number;
+  /** 0 … 1, like Math.random (the default). Tests pass a fixed one to pick items */
+  random?: () => number;
 }
 
 export interface Standing {
@@ -26,6 +35,21 @@ export interface Standing {
   checkpoint: number; // index of the last checkpoint crossed in order (0 = the finish line)
   finishedAt: number | null; // race time in ms, null while still racing
   progress: number; // m along the race from the start line (negative on the grid)
+  item: ItemId | null; // the item the player holds, fired with input.item
+}
+
+/** An item box: hidden for itemBoxRespawn after a ball hits it */
+export interface ItemBoxState {
+  id: string;
+  pos: Vec3;
+  active: boolean;
+}
+
+/** A Creamery Spill puddle on the road */
+export interface PuddleState {
+  id: string;
+  pos: Vec3;
+  radius: number;
 }
 
 /** The game-core API the server (and local mode) drives. Agreed with Rasim; see docs/team/ali-game.md. */
@@ -37,7 +61,9 @@ export interface Race {
   step(dt: number): void; // always 1/60
   snapshot(tick: number, t: number): SnapMsg;
   drainEvents(): GameEvent[]; // events since the last call
-  standings(): Standing[]; // id, place, lap, checkpoint, finishedAt, progress
+  standings(): Standing[]; // id, place, lap, checkpoint, finishedAt, progress, item
+  itemBoxes(): ItemBoxState[]; // for the synced state (screens draw the boxes)
+  puddles(): PuddleState[]; // Creamery Spill puddles, for screens to draw
   readonly phase: Phase;
   readonly laps: number;
   /** The route's centerline as [x, z] points from the finish line, for the big-screen map; [] without a route */
@@ -85,7 +111,23 @@ interface Racer extends PlayerSim {
   routeS: number; // where the ball is along the track path, in the path's own meters
   stuckFor: number; // seconds of gas while barely moving
   surfaces: Set<Surface>; // surface volumes the ball is inside
-  boostLeft: number; // seconds of raised top speed left after a boost pad
+  boostLeft: number; // seconds of raised top speed left after a boost pad or item
+  slowLeft: number; // seconds of Snow Day slowdown left
+  item: ItemId | null;
+}
+
+interface Box {
+  id: string;
+  pos: Vec3;
+  collider: number;
+  hiddenUntil: number; // simMs
+}
+
+interface Puddle {
+  id: string;
+  pos: Vec3;
+  surface: Surface;
+  until: number; // simMs
 }
 
 class TrackRace implements Race {
@@ -99,6 +141,11 @@ class TrackRace implements Race {
   private readonly gateOrder = new Map<number, number>(); // collider handle → position in track.checkpoints
   private readonly surfaceByCollider = new Map<number, Surface>();
   private readonly padByCollider = new Map<number, BoostPad>();
+  private readonly boxes: Box[] = [];
+  private readonly boxByCollider = new Map<number, Box>();
+  private puddleList: Puddle[] = [];
+  private puddleCount = 0;
+  private readonly random: () => number;
   private readonly byCollider = new Map<number, Racer>();
   private players = new Map<string, Racer>();
   private events: GameEvent[] = [];
@@ -131,6 +178,24 @@ class TrackRace implements Race {
     track.checkpoints.forEach((c, i) => this.gateOrder.set(c.collider, i));
     for (const s of track.surfaces) this.surfaceByCollider.set(s.collider, s);
     for (const b of track.boosts) this.padByCollider.set(b.collider, b);
+    this.random = cfg.random ?? Math.random;
+    const half = t.itemBoxSize;
+    track.items.forEach(({ pos }, i) => {
+      const c = world.createCollider(
+        RAPIER.ColliderDesc.cuboid(half, half, half)
+          .setTranslation(...pos)
+          .setSensor(true)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+      );
+      const box: Box = {
+        id: `box${i}`,
+        pos,
+        collider: c.handle,
+        hiddenUntil: 0,
+      };
+      this.boxes.push(box);
+      this.boxByCollider.set(c.handle, box);
+    });
 
     const gates = track.checkpoints;
     const route = track.path;
@@ -183,6 +248,8 @@ class TrackRace implements Race {
       stuckFor: 0,
       surfaces: new Set(),
       boostLeft: 0,
+      slowLeft: 0,
+      item: null,
     };
     this.players.set(id, racer);
     this.byCollider.set(racer.collider, racer);
@@ -223,7 +290,9 @@ class TrackRace implements Race {
     const drives = (p: Racer) => racing && p.finishedAt === null;
     if (racing) this.raceMs += dt * 1000;
     this.simMs += dt * 1000;
+    this.expirePuddles();
     for (const p of this.players.values()) {
+      if (p.input.item && p.item && drives(p)) this.fire(p, p.item);
       this.applySurfaces(p, dt);
       applyControls(
         p,
@@ -248,6 +317,8 @@ class TrackRace implements Race {
       if (!started) return;
       const pad = this.padByCollider.get(other);
       if (pad) return this.boost(p, pad);
+      const box = this.boxByCollider.get(other);
+      if (box) return this.hitBox(p, box, drives(p));
       const gate = this.gateOrder.get(other);
       // only the next gate counts, so shortcuts and driving backwards don't
       if (gate !== undefined && gate === p.next && drives(p))
@@ -323,7 +394,24 @@ class TrackRace implements Race {
         checkpoint: p.passed > 0 ? (p.passed - 1) % gates : 0,
         finishedAt: p.finishedAt,
         progress,
+        item: p.item,
       }));
+  }
+
+  itemBoxes(): ItemBoxState[] {
+    return this.boxes.map((b) => ({
+      id: b.id,
+      pos: b.pos,
+      active: this.simMs >= b.hiddenUntil,
+    }));
+  }
+
+  puddles(): PuddleState[] {
+    return this.puddleList.map((d) => ({
+      id: d.id,
+      pos: d.pos,
+      radius: this.t.spillRadius,
+    }));
   }
 
   /**
@@ -397,8 +485,11 @@ class TrackRace implements Race {
       if (s.kind === "snow") snow = true;
     }
     p.surfaceGrip = grip;
-    p.maxSpeedMul = p.boostLeft > 0 ? this.t.boostMaxSpeedMul : 1;
+    p.maxSpeedMul =
+      (p.boostLeft > 0 ? this.t.boostMaxSpeedMul : 1) *
+      (p.slowLeft > 0 ? this.t.snowDaySpeedMul : 1);
     p.boostLeft = Math.max(0, p.boostLeft - dt);
+    p.slowLeft = Math.max(0, p.slowLeft - dt);
     if (snow) {
       const v = p.body.linvel();
       const k = (1 - Math.exp(-this.t.snowDrag * dt)) * p.body.mass();
@@ -414,6 +505,101 @@ class TrackRace implements Race {
       true,
     );
     p.boostLeft = this.t.boostSeconds;
+  }
+
+  /** An active box hides for itemBoxRespawn and gives an item, by place, to a racer whose slot is empty */
+  private hitBox(p: Racer, box: Box, racing: boolean): void {
+    if (!racing || this.simMs < box.hiddenUntil) return;
+    box.hiddenUntil = this.simMs + this.t.itemBoxRespawn * 1000;
+    if (p.item) return;
+    const place = this.standings().find((s) => s.id === p.id)?.place ?? 1;
+    p.item = rollItem(place, this.players.size, this.random);
+    this.events.push({ type: "item", player: p.id, item: p.item });
+  }
+
+  private fire(p: Racer, item: ItemId): void {
+    const t = this.t;
+    const pos = p.body.translation();
+    const mass = p.body.mass();
+    const fwd = { x: Math.sin(p.heading), z: Math.cos(p.heading) };
+    let at: Vec3 = [pos.x, pos.y, pos.z];
+    switch (item) {
+      case "boost": {
+        const j = t.itemBoostSpeed * mass;
+        p.body.applyImpulse({ x: fwd.x * j, y: 0, z: fwd.z * j }, true);
+        p.boostLeft = t.boostSeconds;
+        break;
+      }
+      case "roar":
+        for (const q of this.players.values()) {
+          if (q === p) continue;
+          const qp = q.body.translation();
+          const dx = qp.x - pos.x;
+          const dz = qp.z - pos.z;
+          const d = Math.hypot(dx, dz);
+          if (d >= t.roarRadius) continue;
+          const k = (1 - d / t.roarRadius) * q.body.mass();
+          // straight away from the roarer; a ball right on top of it goes forward
+          const [ux, uz] = d > 1e-3 ? [dx / d, dz / d] : [fwd.x, fwd.z];
+          q.body.applyImpulse(
+            {
+              x: ux * t.roarSpeed * k,
+              y: t.roarLift * k,
+              z: uz * t.roarSpeed * k,
+            },
+            true,
+          );
+        }
+        break;
+      case "spill": {
+        at = [
+          pos.x - fwd.x * t.spillBehind,
+          pos.y - BALL_RADIUS,
+          pos.z - fwd.z * t.spillBehind,
+        ];
+        const c = this.world.createCollider(
+          RAPIER.ColliderDesc.cylinder(BALL_RADIUS, t.spillRadius)
+            .setTranslation(...at)
+            .setSensor(true)
+            .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+        );
+        const surface: Surface = {
+          kind: "icecream",
+          grip: t.spillGrip,
+          collider: c.handle,
+        };
+        this.surfaceByCollider.set(c.handle, surface);
+        this.puddleList.push({
+          id: `spill${this.puddleCount++}`,
+          pos: at,
+          surface,
+          until: this.simMs + t.spillSeconds * 1000,
+        });
+        break;
+      }
+      case "snowday": {
+        const place = new Map(this.standings().map((s) => [s.id, s.place]));
+        const mine = place.get(p.id) ?? 1;
+        for (const q of this.players.values())
+          if ((place.get(q.id) ?? mine) < mine) q.slowLeft = t.snowDaySeconds;
+        break;
+      }
+    }
+    p.item = null;
+    this.events.push({ type: "fire", player: p.id, item, pos: at });
+  }
+
+  /** Puddles dry up after spillSeconds. Balls inside drop the surface right away */
+  private expirePuddles(): void {
+    if (!this.puddleList.some((d) => this.simMs >= d.until)) return;
+    this.puddleList = this.puddleList.filter((d) => {
+      if (this.simMs < d.until) return true;
+      for (const p of this.players.values()) p.surfaces.delete(d.surface);
+      this.surfaceByCollider.delete(d.surface.collider);
+      const c = this.world.getCollider(d.surface.collider);
+      if (c) this.world.removeCollider(c, false);
+      return false;
+    });
   }
 
   /**

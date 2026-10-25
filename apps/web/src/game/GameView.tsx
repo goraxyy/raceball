@@ -166,6 +166,11 @@ export function GameView({
                     <span>current lap</span>
                   </div>
                 </div>
+                <p className="local-item" data-item={status.stats.item ?? ""}>
+                  {status.stats.item
+                    ? `${ITEM_NAMES[status.stats.item]} · Space to fire`
+                    : "No item: drive through a blue box"}
+                </p>
                 {status.map !== "flat" && (
                   <p className="local-lap-info">
                     {status.stats.lapElapsed === null
@@ -224,13 +229,21 @@ export function GameView({
           </aside>
           <p className="local-controls">
             W / ↑ accelerate <span>·</span> A D / ← → steer <span>·</span> S / ↓
-            brake <span>·</span> R reset <span>·</span> V overview
+            brake <span>·</span> Space item <span>·</span> R reset{" "}
+            <span>·</span> V overview
           </p>
         </>
       )}
     </>
   );
 }
+
+const ITEM_NAMES: Record<string, string> = {
+  boost: "Blue & White Boost",
+  roar: "Lion Roar",
+  spill: "Creamery Spill",
+  snowday: "Snow Day",
+};
 
 function formatTime(seconds: number | null): string {
   if (seconds === null) return "—";

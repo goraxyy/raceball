@@ -35,6 +35,7 @@ class FakeRoom implements SnapshotSource {
     trackId: "happy_valley",
     players: {},
     itemBoxes: [],
+    puddles: [],
   };
   balls = new Map<string, BallPose>();
   listeners = new Set<() => void>();

@@ -23,6 +23,7 @@ import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera, eventShake, swoopProgress } from "./cameras";
 import { GameFx, type FxEvent } from "./fx";
 import { loadLandmarks } from "./landmarks";
+import { ItemViews } from "./items";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
 
@@ -96,6 +97,7 @@ export function createGame(
 
   if (map === "flat") createFlatGround(scene);
   const balls = new BallViews(scene, shadows);
+  const items = new ItemViews(scene);
   const chase = new ChaseCamera(scene);
   scene.activeCamera = chase.camera;
   const overview = new ArcRotateCamera(
@@ -365,6 +367,23 @@ export function createGame(
         poses,
         status.overview || !own ? overview.target : Vector3.FromArray(own.p),
       );
+      if (local) items.sync(local.itemBoxes(), local.puddles());
+      else if (options.session) {
+        const { itemBoxes = [], puddles = [] } = options.session.state;
+        items.sync(
+          itemBoxes.map((b) => ({
+            id: b.id,
+            pos: [b.x, b.y, b.z],
+            active: b.active,
+          })),
+          puddles.map((d) => ({
+            id: d.id,
+            pos: [d.x, d.y, d.z],
+            radius: d.radius,
+          })),
+        );
+      }
+      items.update(dt);
       if (big && net) {
         const fps = scene.getEngine().getFps();
         if (big.update(poses, net, dt, fps)) {
@@ -402,6 +421,7 @@ export function createGame(
       big?.dispose();
       fx.dispose();
       balls.dispose();
+      items.dispose();
       overview.dispose();
       chase.camera.dispose();
       shadows.dispose();

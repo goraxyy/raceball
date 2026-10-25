@@ -499,6 +499,17 @@ Notes:
 
 ### Items (`items.ts`)
 
+**Done.** The odds are `ITEM_ODDS` in `items.ts`, the numbers are in `tuning.ts`, and the logic is in `race.ts`:
+- **Item boxes** are sensors (`itemBoxSize`) at each `item` marker; the marker is the box's center. A hit hides the box for `itemBoxRespawn`, and gives an item by place only if the slot is empty. `Race.itemBoxes()` feeds Rasim's `itemBoxes` schema.
+- **Firing** needs the race to be running for you (not during the countdown or after you finish). Each use sends a `fire` event with `pos`, which is where it happens (the puddle's center for a spill), so Nuris's `fx.ts` can place the effect.
+- **Lion Roar** is a speed change, not an impulse: up to `roarSpeed` = 12 m/s away from you at point blank, fading to 0 at `roarRadius`, plus a `roarLift` hop. That makes it the same for every ball, whatever its mass.
+- **Creamery Spill** drops a round `icecream` surface (`spillGrip`) `spillBehind` behind you. It's in `Race.puddles()` and the `puddles` schema, and it goes away after `spillSeconds`.
+- **Snow Day** lowers the top speed of everyone ahead of you; it stacks with a boost.
+- `RaceConfig.random` swaps `Math.random` for tests.
+- The web game draws a placeholder spinning blue box and a pink puddle (`apps/web/src/game/items.ts`). Nuris's animated item box replaces the box mesh.
+
+On the real map, a 4-bot 3-lap race picks up and fires items with no respawns. The bots all take the same line, so only the leader reaches a box first; that's a bot quirk, not an item bug.
+
 | Item | Effect | Starting numbers |
 |---|---|---|
 | Blue & White Boost | Impulse along the heading, plus a higher `maxSpeed` for a while | +8 m/s, `maxSpeed` x1.5 for 1.5 s |

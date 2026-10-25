@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Engine, Scene } from "@babylonjs/core";
+import { PLANETS } from "@raceball/shared";
 import "@babylonjs/loaders/glTF";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
 import { installInspectorToggle } from "./inspector";
@@ -18,8 +19,10 @@ export function GameView({ mode }: { mode: GameMode }) {
     scene.useRightHandedSystem = true; // match glTF + Rapier, no conversions
 
     const params = new URLSearchParams(location.search);
+    const ball = params.get("ball") ?? "";
     const game = createGame(scene, mode, {
       map: params.get("map") === "flat" ? "flat" : "happy_valley",
+      ball: (PLANETS as readonly string[]).includes(ball) ? ball : undefined,
       overview: params.get("view") === "overview",
       onStatus: (next) => {
         if (active) setStatus(next);

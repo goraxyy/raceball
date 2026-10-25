@@ -42,6 +42,8 @@ export interface GameStatus {
 
 interface GameOptions {
   map?: LocalMap;
+  /** Local mode: the planet your ball wears */
+  ball?: string;
   overview?: boolean;
   onStatus?: (status: GameStatus) => void;
 }
@@ -168,7 +170,7 @@ export function createGame(
 
   async function loadLocal(): Promise<void> {
     const results = await Promise.allSettled([
-      LocalSession.start(map, abort.signal).then((session) => {
+      LocalSession.start(map, abort.signal, options.ball).then((session) => {
         if (disposed) {
           session.dispose();
           throw new DOMException("Local load cancelled", "AbortError");
@@ -249,7 +251,7 @@ export function createGame(
       local?.advance(dt);
       if (!feed) return;
       const poses = feed.sample(performance.now());
-      balls.sync(poses);
+      balls.sync(poses, (id) => feed?.look?.(id));
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
       publishAfter -= dt;

@@ -118,7 +118,7 @@ Nothing right now. Add new questions here.
 - [x] Respawn at the right `respawn_*` marker when the ball falls below y = -10 or gets stuck
   - Gates count only in order; "stuck" = gas held while moving under 1 m/s for 5 s (`stuckSpeed`, `stuckSeconds` in `tuning.ts`)
 - [x] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
-- [ ] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly
+- [x] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly (`/play` and `/host` against a local server; [how it's wired](docs/team/ali-game.md#6-render-server-snapshots))
 - [x] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
 - [x] 4 planet balls (Earth, Mars, Jupiter, Saturn), each with the player-color orbit ring ([art bible](docs/ASSETS.md#balls-the-eight-planets))
   - Built by `tools/models/build_planet_balls.py`: 4.5k triangles with the ring, about 30 KB each after meshopt + WebP. `/play?local=1&ball=mars` drives one. Planets without a model yet get the striped placeholder, still with the ring
@@ -152,7 +152,7 @@ Nothing right now. Add new questions here.
 - [ ] Race phases in `game-core`: lobby, countdown (inputs ignored), racing, results; `start(countdownMs, laps)` takes the lap count
 - [ ] Ball-to-ball collisions that feel good; emit `bump` (with strength) and `overtake` (with section) events
 - [ ] `botInput()` for Rasim's bots
-- [ ] Own-ball extrapolation in the player view (with Rasim)
+- [x] Own-ball extrapolation in the player view (with Rasim) (Rasim's snapshot buffer, drawn by `NetFeed`; smooth at 65 ms round trip with jitter)
 - [ ] Big screen: overview camera + **up to 4 follow-cam tiles** for phone-only players, with an automatic fallback to name tags below 50 fps
 - [ ] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`
 

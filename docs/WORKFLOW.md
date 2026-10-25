@@ -126,7 +126,7 @@ These are the same in Blender exports, Rapier and Babylon:
 | What | How | Who |
 |---|---|---|
 | Web + pad | Automatic. Vercel deploys `main` to production, and every PR gets a preview URL | Nobody needs to do anything |
-| Server | Automatic. Railway redeploys on every push to `main` that touches `apps/server`, `packages/` or the lockfile ([setup](team/rasim-platform.md#3-deploying-the-server-to-railway)) | Nobody, once Rasim has set it up |
+| Server | Automatic. Railway redeploys on every push to `main` that touches `apps/server`, `packages/` or the lockfile ([setup](team/ali-game.md#6-deploying-the-server-to-railway)) | Nobody, once Ali has set it up |
 | Order | When the protocol changes: server first, then web and pad | |
 
 ## Check-ins

@@ -33,8 +33,8 @@
    - Walk through the [protocol draft](docs/ARCHITECTURE.md#protocol-v1-draft-lives-in-packagessharedsrcprotocolts) and change what's needed.
    - Rasim commits `packages/shared/src/protocol.ts`.
    - Ali commits the `Race` interface (types only) in `game-core`.
-6. **Ali (10 min):** create the Railway project and invite Rasim. Import `apps/web` and `apps/pad` into Vercel with the settings from Rasim ([steps](docs/team/rasim-platform.md#3-deploying-the-server-to-railway)).
-7. **Rasim:** configure Railway and deploy the hello-world server. Get the pad sensor page working on an iPhone and an Android phone.
+6. **Ali:** create and configure the Railway project and deploy the hello-world server ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway)). Import `apps/web` and `apps/pad` into Vercel with the settings from Rasim ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)).
+7. **Rasim:** get the pad sensor page working on an iPhone and an Android phone.
 8. **Everyone:** make your first small PR (your row in "Test devices") to practise the [workflow](docs/WORKFLOW.md).
 9. **Work through your M0 checklist in parallel.** When every M0 box is ticked, hold the **M0 check-in**: run the "Done when" line together on real devices, then start M1.
 
@@ -52,7 +52,7 @@
 - [x] **Race length:** 3 laps. **Demo races are 1 lap**, set with a lap selector in the host lobby
 - [x] **Feedback on phones:** sound + visuals only. **No vibration**, and no native iPhone app
 - [x] **Demo format:** table presentation with **2 laptops + 4 phones** ([docs/DEMO.md](docs/DEMO.md))
-- [x] **Accounts:** Ali creates the Railway and Vercel projects (he owns the repo); Rasim configures them
+- [x] **Accounts:** Ali owns Railway end to end (project, service settings, deploys, logs). Ali also imports the Vercel projects (he owns the repo), using the settings from Rasim
 - [x] **Schedule:** none. Milestones in order
 
 ## Still open
@@ -79,7 +79,8 @@ Nothing right now. Add new questions here.
 **Ali**
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
 - [ ] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
-- [ ] After the bootstrap PR is merged: create the Railway project from the repo and invite Rasim; import `apps/web` and `apps/pad` into Vercel ([steps](docs/team/rasim-platform.md#3-deploying-the-server-to-railway)). As repo owner, only you can grant them GitHub access
+- [ ] Create and configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy the hello-world Colyseus server; `/health` returns `ok` ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway))
+- [ ] Import `apps/web` and `apps/pad` into Vercel with Rasim's settings ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). As repo owner, only you can grant them GitHub access
 - [ ] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
 - [ ] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
 - [ ] Dev-only Inspector toggle (`Shift+I`)
@@ -90,7 +91,7 @@ Nothing right now. Add new questions here.
 **Rasim**
 - [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
 - [x] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
-- [ ] Configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy a hello-world Colyseus server with a `/health` check; give Ali the Vercel settings for web + pad
+- [ ] Give Ali the Vercel settings for web + pad
 - [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
 
 **Nuris**
@@ -171,6 +172,7 @@ Nothing right now. Add new questions here.
 - [ ] Event-to-effect table (`fx.ts`): particles, sounds and camera shake for every event
 - [ ] Performance pass: instancing/merging, one shadow light, LOD, freezing static meshes; under 150 draw calls
 - [ ] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown
+- [ ] Railway: check the health check, logs and resource graphs under load
 - [ ] **Landmark art pass** in this order: Old Main, Lion Shrine, Creamery + cone, Beaver Stadium, Pattee Library, Mount Nittany backdrop (budgets in [your guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Nuris reviews each against the art bible
 - [ ] Ball skins 5–8: Old Main bell, beach ball, library book, campus squirrel
 - [ ] Animated props: item boxes, flags, arch, crowd cards
@@ -179,7 +181,7 @@ Nothing right now. Add new questions here.
 - [ ] Snapshot compression (quantized arrays); confirm 60 Hz on Railway
 - [ ] Rematch flow; session stats (wins, best lap)
 - [ ] Error screens: room not found or full, version mismatch, permission denied, unsupported browser
-- [ ] Self-host Babylon's Meshopt/KTX2 decoders; check the health check and logs
+- [ ] Self-host Babylon's Meshopt/KTX2 decoders
 - [ ] Pad accessibility settings: auto-gas, sensitivity, dead zone
 
 **Nuris**
@@ -202,7 +204,7 @@ Nothing right now. Add new questions here.
 - [ ] Backup gameplay video
 - [ ] Devpost: description, screenshots, video, stack, team
 - [ ] Run through the [DEMO.md](docs/DEMO.md) checklists
-- [ ] After the event: delete the Railway project (or keep it on Hobby)
+- [ ] After the event: Ali deletes the Railway project (or keeps it on Hobby)
 
 ---
 

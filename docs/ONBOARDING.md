@@ -20,7 +20,7 @@ Work through this top to bottom. It takes about an hour. At the end you can run 
 | GitHub | Everyone | Accept the collaborator invite to `goraxyy/raceball` (Ali sends it from Settings > Collaborators) |
 | Google Drive folder `RaceBall/` | Everyone | Raw art sources, `happy_valley.blend`, reference photos |
 | Vercel | Ali (the repo owner imports the projects), Rasim configures them | Hosts the web app and the pad. The free plan has no team members, so the projects live in Ali's account |
-| Railway | Ali creates the project and invites Rasim | Hosts the game server ($5 one-time trial credit, then $5/month) |
+| Railway | Ali creates and configures the project | Hosts the game server ($5 one-time trial credit, then $5/month) |
 | Team chat | Everyone | Daily coordination, and "blocked" messages |
 
 ## 3. Install the tools
@@ -36,7 +36,7 @@ Work through this top to bottom. It takes about an hour. At the end you can run 
 | gltf-transform CLI | Ali, Nuris | `npm i -g @gltf-transform/cli` |
 | KTX-Software (`toktx`) | Ali (optional) | Releases on GitHub (KhronosGroup/KTX-Software). Needed only for KTX2 texture compression |
 | Audacity | Nuris | https://www.audacityteam.org, for trimming and normalizing sounds |
-| Railway CLI (optional) | Rasim | `npm i -g @railway/cli`, for logs and manual deploys from the terminal |
+| Railway CLI (optional) | Ali | `npm i -g @railway/cli`, for logs and manual deploys from the terminal |
 
 Check it worked:
 

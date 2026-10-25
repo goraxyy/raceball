@@ -27,6 +27,7 @@ export function GameView({
   session,
   onLoaded,
   view = "split",
+  onFallback,
 }: {
   mode: GameMode;
   session?: SnapshotSource;
@@ -34,6 +35,8 @@ export function GameView({
   onLoaded?: () => void;
   /** Host: a view per player with the race board in the middle, or the whole map from above */
   view?: "split" | "global";
+  /** Host: the screen was too slow for the split screen and switched to the global view on its own */
+  onFallback?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -61,6 +64,14 @@ export function GameView({
   const spots = useRef(new Map<string, [number, number]>());
   const positions = useCallback(() => spots.current, []);
   const path = useRoute(mode === "host");
+  const onFallbackRef = useRef(onFallback);
+  useEffect(() => {
+    onFallbackRef.current = onFallback;
+  });
+  const fellBack = !!status?.nameTags;
+  useEffect(() => {
+    if (fellBack) onFallbackRef.current?.();
+  }, [fellBack]);
 
   useEffect(() => {
     let active = true;

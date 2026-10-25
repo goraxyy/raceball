@@ -404,8 +404,7 @@ export function createGame(
       }
       items.update(dt);
       if (big && net) {
-        const fps = scene.getEngine().getFps();
-        if (big.update(poses, net, dt, fps)) {
+        if (big.update(poses, net, dt)) {
           status.tiles = big.tileIds;
           status.nameTags = big.nameTags;
           status.globalView = big.global;

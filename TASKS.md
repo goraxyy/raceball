@@ -78,11 +78,11 @@ Nothing right now. Add new questions here.
 
 **Ali**
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
-- [ ] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
+- [x] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
 - [ ] After the bootstrap PR is merged: create the Railway project from the repo and invite Rasim; import `apps/web` and `apps/pad` into Vercel ([steps](docs/team/rasim-platform.md#3-deploying-the-server-to-railway)). As repo owner, only you can grant them GitHub access
-- [ ] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
-- [ ] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
-- [ ] Dev-only Inspector toggle (`Shift+I`)
+- [x] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
+- [x] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
+- [x] Dev-only Inspector toggle (`Shift+I`)
 
 **Rasim**
 - [ ] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
@@ -102,13 +102,13 @@ Nothing right now. Add new questions here.
 **Done when:** one phone steers one ball on one laptop through the **Railway** server, and the p95 delay is measured and written here: `p95 = ____ ms`.
 
 **Ali**
-- [ ] Ball control: heading + turn rate from `steer`, force from `gas`, grip, damping from `brake`, max speed, ground check, a little air control
+- [x] Ball control: heading + turn rate from `steer`, force from `gas`, grip, damping from `brake`, max speed, ground check, a little air control
 - [ ] **Greybox of the full Happy Valley route** in Blender (Kenney pieces + boxes for landmarks), with gameplay markers ([marker table](docs/ASSETS.md#blender-is-our-level-editor))
 - [ ] `game-core` `loadTrack()`: trimesh colliders + markers from `packages/game-core/tracks/happy_valley_col.glb`, with a Vitest test
 - [ ] Respawn at the right `respawn_*` marker when the ball falls below y = -10 or gets stuck
-- [ ] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
+- [x] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
 - [ ] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly
-- [ ] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
+- [x] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
 
 **Rasim**
 - [ ] `RaceRoom`: roles host/viewer/pad, short room code, join/leave, `PROTOCOL_VERSION` check

@@ -1,3 +1,4 @@
+import { status } from "./connection";
 import { gravity, permission } from "./motion";
 import { steering } from "./steering";
 import { wakeLockActive } from "./wake-lock";
@@ -42,6 +43,7 @@ export function mountDebugOverlay() {
       `wake lock ${wakeLockActive() ? "on" : "off"}`,
       `angle     ${fmt((steering.angle * 180) / Math.PI)}°`,
       `steer     ${steering.calib ? fmt(steering.read()) : "— (not calibrated)"}`,
+      `net       ${status.state}${"playerId" in status ? " " + status.playerId : ""}`,
       `rtt       —`,
       `hold side —`,
       `calib     —`,

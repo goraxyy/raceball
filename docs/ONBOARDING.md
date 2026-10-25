@@ -17,9 +17,9 @@ Work through this top to bottom. It takes about an hour. At the end you can run 
 
 | Account | Who | Why |
 |---|---|---|
-| GitHub | Everyone | Accept the collaborator invite to `goraxyy/raceball` (Ali sends it from Settings > Collaborators) |
+| GitHub | Everyone | Accept the invite to the `raceball` GitHub organization, which owns `raceball/raceball` |
 | Google Drive folder `RaceBall/` | Everyone | Raw art sources, `happy_valley.blend`, reference photos |
-| Vercel | Ali (the repo owner imports the projects), Rasim configures them | Hosts the web app and the pad. The free plan has no team members, so the projects live in Ali's account |
+| Vercel | Rasim | Hosts the web app and the pad. The free plan has no team members, so the projects live in Rasim's account |
 | Railway | Ali creates and configures the project | Hosts the game server ($5 one-time trial credit, then $5/month) |
 | Team chat | Everyone | Daily coordination, and "blocked" messages |
 
@@ -50,7 +50,7 @@ cloudflared --version
 ## 4. Clone and run
 
 ```bash
-git clone https://github.com/goraxyy/raceball
+git clone https://github.com/raceball/raceball
 cd raceball
 pnpm install
 pnpm dev

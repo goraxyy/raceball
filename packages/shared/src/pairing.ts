@@ -7,7 +7,7 @@ export interface PadParams {
   pairToken?: string;
 }
 
-/** URL the QR code encodes. padBase is VITE_PAD_URL, e.g. https://raceball-delta.vercel.app */
+/** URL the QR code encodes. padBase is VITE_PAD_URL, e.g. https://raceball-omega.vercel.app */
 export function padUrl(
   padBase: string,
   room: string,

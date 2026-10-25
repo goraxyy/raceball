@@ -104,11 +104,11 @@ Keep `experimentalDecorators: true` and `useDefineForClassFields: false` in the 
 
 ### 4. Deploying web and pad to Vercel
 
-**You** own both projects, in your Vercel account, connected to the `raceball` GitHub org (Vercel's GitHub app is installed on the org). The live projects are `raceball` (the pad, https://raceball-delta.vercel.app) and `raceball-web` (https://raceball-web-delta.vercel.app). To recreate them:
+Both projects live in **Nuris's** Vercel account (moved from yours after it hit the free plan's 100 deploys a day), connected to the `raceball` GitHub org (Vercel's GitHub app is installed on the org). The live sites are the pad, https://raceball-omega.vercel.app, and the web app, https://raceball-hw9w.vercel.app. Ask Nuris for dashboard changes. To recreate them:
 
 1. In Vercel, choose New Project > Import `raceball/raceball`.
 2. **Root Directory:** `apps/web`. Framework: Vite. Make sure "Include files outside the root directory in the build step" is enabled, because the app imports `packages/shared`.
-3. **Env:** `VITE_SERVER_URL = wss://raceball-server-production.up.railway.app`, and `VITE_PAD_URL = https://raceball-delta.vercel.app`.
+3. **Env:** `VITE_SERVER_URL = wss://raceball-server-production.up.railway.app`, and `VITE_PAD_URL = https://raceball-omega.vercel.app`.
 4. Repeat for the pad with Root Directory `apps/pad`. It only needs `VITE_SERVER_URL`.
 5. **SPA routing** for `/host` and `/play`: add `apps/web/vercel.json`:
 

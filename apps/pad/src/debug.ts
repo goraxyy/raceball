@@ -1,4 +1,5 @@
 import { gravity, permission } from "./motion";
+import { steering } from "./steering";
 
 export const debugEnabled =
   new URLSearchParams(location.search).get("debug") === "1";
@@ -37,7 +38,8 @@ export function mountDebugOverlay() {
       `motion    ${Math.round(rate)} Hz, last ${age}`,
       `permission ${permission}`,
       `screen    ${screenAngle()}°`,
-      `steer     —`,
+      `angle     ${fmt((steering.angle * 180) / Math.PI)}°`,
+      `steer     ${steering.calib ? fmt(steering.read()) : "— (not calibrated)"}`,
       `rtt       —`,
       `hold side —`,
       `calib     —`,

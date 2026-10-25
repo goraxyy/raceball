@@ -1,7 +1,7 @@
 {
   "name": "fx_dust",
   "id": "fx_dust",
-  "capacity": 60,
+  "capacity": 90,
   "disposeOnStop": false,
   "manualEmitCount": -1,
   "emitter": [
@@ -77,9 +77,9 @@
   "maxScaleY": 1,
   "minEmitPower": 0.4,
   "maxEmitPower": 1,
-  "minLifeTime": 0.35,
-  "maxLifeTime": 0.6,
-  "emitRate": 24,
+  "minLifeTime": 0.45,
+  "maxLifeTime": 0.75,
+  "emitRate": 30,
   "gravity": [
     0,
     0.8,
@@ -94,13 +94,13 @@
     0.8509803921568627,
     0.796078431372549,
     0.6901960784313725,
-    0.6
+    0.78
   ],
   "color2": [
     0.9529411764705882,
     0.9176470588235294,
     0.8509803921568627,
-    0.5
+    0.66
   ],
   "colorDead": [
     0.8509803921568627,
@@ -127,13 +127,13 @@
   "sizeGradients": [
     {
       "gradient": 0,
-      "factor1": 0.4,
-      "factor2": 0.5
+      "factor1": 0.6,
+      "factor2": 0.8
     },
     {
       "gradient": 1,
-      "factor1": 1,
-      "factor2": 1.3
+      "factor1": 1.4,
+      "factor2": 1.8
     }
   ],
   "textureMask": [

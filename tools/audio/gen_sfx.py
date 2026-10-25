@@ -227,6 +227,67 @@ def lion_roar():
     x = np.tanh(2.2 * x * env / (np.max(np.abs(x * env)) + 1e-9))  # snarl
     return fade(room(x, 0.45, 2500), 0.004, 0.15)
 
+# ---------------------------------------------------------------- interactables (M3 polish)
+# Their own random stream, so adding them leaves every sound above byte-identical.
+irng = np.random.default_rng(7101)
+
+
+def chirp(f, t):
+    """A sine following the frequency curve f(t)"""
+    return np.sin(2 * np.pi * np.cumsum(f) / SR)
+
+
+def pad_whoosh():
+    """A boost pad: a low thump, air rushing up through a rising band, and a bright two-note zing on top."""
+    t = t_axis(0.7)
+    thump = chirp(55 + 90 * np.exp(-t / 0.025), t) * np.exp(-t / 0.08)
+    noise = irng.standard_normal(len(t))
+    rush = np.zeros_like(t)
+    for i, centre in enumerate(np.geomspace(500, 4200, 8)):  # the band climbs in steps, crossfaded
+        k = np.clip(1 - np.abs(t / 0.42 * 8 - i) / 1.5, 0, 1)
+        rush += band(noise, centre * 0.7, centre * 1.4) * k
+    rush *= np.clip(t / 0.05, 0, 1) * np.exp(-np.clip(t - 0.3, 0, None) / 0.12)
+    zing = chirp(880 * (1 + np.clip(t / 0.12, 0, 1)), t) + 0.5 * chirp(1320 * (1 + np.clip(t / 0.12, 0, 1)), t)
+    zing *= np.clip((t - 0.04) / 0.02, 0, 1) * np.exp(-np.clip(t - 0.06, 0, None) / 0.16)
+    return fade(0.8 * thump + 1.1 * rush + 0.28 * zing, 0.001, 0.08)
+
+
+def scoop_pop():
+    """A Creamery Scoop: a soft 'bloop' and a little bell. The game raises its pitch with every scoop held."""
+    t = t_axis(0.42)
+    bloop = chirp(330 + 650 * np.exp(-t / 0.035), t) * np.exp(-t / 0.07)
+    bell = np.zeros_like(t)
+    for f, a in ((1568, 1.0), (2349, 0.45), (3136, 0.2)):  # G6, D7, G7
+        bell += a * np.sin(2 * np.pi * f * t)
+    bell *= np.clip((t - 0.03) / 0.004, 0, 1) * np.exp(-np.clip(t - 0.03, 0, None) / 0.13)
+    return fade(0.9 * bloop + 0.35 * bell, 0.0005, 0.06)
+
+
+def scoop_drop():
+    """Scoops knocked off: three plops falling in pitch, each with a wet little splat."""
+    t = t_axis(0.62)
+    out = np.zeros_like(t)
+    for start, f0 in ((0.0, 720), (0.13, 540), (0.26, 390)):
+        k = np.clip(t - start, 0, None)
+        on = t >= start
+        plop = chirp(f0 * (0.55 + 0.45 * np.exp(-k / 0.04)) * on, t) * np.exp(-k / 0.06) * on
+        splat = band(irng.standard_normal(len(t)), 900, 3200) * np.exp(-k / 0.015) * on
+        out += plop + 0.25 * splat
+    return fade(out, 0.0005, 0.08)
+
+
+def paw_boing():
+    """A Lion Paw bumper: the pinball thwack (a click and a burst of bright noise), a springy boing and a short
+    metallic ring."""
+    t = t_axis(0.75)
+    click = np.sin(2 * np.pi * 2400 * t) * np.exp(-t / 0.004)
+    snap = band(irng.standard_normal(len(t)), 1200, 5000) * np.exp(-t / 0.018)
+    wobble = 1 + 0.18 * np.sin(2 * np.pi * 24 * t) * np.exp(-t / 0.25)
+    boing = chirp(170 * (1 + 0.9 * np.exp(-t / 0.045)) * wobble, t) * np.exp(-t / 0.28)
+    ring = (np.sin(2 * np.pi * 1210 * t) + 0.6 * np.sin(2 * np.pi * 1737 * t)) * np.exp(-t / 0.09)
+    return fade(0.5 * click + 0.6 * snap + boing + 0.18 * ring, 0.0003, 0.1)
+
+
 # ---------------------------------------------------------------- output
 
 
@@ -280,3 +341,8 @@ if __name__ == "__main__":
     one_shot("sfx_crowd_cheer", crowd_cheer())
     one_shot("sfx_crowd_oooh", crowd_oooh())
     one_shot("sfx_lion_roar", lion_roar())
+    # the interactables: boost pads, Creamery Scoops and Lion Paw bumpers
+    one_shot("sfx_pad_whoosh", pad_whoosh())
+    one_shot("sfx_scoop_pop", scoop_pop())
+    one_shot("sfx_scoop_drop", scoop_drop())
+    one_shot("sfx_paw_boing", paw_boing())

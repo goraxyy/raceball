@@ -1,0 +1,146 @@
+{
+  "name": "fx_pad_burst",
+  "id": "fx_pad_burst",
+  "capacity": 60,
+  "disposeOnStop": false,
+  "manualEmitCount": 0,
+  "emitter": [
+    0,
+    0,
+    0
+  ],
+  "particleEmitterType": {
+    "type": "CylinderDirectedParticleEmitter",
+    "radius": 1.6,
+    "height": 0.2,
+    "radiusRange": 0.6,
+    "directionRandomizer": 0,
+    "direction1": [
+      -0.25,
+      1,
+      -0.25
+    ],
+    "direction2": [
+      0.25,
+      1.6,
+      0.25
+    ]
+  },
+  "textureName": "fx_atlas.png",
+  "invertY": false,
+  "textureSettings": {
+    "level": 1,
+    "hasAlpha": true,
+    "getAlphaFromRGB": false,
+    "gammaSpace": true,
+    "coordinatesIndex": 0,
+    "coordinatesMode": 0,
+    "wrapU": 1,
+    "wrapV": 1,
+    "wrapR": 1,
+    "anisotropicFilteringLevel": 4,
+    "uOffset": 0,
+    "vOffset": 0,
+    "uScale": 1,
+    "vScale": 1,
+    "uAng": 0,
+    "vAng": 0,
+    "wAng": 0,
+    "uRotationCenter": 0.5,
+    "vRotationCenter": 0.5,
+    "wRotationCenter": 0.5,
+    "samplingMode": 3
+  },
+  "isLocal": false,
+  "animations": [],
+  "beginAnimationOnStart": false,
+  "beginAnimationFrom": 0,
+  "beginAnimationTo": 60,
+  "beginAnimationLoop": false,
+  "startDelay": 0,
+  "renderingGroupId": 0,
+  "isBillboardBased": true,
+  "billboardMode": 8,
+  "minAngularSpeed": 0,
+  "maxAngularSpeed": 0,
+  "minSize": 1,
+  "maxSize": 1,
+  "minScaleX": 1,
+  "maxScaleX": 1,
+  "minScaleY": 1,
+  "maxScaleY": 1,
+  "minEmitPower": 8,
+  "maxEmitPower": 13,
+  "minLifeTime": 0.25,
+  "maxLifeTime": 0.42,
+  "emitRate": 0,
+  "gravity": [
+    0,
+    -10,
+    0
+  ],
+  "noiseStrength": [
+    10,
+    10,
+    10
+  ],
+  "color1": [
+    0.9372549019607843,
+    0.9882352941176471,
+    1,
+    1
+  ],
+  "color2": [
+    0.24705882352941178,
+    0.7686274509803922,
+    1,
+    1
+  ],
+  "colorDead": [
+    0.11764705882352941,
+    0.43529411764705883,
+    0.8509803921568627,
+    0
+  ],
+  "updateSpeed": 0.01,
+  "targetStopDuration": 0,
+  "blendMode": 2,
+  "preWarmCycles": 0,
+  "preWarmStepOffset": 1,
+  "minInitialRotation": 0,
+  "maxInitialRotation": 0,
+  "startSpriteCellID": 11,
+  "spriteCellLoop": true,
+  "endSpriteCellID": 11,
+  "spriteCellChangeSpeed": 0,
+  "spriteCellWidth": 128,
+  "spriteCellHeight": 128,
+  "spriteRandomStartCell": true,
+  "isAnimationSheetEnabled": true,
+  "useLogarithmicDepth": false,
+  "sizeGradients": [
+    {
+      "gradient": 0,
+      "factor1": 0.6,
+      "factor2": 0.85
+    },
+    {
+      "gradient": 1,
+      "factor1": 0.15,
+      "factor2": 0.25
+    }
+  ],
+  "textureMask": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "customShader": null,
+  "preventAutoStart": false,
+  "worldOffset": [
+    0,
+    0,
+    0
+  ]
+}

@@ -110,7 +110,8 @@ Nothing right now. Add new questions here.
 **Ali**
 - [x] Ball control: heading + turn rate from `steer`, force from `gas`, grip, damping from `brake`, max speed, ground check, a little air control
 - [ ] **Greybox of the full Happy Valley route** in Blender (Kenney pieces + boxes for landmarks), with gameplay markers ([marker table](docs/ASSETS.md#blender-is-our-level-editor))
-- [ ] `game-core` `loadTrack()`: trimesh colliders + markers from `packages/game-core/tracks/happy_valley_col.glb`, with a Vitest test
+- [x] `game-core` `loadTrack()`: trimesh colliders + markers from `packages/game-core/tracks/happy_valley_col.glb`, with a Vitest test
+  - Tested on a synthetic track. The real-file test (`checkTrack`) switches on once the greybox is exported
 - [ ] Respawn at the right `respawn_*` marker when the ball falls below y = -10 or gets stuck
 - [x] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
 - [ ] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly

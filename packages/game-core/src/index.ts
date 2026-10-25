@@ -9,5 +9,17 @@ export {
 } from "./race";
 export { KeyboardInput, NEUTRAL_INPUT, type KeyState } from "./input";
 export { BALL_RADIUS } from "./ball";
-export { FLAT_GROUND_HALF_SIZE, type Spawn, type TrackData } from "./track";
+export {
+  checkTrack,
+  createFlatTrack,
+  FLAT_GROUND_HALF_SIZE,
+  loadTrack,
+  type BoostPad,
+  type CameraSpot,
+  type Checkpoint,
+  type Respawn,
+  type Spawn,
+  type Surface,
+  type TrackData,
+} from "./track";
 export { tuning, type Tuning } from "./tuning";

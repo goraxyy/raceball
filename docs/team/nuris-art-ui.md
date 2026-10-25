@@ -57,7 +57,7 @@ The art bible is in ASSETS.md: style pillars, the environment and livery palette
 ### 2. Particle and audio packs
 Download and look through the Kenney **Particle Pack** and the Kenney audio packs (all CC0). Add the particle textures and sounds you'd use to the shortlist in ASSETS.md. Put the downloads in `assets-src/packs/` in Drive. (Ali reviews the Marble Kit and Racing Kit.)
 
-**Done when:** the art bible (done), the mood board (done) and the particle and audio shortlist are in the repo.
+**Done when:** the art bible, the mood board and the particle and audio shortlist are in the repo (all done). The shortlist maps every effect and sound event to a Kenney file, and lists the gaps to fill from other sources.
 
 ---
 

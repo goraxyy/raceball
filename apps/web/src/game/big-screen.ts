@@ -19,11 +19,17 @@ import { DriverCamera } from "./cameras";
 
 /** Split-screen views on the big screen: one per player */
 export const MAX_TILES = MAX_PLAYERS;
-/** Below this fps for LOW_FPS_SECONDS, the split screen goes and the overview with name tags takes over */
-export const MIN_FPS = 50;
+/** Below this fps for LOW_FPS_SECONDS, the split screen draws at a lower resolution, then gives way to the overview */
+export const MIN_FPS = 30;
 const LOW_FPS_SECONDS = 3;
 /** Right after the tiles change (new render passes, shader compiles) the fps doesn't count, s */
-const FPS_GRACE = 2;
+const FPS_GRACE = 3;
+/** A frame longer than this is a one-off stall (a model loading, a hidden window, a tab switch), not a slow screen, s */
+const HITCH = 0.25;
+/** How long the frame time is averaged over, s */
+const FPS_WINDOW = 0.5;
+/** Hardware scaling levels the split screen steps through before giving up: 1 = full resolution, 2 = half */
+export const RESOLUTION_STEPS = [1, 1.5, 2] as const;
 /** Overview framing: the camera backs off this much per metre of pack spread, plus a margin, m */
 const PACK_ZOOM = 1.2;
 const PACK_MARGIN = 30;
@@ -52,30 +58,56 @@ export interface BigScreenPlayers {
 }
 
 /**
- * Trips once the fps has stayed under MIN_FPS for LOW_FPS_SECONDS. Every tile draws the scene again,
- * so this is the safety valve: one slow projector laptop shouldn't make the whole race stutter.
+ * Every tile draws the scene again, so this is the safety valve: one slow projector laptop shouldn't make the whole
+ * race stutter. When the frame rate (measured from the frame times) stays under MIN_FPS for LOW_FPS_SECONDS, it asks
+ * for the next lower resolution (RESOLUTION_STEPS), and only once the lowest is still too slow does it trip.
+ * One-off stalls and a hidden page don't count: they say nothing about how fast the screen can draw.
  */
 export class FpsGuard {
   tripped = false;
+  /** Index into RESOLUTION_STEPS */
+  step = 0;
+  /** The host brought the split screen back by hand: never trip again */
+  disabled = false;
   private low = 0;
   private grace = FPS_GRACE;
+  private frameTime = 1 / 60;
 
-  /** Call every frame while tiles draw */
-  update(fps: number, dt: number): boolean {
-    if (this.tripped) return true;
+  /** Call every frame while tiles draw: "lower" = draw at RESOLUTION_STEPS[step], "trip" = give up on the tiles */
+  update(dt: number, hidden = false): "keep" | "lower" | "trip" {
+    if (this.tripped) return "trip";
+    if (this.disabled) return "keep";
+    if (hidden) {
+      this.restart(); // a hidden page barely draws; judge it afresh once it's back
+      return "keep";
+    }
+    if (dt <= 0 || dt > HITCH) return "keep";
+    this.frameTime += (dt - this.frameTime) * Math.min(1, dt / FPS_WINDOW);
     if (this.grace > 0) {
       this.grace -= dt;
-      return false;
+      return "keep";
     }
-    this.low = fps < MIN_FPS ? this.low + dt : 0;
-    this.tripped = this.low >= LOW_FPS_SECONDS;
-    return this.tripped;
+    this.low = 1 / this.frameTime < MIN_FPS ? this.low + dt : 0;
+    if (this.low < LOW_FPS_SECONDS) return "keep";
+    if (this.step + 1 < RESOLUTION_STEPS.length) {
+      this.step++;
+      this.restart();
+      return "lower";
+    }
+    this.tripped = true;
+    return "trip";
   }
 
   /** The tiles changed: wait out the grace period again before judging */
   restart(): void {
     this.grace = FPS_GRACE;
     this.low = 0;
+  }
+
+  /** The host wants the split screen back after a trip: keep it, at the lowest resolution */
+  override(): void {
+    this.tripped = false;
+    this.disabled = true;
   }
 }
 
@@ -144,10 +176,18 @@ export class BigScreen {
     });
   }
 
-  /** Global view (true) or split screen (false). The next update() swaps the tiles */
+  /**
+   * Global view (true) or split screen (false). The next update() swaps the tiles. Asking for the split screen after
+   * the fps guard gave up on it brings it back for good: the host can see whether it's smooth enough
+   */
   setGlobal(on: boolean): void {
     this.global = on;
+    if (!on && this.nameTags) {
+      this.nameTags = false;
+      this.guard.override();
+    }
     this.guard.restart(); // the render passes change: judge the fps afresh
+    this.applyResolution();
   }
 
   /** True while the overview is what's on screen: picked by the host, or forced by a low fps */
@@ -171,15 +211,17 @@ export class BigScreen {
     poses: Map<string, BallPose>,
     players: BigScreenPlayers,
     dt: number,
-    fps: number,
   ): boolean {
     this.frame(poses, dt);
     let changed = false;
     if (
-      !this.nameTags &&
+      !this.overviewShown &&
       this.tileIds.some((id) => this.tiles.get(id)?.drawn)
     ) {
-      if (this.guard.update(fps, dt)) {
+      const hidden = typeof document !== "undefined" && document.hidden;
+      const verdict = this.guard.update(dt, hidden);
+      if (verdict === "lower") this.applyResolution();
+      if (verdict === "trip") {
         this.nameTags = true;
         changed = true;
       }
@@ -255,6 +297,20 @@ export class BigScreen {
     this.drawnKey = key;
     this.scene.activeCamera = drawn[0] ?? this.overview;
     this.scene.activeCameras = drawn.length ? drawn : [];
+    this.applyResolution();
+  }
+
+  /** The hardware scaling level the screen draws at: the guard's step for the split screen; the overview is one pass, so full resolution */
+  get resolution(): number {
+    return this.tileIds.length
+      ? RESOLUTION_STEPS[this.guard.step]
+      : RESOLUTION_STEPS[0];
+  }
+
+  private applyResolution(): void {
+    const engine = this.scene.getEngine();
+    if (engine.getHardwareScalingLevel() !== this.resolution)
+      engine.setHardwareScalingLevel(this.resolution);
   }
 
   private clearTags(): void {

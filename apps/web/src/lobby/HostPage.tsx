@@ -61,7 +61,15 @@ function HostRoom({ session }: { session: NetSession }) {
     <>
       {/* Split screen: a first-person view per player. Mounted from the countdown on, so the views don't draw
           hidden behind the lobby (and can't trip the fps fallback before the race) */}
-      {racing && <GameView mode="host" session={session} view={view} />}
+      {racing && (
+        <GameView
+          mode="host"
+          session={session}
+          view={view}
+          // too slow for a view each: the button now offers the split screen back
+          onFallback={() => setView("global")}
+        />
+      )}
       {!state.phase && <LoadingScreen progress={0.6} label="Opening a room" />}
       {state.phase === "lobby" && (
         <HostLobby
@@ -81,27 +89,28 @@ function HostRoom({ session }: { session: NetSession }) {
           now={() => session.clock.serverNow()}
         />
       )}
+      {/* top center, on the seam between the views, so no player's name plate is covered */}
       {racing && (
-        <button
-          type="button"
-          className="host-view-toggle"
-          aria-pressed={view === "global"}
-          onClick={(event) => {
-            setView(view === "split" ? "global" : "split");
-            event.currentTarget.blur();
-          }}
-        >
-          {view === "split" ? "Global view · G" : "Split screen · G"}
-        </button>
-      )}
-      {racing && (
-        <button
-          type="button"
-          className="host-rematch"
-          onClick={() => session.rematch()}
-        >
-          {state.phase === "results" ? "Rematch" : "Back to lobby"}
-        </button>
+        <div className="host-race-buttons">
+          <button
+            type="button"
+            className="host-view-toggle"
+            aria-pressed={view === "global"}
+            onClick={(event) => {
+              setView(view === "split" ? "global" : "split");
+              event.currentTarget.blur();
+            }}
+          >
+            {view === "split" ? "Global view · G" : "Split screen · G"}
+          </button>
+          <button
+            type="button"
+            className="host-rematch"
+            onClick={() => session.rematch()}
+          >
+            {state.phase === "results" ? "Rematch" : "Back to lobby"}
+          </button>
+        </div>
       )}
       <NetHud session={session} />
     </>

@@ -2,13 +2,164 @@
 
 Owners: **Nuris** sets the art direction (this art bible) and makes the particles, sounds and UI art. **Ali** builds the 3D models and runs the model pipeline, and Nuris reviews them against the art bible. RaceBall is **asset-heavy** (models, materials, audio, particles, animation), so budgets and a pipeline are decided in M0, not at the end.
 
-## Art direction (decide in M0)
+## Art bible
 
-- **Theme:** a **toy-sized Penn State campus**: the Happy Valley Grand Prix ([docs/MAP.md](MAP.md)). Fall colors (orange/red trees, brick) for most of the lap, then a snowy finale. Navy and white serve as accent colors. Use **original art only**, with no official Penn State logos ([trademark note](MAP.md#trademark-note)).
-- **Style:** stylized, chunky low-poly shapes with PBR materials (soft roughness, saturated colors), readable from a couple of meters away on a laptop screen at a judging table.
-- **Landmarks:** one strong, simplified silhouette each (Old Main's bell tower, the Lion Shrine, the Creamery cone, the Beaver Stadium bowl). Exaggerate the proportions, and don't chase realism.
-- **Palette:** a main palette of 5–6 colors, plus **8 player colors that are colorblind-safe**. Each player color also gets a **shape or pattern** (stripes, dots, star, ring, …), so players never have to be told apart by color alone.
-- **Mood board:** 5–10 reference images (campus photos + target style) in `docs/moodboard/`.
+**In one line: tiny planets racing across a toy-box Happy Valley on race day.** The balls are the eight planets, a nod to HackPSU's space theme. The campus looks like a painted wooden play set someone built on a table, and the race looks like a real race day: checkered flags, number plates, chevrons and stickers. Everything in the game, on the laptops and on the phones follows this page. If an asset doesn't fit it, it doesn't ship.
+
+Use **original art only**, with no official Penn State logos, wordmarks or athletics marks ([trademark note](MAP.md#trademark-note)).
+
+### Style pillars
+
+1. **Toy, not real.** Chunky shapes, rounded and bevelled edges, flat painted color. A building is a block with a roof, not a scan. Exaggerate proportions: towers taller, cones bigger, doors smaller.
+2. **Silhouette first.** Every landmark must be recognizable as a black shape against the sky: Old Main's bell tower, the Lion Shrine's crouching lion, the Creamery cone, the Beaver Stadium bowl. If the silhouette doesn't read, add nothing else until it does.
+3. **Race-day livery.** Racing graphics sit on top of the campus: checkered strips, chevrons on boost pads and barriers, number-plate signs, sticker-style banners. The UI uses the same language (ink outlines, hard offset shadows, condensed italic type).
+4. **Fall into snow.** Most of the lap is a warm fall afternoon (brick, maple, gold). The Arboretum turns to snow for the finale, so the last third of every lap feels different.
+5. **Readable at a table.** Judges see a laptop screen from a meter or two away. Big shapes, strong contrast between the track and everything else, and no detail smaller than the ball.
+
+| Do | Don't |
+|---|---|
+| Flat colors from the palettes below, one main color per object | Photo textures, noise, grunge, realistic dirt |
+| Bevel every hard edge (2–3 cm, 2 segments) so it catches light like a toy | Razor-sharp edges or smooth-shaded blobs |
+| Rounded, slightly squashed shapes | Thin poles, wires, fences or text smaller than the ball |
+| Dark track (asphalt) against bright surroundings | Track the same color as the ground around it |
+| Original lion, original campus shapes | The official Nittany Lion logo, wordmarks, real brand signs |
+| Cartoon puffs, stars and leaves for effects | Realistic smoke, fire or lens flares |
+
+### Environment palette
+
+The campus, track and props use these colors through the shared palette texture (see [Track dressing kit](team/ali-game.md#m1-track-dressing-kit)). The first six are the main palette; the rest are supporting colors.
+
+![Environment palette](art/palette-environment.svg)
+
+| Color | Hex | Used for |
+|---|---|---|
+| Brick | `#A8452F` | Campus buildings, walls |
+| Maple | `#E8742B` | Fall trees, banners |
+| Gold leaf | `#F2B33D` | Fall trees, highlights |
+| Pine | `#2F5D3A` | Evergreens, hedges |
+| Limestone | `#D9CBB0` | Old Main, Pattee Library, steps |
+| Navy | `#1E2F5C` | Trim, the stadium, accents |
+| Lawn | `#7FA34A` | Grass, the HUB lawn |
+| Asphalt | `#3A3944` | The track surface |
+| Sky | `#9CCBE6` | Sky, haze, fog |
+| Snow | `#F4F6F8` | The Arboretum and the finale |
+| Ice | `#BFE3F2` | Low-grip patches |
+| Vanilla | `#F7E6C4` | The Creamery, spill puddles |
+
+**Each section has a color key,** so players know where they are at a glance:
+
+| Section | Dominant colors |
+|---|---|
+| Start / finish (Old Main) | Limestone, navy, checkered black and white |
+| Pollock Road (HUB) | Brick, lawn, maple |
+| Library steps (Pattee) | Limestone, gold leaf |
+| Lion Shrine hairpin | Limestone rock, pine hedges |
+| Creamery run | Vanilla, chocolate brown, sprinkle colors from the livery palette |
+| Beaver Stadium | Navy, white, asphalt |
+| Snowy Arboretum | Snow, ice, pine |
+| College Avenue | Brick, gold leaf, warm window light |
+
+### Livery palette (UI, HUD, phone controller, signage)
+
+These are the colors in [`apps/pad/src/style.css`](../apps/pad/src/style.css). The in-world signage, boost pads and item boxes use them too, so the game and the UI match.
+
+![Livery palette](art/palette-livery.svg)
+
+| Color | Hex | Used for |
+|---|---|---|
+| Ink | `#17151F` | Outlines, text, hard shadows |
+| Paper | `#F3EAD9` | Menu backgrounds |
+| Gas orange | `#F5702A` | Gas, main buttons |
+| Brake blue | `#7CC3E8` | Brake, the Blue & White Boost |
+| Flag yellow | `#FFC81E` | Items, item boxes, highlights |
+| Go green | `#1F9E57` | Ready, laps, gaining a place |
+| Stop red | `#D7263D` | Bumps, errors, losing a place |
+| Pit black | `#1C1B24` | The racing screen on the pad |
+
+### Balls: the eight planets
+
+Eight players, eight planets. Each player picks a planet in the lobby, and **no two players in a race share one**, so the planet itself is a second way to spot a player that doesn't depend on color. The IDs are `PLANETS` in [`packages/shared/src/constants.ts`](../packages/shared/src/constants.ts).
+
+![The eight planet balls](art/planets.svg)
+
+| Planet | Look (flat paint, 1–3 details) | File |
+|---|---|---|
+| Mercury | Warm grey, three craters | `ball_mercury.glb` |
+| Venus | Pale gold, two soft cloud bands | `ball_venus.glb` |
+| Earth | Ocean blue, two green continents, a white cloud streak | `ball_earth.glb` |
+| Mars | Rust red, a dark patch, a white polar cap | `ball_mars.glb` |
+| Jupiter | Cream with tan bands and the red spot | `ball_jupiter.glb` |
+| Saturn | Butter yellow bands (its own rings are the orbit ring) | `ball_saturn.glb` |
+| Uranus | Pale cyan, one faint band | `ball_uranus.glb` |
+| Neptune | Deep blue, a light streak, a dark spot | `ball_neptune.glb` |
+
+- **Toy-painted, not NASA.** A flat base color and 1–3 painted details, one highlight. No photo textures.
+- **The orbit ring is the player color.** Every planet wears a ring in its player's color (`mat_player_color`, tinted in code). In 3D it **floats level around the ball and doesn't roll with it**, so it always reads from above, even mid-tumble. It's visual only: the collider stays a 1 m sphere.
+- **The ring has an ink edge** on both sides, so the white ring (slot 7) still shows in the snowy Arboretum.
+
+### Player colors and shapes
+
+Eight colorblind-safe colors from the Okabe-Ito palette, with white instead of black so it shows on the dark track. **Each slot always pairs one color with one shape**, so no one is ever told apart by color alone. The server stores the slot number (`color` and `shape` in the player state), and every screen looks up these values in `PLAYER_COLORS` and `PLAYER_SHAPES` in [`packages/shared/src/constants.ts`](../packages/shared/src/constants.ts).
+
+![Player colors and shapes](art/player-colors.svg)
+
+| Slot | Color | Hex | Shape |
+|---|---|---|---|
+| 0 | Orange | `#E69F00` | Circle |
+| 1 | Sky blue | `#56B4E9` | Square |
+| 2 | Bluish green | `#009E73` | Triangle |
+| 3 | Yellow | `#F0E442` | Star |
+| 4 | Blue | `#0072B2` | Diamond |
+| 5 | Vermillion | `#D55E00` | Cross |
+| 6 | Reddish purple | `#CC79A7` | Pentagon |
+| 7 | White | `#FFFFFF` | Hexagon |
+
+Where they appear:
+- **Ball:** the orbit ring in the player color (see above). The shape isn't painted on the planet; it rides on the name tag that floats above the ball.
+- **Map marker and HUD:** the shape filled with the color, with an ink outline.
+- **Name tags and follow-cam frames:** a color bar plus the shape before the name.
+- **Phone:** the planet's ring, the status plate and the steering dot use the color; the shape shows next to the place.
+
+### Shape language and scale
+
+- **Ball = 1 m.** Everything is sized against it. Doors are about 2 balls tall, Old Main's tower about 18 balls. Track width is at least 6 balls.
+- **Bevel everything.** A 2–3 cm bevel with 2 segments gives the soft highlight that makes objects read as toys.
+- **Squash and lean.** Trees are chunky cones and lollipops, slightly tilted. Buildings have thick roofs and deep window insets (insets catch shadow, so no window textures are needed).
+- **Repeat with variation.** Make 2–3 versions of each prop (trees, crowd cards, lamp posts) and rotate and scale them a little, so instancing doesn't look like copy-paste.
+
+### Materials
+
+- **Flat painted PBR.** Base color from the palettes, roughness 0.55–0.8, metallic 0. Only real metal toys get metallic (the Old Main bell, the trophy): metallic 0.8, roughness 0.35.
+- **One palette texture for almost everything** (a 256×256 swatch image). Only the hero pieces (Old Main, the lion, the Creamery cone) get their own small textures.
+- **No noise or photo detail.** Variation comes from shape and color, not from texture.
+- **Special materials** in the Node Material Editor: glowing boost pads (flag yellow chevrons that scroll), melted ice cream (vanilla, glossy, roughness 0.2), ice (ice blue, roughness 0.1), and the finish line (animated checkers).
+
+### Lighting and camera
+
+- **A late fall afternoon, about 4 PM.** One warm, low sun (slightly orange, from the side) for long, soft shadows, plus a cool sky HDRI for fill. Shadows are a cool blue-purple, never black.
+- **Haze:** light fog in the sky color, so far-off things (Mount Nittany) fade back and the track stands out.
+- **Snow section:** the light turns cooler and brighter, and the fog thickens a little.
+- **Toy-scale camera feel:** an optional, gentle tilt-shift (depth-of-field blur at the top and bottom of the overview camera) makes the campus look like a model on a table. Keep it off on the chase cameras, where players need to see ahead.
+
+### Effects (VFX)
+
+- **Cartoon, not realistic:** puffs are round blobs, sparks are little stars, and leaves fly off trees on bumps. Effects use the livery and environment palettes only.
+- **Short and punchy:** most effects last under half a second. Only weather (snow) loops.
+- **Readable shapes:** a few big particles, not thousands of tiny ones (and it keeps the particle budget).
+
+### Typography (UI)
+
+- **Display:** Barlow Condensed, heavy italic, uppercase (titles, numbers, place, lap, buttons).
+- **Text:** Barlow, semibold (sentences, hints, labels).
+- Both are SIL Open Font License.
+- Self-hosted in `apps/pad/public/fonts/` (latin subset, with `OFL.txt`) and embedded in the swatch sheets in `docs/art/`.
+- See every UI screen in [`apps/pad/screens.html`](../apps/pad/screens.html) (open `/screens.html` while `pnpm dev` runs).
+
+### Mood board
+
+5–10 reference images in `docs/moodboard/`, small JPGs under 300 KB each:
+- [ ] Campus references: Old Main, the Lion Shrine, the Creamery, Beaver Stadium, Pattee Library, fall trees on campus, snow on campus. Use **your own photos** or images with a free license (for example Wikimedia Commons), and list each one in [Credits](#credits) with its license.
+- [ ] Style references: 3–4 images of painted wooden toy sets, toy race tracks and race-day graphics (checkered flags, number plates, chevrons). These are for the team only, so link them in a list below instead of copying them into the repo when their license is unclear.
 
 ## Units and conventions
 
@@ -150,4 +301,5 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 
 | Asset | Author | License | Link | Used for |
 |---|---|---|---|---|
+| Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`apps/pad/public/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad UI, art bible sheets |
 | `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |

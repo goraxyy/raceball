@@ -555,13 +555,13 @@ Do this with one ball and one track piece, so the pipeline is proven before real
 3. **Optimize:**
 
    ```bash
-   gltf-transform optimize ball_lion.glb ball_lion.opt.glb --compress meshopt --texture-compress webp
+   gltf-transform optimize ball_earth.glb ball_earth.opt.glb --compress meshopt --texture-compress webp
    # with toktx installed you can use --texture-compress ktx2 instead
-   gltf-transform inspect ball_lion.opt.glb    # check triangles, textures, size
+   gltf-transform inspect ball_earth.opt.glb    # check triangles, textures, size
    ```
 
 4. **Check:** drag the optimized file into the Babylon Sandbox. Look at the scale (compare it with a 1 m cube), the materials, normals (no black or inside-out faces) and any animations.
-5. **Commit:** rename it to the final name, without `.opt`, and place it in the right folder (e.g. `apps/web/public/assets/models/ball_lion.glb`). Add a credits line in ASSETS.md, then open a PR with a Sandbox screenshot.
+5. **Commit:** rename it to the final name, without `.opt`, and place it in the right folder (e.g. `apps/web/public/assets/models/ball_earth.glb`). Add a credits line in ASSETS.md, then open a PR with a Sandbox screenshot.
 
 ### M0: Drive folder
 Create the folders:
@@ -570,11 +570,11 @@ Create the folders:
 
 Share the folder with Nuris and Rasim.
 
-### M1: Ball skins (first 4: Lion, Creamery scoop, football, snowball)
-- **One material per ball.** Textures are 1024² at most. The player-color ring or trim must be clearly visible, because it's how players spot themselves.
-- **The Lion is an original cartoon lion.** Don't copy the official logo.
-- **File names:** `models/ball_lion.glb`, `ball_scoop.glb`, `ball_football.glb`, `ball_snowball.glb`.
-- **Player color:** either make the colored part a separate material named `mat_player_color` (you tint it in code), or use a mask texture.
+### M1: Planet balls (first 4: Earth, Mars, Jupiter, Saturn)
+- **The balls are the eight planets.** Looks, colors and details are in the [art bible](../ASSETS.md#balls-the-eight-planets): flat paint and 1–3 details, no photo textures.
+- **One material per planet.** Textures are 1024² at most, or paint the details with vertex colors.
+- **File names:** `models/ball_earth.glb`, `ball_mars.glb`, `ball_jupiter.glb`, `ball_saturn.glb`.
+- **The orbit ring** is a separate mesh in the same file (`ring`), with material `mat_player_color` that you tint in code. In the scene, parent it to a node that **follows the ball's position but not its rotation**, so it floats level while the planet rolls. It isn't part of the collider.
 
 ### M1: Track dressing kit
 Barriers, fall trees (2–3 variants), lamp posts, benches, the start/finish arch, ground tiles.
@@ -602,8 +602,8 @@ From [MAP.md](../MAP.md).
 4. Use the shared palette texture where you can. Only hero pieces (Old Main, the lion, the cone) get their own textures.
 5. Export the `visual` collection to `apps/web/public/assets/maps/happy_valley.glb`, optimize it, check the size, commit.
 
-### M3: Remaining skins
-Old Main bell, blue-white beach ball, library book, campus squirrel. Same rules as the first four.
+### M3: Remaining planets
+Mercury, Venus, Uranus, Neptune. Same rules as the first four.
 
 ### M3: Animated props
 Item boxes (spin + bob), flags, the arch, crowd cards (2-frame sprite cards). Animate in Blender, then export with Animation on. Give every animation a clear name (`anim_itembox_spin`), because your code plays them by name.

@@ -200,3 +200,15 @@ describe("pairing", () => {
     );
   });
 });
+
+describe("clock sync", () => {
+  test("pong echoes the client time and adds server time", async () => {
+    const client = await join({ role: "host" });
+    const pong = client.waitForMessage("pong");
+    const before = Date.now();
+    client.send("ping", 1234.5);
+    const msg = await pong;
+    expect(msg.c).toBe(1234.5);
+    expect(msg.s).toBeGreaterThanOrEqual(before);
+  });
+});

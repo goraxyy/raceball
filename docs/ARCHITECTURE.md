@@ -194,6 +194,17 @@ export const JoinError = {
   BadPairToken: 4005,
   AlreadyPaired: 4006,
 } as const;
+
+/**
+ * Clock sync, 1 Hz. Any client sends "ping" with its performance.now() as the payload;
+ * the server answers "pong" with that value echoed back and its own clock.
+ */
+export interface PongMsg {
+  /** The client's timestamp from the ping, echoed back */
+  c: number;
+  /** Server time in ms (same clock as SnapMsg.t) */
+  s: number;
+}
 ```
 
 Colyseus schema (synced automatically):

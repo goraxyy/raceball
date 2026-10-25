@@ -28,6 +28,7 @@ import { loadLandmarks } from "./landmarks";
 import { GREYBOX_PADS, InteractableViews } from "./interactables";
 import { ItemViews } from "./items";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
+import { LobbyTour, type TourFrame } from "./lobby-tour";
 import { NetFeed, type SnapshotSource } from "./net-feed";
 import { QualityGovernor, ladderFor, type QualityLevel } from "./quality";
 import { loadBoostPads } from "./route";
@@ -68,6 +69,8 @@ interface GameOptions {
   mixer?: Mixer;
   /** Every frame, with every ball's pose: the page's wheel indicators and live map read them */
   onFrame?: (poses: Map<string, BallPose>) => void;
+  /** Viewer: tour the landmarks while the room is in the lobby, with each frame's shot here (null once it stops) */
+  onTour?: (frame: TourFrame | null) => void;
   onStatus?: (status: GameStatus) => void;
 }
 
@@ -112,6 +115,8 @@ export function createGame(
   const toys = new InteractableViews(scene, { glow: mode !== "host" });
   const chase = new ChaseCamera(scene);
   scene.activeCamera = chase.camera;
+  const tour =
+    mode === "viewer" && options.onTour ? new LobbyTour(scene) : undefined;
   const overview = new ArcRotateCamera(
     "map-overview",
     -Math.PI / 2,
@@ -405,6 +410,14 @@ export function createGame(
       options.onFrame?.(poses);
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       const phase = local?.phase ?? net?.phase;
+      // a laptop's lobby: the camera tours the landmarks behind it, starting on the grid with the joined planets
+      if (tour && phase === "lobby") {
+        scene.activeCamera = tour.camera;
+        options.onTour?.(tour.update(dt));
+      } else if (tour && scene.activeCamera === tour.camera) {
+        applyCamera();
+        options.onTour?.(null);
+      }
       // local race time starts with the countdown; online it's counted from the state patch that began it
       if (phase !== "countdown") countdown = 0;
       else if (local) countdown = local.stats.elapsed;
@@ -501,6 +514,7 @@ export function createGame(
       toys.dispose();
       overview.dispose();
       chase.camera.dispose();
+      tour?.camera.dispose();
       shadows.dispose();
       sky.dispose();
       sun.dispose();

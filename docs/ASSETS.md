@@ -1,6 +1,6 @@
 # Assets: art bible and pipeline
 
-Owners: **Nuris** sets the art direction (this art bible) and makes the particles, sounds and UI art. **Ali** builds the 3D models and runs the model pipeline, and Nuris reviews them against the art bible. RaceBall is **asset-heavy** (models, materials, audio, particles, animation), so budgets and a pipeline are decided in M0, not at the end.
+Owners: **Nuris** sets the art direction (this art bible) and makes the particles, sounds and UI art. **Ali** builds most 3D models (the first four planets, the dressing kit, the landmarks a ball touches) and runs the model pipeline. **Nuris** builds planets 5–8, the animated props, Beaver Stadium and the Mount Nittany backdrop, and reviews every model against the art bible. RaceBall is **asset-heavy** (models, materials, audio, particles, animation), so budgets and a pipeline are decided in M0, not at the end.
 
 ## Art bible
 

@@ -183,9 +183,9 @@ Put the server tunnel URL in `apps/pad/.env.local` and `apps/web/.env.local` as 
 
 | Who | Owns | Main folders | Guide |
 |---|---|---|---|
-| **Ali** | **Game:** physics and gameplay, track loading, race rules, 3D scene, cameras (incl. big-screen follow-cams), items, map greybox + gameplay markers, 3D models (balls, Penn State landmarks, props) and their pipeline, wiring art/VFX/audio to events, Railway hosting | `packages/game-core`, `apps/web/src/game`, `railway.json` | [ali-game.md](docs/team/ali-game.md) |
+| **Ali** | **Game:** physics and gameplay, track loading, race rules, 3D scene, cameras (incl. big-screen follow-cams), items, map greybox + gameplay markers, most 3D models (planets 1–4, the dressing kit, the landmarks a ball touches) and their pipeline, wiring art/VFX/audio to events, Railway hosting | `packages/game-core`, `apps/web/src/game`, `railway.json` | [ali-game.md](docs/team/ali-game.md) |
 | **Rasim** | **Platform + controller:** monorepo, server code, Vercel settings, rooms, pairing, phone-only join, netcode, the phone controller and the rotation fix | `apps/server`, `apps/pad`, `packages/shared`, `apps/web/src/net` | [rasim-platform.md](docs/team/rasim-platform.md) |
-| **Nuris** | **Art direction, audio + UI:** art bible (and reviewing models against it), particles, sound, lobby/HUD/big-screen UI, pad look, branding | `apps/web/public/assets`, `apps/web/src/ui`, `apps/pad/src/style.css` | [nuris-art-ui.md](docs/team/nuris-art-ui.md) |
+| **Nuris** | **Art direction, audio + UI:** art bible (and reviewing models against it), particles, sound, the event-to-effect table, planets 5–8, animated props, Beaver Stadium + Mount Nittany models, lobby/HUD/big-screen UI, pad look, branding | `apps/web/public/assets`, `apps/web/src/ui`, `apps/pad/src/style.css` | [nuris-art-ui.md](docs/team/nuris-art-ui.md) |
 
 How we work together (branches, PRs, conventions, protocol changes) is in **[docs/WORKFLOW.md](docs/WORKFLOW.md)**.
 

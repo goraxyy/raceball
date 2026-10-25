@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Engine, Scene } from "@babylonjs/core";
 import { PLANETS } from "@raceball/shared";
 import "@babylonjs/loaders/glTF";
+import { Mixer } from "../audio/mixer";
+import { Captions } from "../ui/Captions";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
 import { installInspectorToggle } from "./inspector";
 import type { TileRect } from "./big-screen";
@@ -26,6 +28,7 @@ export function GameView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [status, setStatus] = useState<GameStatus | null>(null);
+  const [mixer, setMixer] = useState<Mixer | null>(null);
   const onLoadedRef = useRef(onLoaded);
   useEffect(() => {
     onLoadedRef.current = onLoaded;
@@ -44,6 +47,18 @@ export function GameView({
 
     const params = new URLSearchParams(location.search);
     const ball = params.get("ball") ?? "";
+    // the big screen gets the full mix with the crowd; a laptop hears mostly its own ball
+    const mix = new Mixer(mode === "host" ? "big" : "laptop");
+    if (params.has("mute")) mix.volume = 0;
+    mix.load().then(
+      () => active && setMixer(mix), // captions start once the cues can play
+      (error: unknown) =>
+        active && console.warn("Sounds failed to load", error),
+    );
+    // browsers start audio only after a tap or a key; the host page may not have had one yet
+    const unlock = () => void mix.ctx.resume();
+    addEventListener("pointerdown", unlock);
+    addEventListener("keydown", unlock);
     const game = createGame(scene, mode, {
       map: params.get("map") === "flat" ? "flat" : "happy_valley",
       ball: (PLANETS as readonly string[]).includes(ball) ? ball : undefined,
@@ -51,6 +66,7 @@ export function GameView({
         ? params.get("view") === "overview"
         : undefined,
       session,
+      mixer: mix,
       onStatus: (next) => {
         if (!active) return;
         setStatus(next);
@@ -73,7 +89,10 @@ export function GameView({
       gameRef.current = null;
       removeEventListener("resize", onResize);
       removeInspector();
+      removeEventListener("pointerdown", unlock);
+      removeEventListener("keydown", unlock);
       game.dispose();
+      void mix.ctx.close();
       scene.dispose();
       engine.dispose();
     };
@@ -95,6 +114,7 @@ export function GameView({
           outline: "none",
         }}
       />
+      {mode === "host" && mixer && <Captions mixer={mixer} />}
       {mode === "host" && session && !!status?.tiles?.length && (
         <TileFrames
           ids={status.tiles}

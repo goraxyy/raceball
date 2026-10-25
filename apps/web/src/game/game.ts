@@ -16,9 +16,12 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
+import type { Phase } from "@raceball/shared";
+import type { Mixer } from "../audio/mixer";
 import { BallViews, type BallFeed } from "./balls";
 import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera } from "./cameras";
+import { GameFx, type FxEvent } from "./fx";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
 
@@ -55,6 +58,8 @@ interface GameOptions {
   overview?: boolean;
   /** Viewer and host: the room whose snapshots the balls follow */
   session?: SnapshotSource;
+  /** Plays the event sounds and music (fx.ts); without it the effects are silent */
+  mixer?: Mixer;
   onStatus?: (status: GameStatus) => void;
 }
 
@@ -106,6 +111,19 @@ export function createGame(
   overview.upperRadiusLimit = 1000;
   overview.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
   const big = mode === "host" ? new BigScreen(scene, overview) : undefined;
+  // the effects for every game event (Nuris's fx.ts); its files load alongside the map
+  const fx = new GameFx(scene, {
+    screen: mode === "host" ? "big" : "laptop",
+    ownId: () => feed?.ownId ?? null,
+    laps: () => net?.laps ?? 3, // local mode races 3 laps
+    name: (id) => net?.name(id) ?? "You",
+    color: (id) => feed?.look?.(id)?.color ?? 0,
+    place: (id) => (net ? net.place(id) : 1),
+  });
+  fx.mixer = options.mixer;
+  void fx.load().catch((error: unknown) => {
+    if (!disposed) console.warn("Effects failed to load", error);
+  });
 
   let local: LocalSession | undefined;
   let net: NetFeed | undefined;
@@ -271,11 +289,32 @@ export function createGame(
     )
       return;
     local = feed = sessionResult.value;
+    addFxButtons(local);
     container = visualResult.value;
     if (container) showMap(container);
     status.state = "ready";
     status.message = "Ready";
     publish();
+  }
+
+  /** Local mode: fire each effect on your own ball from the panel, to judge it without a full race */
+  function addFxButtons(session: LocalSession): void {
+    const me = session.ownId;
+    const folder = session.gui.addFolder("Effects (fx.ts)");
+    folder.close();
+    const buttons: [string, FxEvent][] = [
+      ["Bump", { type: "bump", a: me, b: "", strength: 0.35 }],
+      ["Crash", { type: "bump", a: me, b: "", strength: 1 }],
+      ["Item pickup", { type: "item", player: me, item: "boost" }],
+      ["Boost", { type: "use", player: me, item: "boost" }],
+      ["Lion Roar", { type: "use", player: me, item: "roar" }],
+      ["Creamery Spill", { type: "use", player: me, item: "spill" }],
+      ["Lap 2", { type: "lap", player: me, lap: 2 }],
+      ["Final lap", { type: "lap", player: me, lap: 3 }],
+      ["Win", { type: "finish", player: me, place: 1 }],
+    ];
+    for (const [label, evt] of buttons)
+      folder.add({ go: () => fx.play(evt) }, "go").name(label);
   }
 
   return {
@@ -287,6 +326,18 @@ export function createGame(
       balls.sync(poses, (id) => feed?.look?.(id));
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
+      for (const evt of feed.drainEvents?.() ?? []) fx.play(evt);
+      const phase = net ? net.phase : (local?.stats.phase as Phase);
+      if (phase) fx.setPhase(phase);
+      const serverNow = net?.serverNow();
+      if (net && phase === "countdown" && serverNow !== undefined)
+        fx.countdown(net.countdownEndsAt - serverNow);
+      if (local) fx.snow = local.stats.section === "arboretum";
+      fx.update(
+        dt,
+        poses,
+        status.overview || !own ? overview.target : Vector3.FromArray(own.p),
+      );
       if (big && net) {
         const fps = scene.getEngine().getFps();
         if (big.update(poses, net, dt, fps)) {
@@ -320,6 +371,7 @@ export function createGame(
       container?.dispose();
       container = undefined;
       big?.dispose();
+      fx.dispose();
       balls.dispose();
       overview.dispose();
       chase.camera.dispose();

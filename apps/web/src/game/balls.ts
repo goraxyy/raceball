@@ -14,7 +14,7 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import { BALL_RADIUS } from "@raceball/game-core";
-import { PLAYER_COLORS } from "@raceball/shared";
+import { PLAYER_COLORS, type GameEvent } from "@raceball/shared";
 
 /** One ball's rendered transform. The same shape comes from local mode and (later) from Rasim's net library. */
 export interface BallPose {
@@ -35,6 +35,8 @@ export interface BallFeed {
   sample(now: number): Map<string, BallPose>;
   /** Without a look, balls get a planet and a color in the order they appear. */
   look?(id: string): BallLook | undefined;
+  /** Game events since the last call, for the effects (fx.ts) */
+  drainEvents?(): GameEvent[];
 }
 
 /** Planets with a model in `assets/models/ball_<planet>.glb`. Mercury, Venus, Uranus and Neptune come in M3. */

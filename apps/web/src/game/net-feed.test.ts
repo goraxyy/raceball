@@ -1,4 +1,4 @@
-import type { PlayerView, RaceStateView } from "@raceball/shared";
+import type { GameEvent, PlayerView, RaceStateView } from "@raceball/shared";
 import { describe, expect, it } from "vitest";
 import type { BallPose } from "../net";
 import { NetFeed, type SnapshotSource } from "./net-feed";
@@ -36,6 +36,16 @@ class FakeRoom implements SnapshotSource {
   };
   balls = new Map<string, BallPose>();
   listeners = new Set<() => void>();
+  eventListeners = new Set<(evt: GameEvent) => void>();
+
+  onEvent(listener: (evt: GameEvent) => void) {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
+
+  send(evt: GameEvent) {
+    for (const listener of this.eventListeners) listener(evt);
+  }
 
   sample() {
     return { balls: this.balls, ownId: this.playerId };
@@ -55,6 +65,40 @@ class FakeRoom implements SnapshotSource {
 }
 
 describe("NetFeed", () => {
+  it("queues game events for the effects until the renderer takes them, then stops listening", () => {
+    const room = new FakeRoom();
+    const feed = new NetFeed(room);
+    room.send({ type: "lap", player: "p1", lap: 2 });
+    room.send({ type: "respawn", player: "p2" });
+    expect(feed.drainEvents()).toEqual([
+      { type: "lap", player: "p1", lap: 2 },
+      { type: "respawn", player: "p2" },
+    ]);
+    expect(feed.drainEvents()).toEqual([]);
+    feed.dispose();
+    expect(room.eventListeners.size).toBe(0);
+  });
+
+  it("keeps the phase, laps and places from the latest patch", () => {
+    const room = new FakeRoom();
+    const feed = new NetFeed(room);
+    room.state = {
+      ...room.state,
+      phase: "countdown",
+      laps: 1,
+      countdownEndsAt: 5000,
+    };
+    room.patch({ a: player({ place: 2 }), b: player({ place: 1 }) });
+    expect([feed.phase, feed.laps, feed.countdownEndsAt]).toEqual([
+      "countdown",
+      1,
+      5000,
+    ]);
+    expect([feed.place("a"), feed.place("b"), feed.place("nobody")]).toEqual([
+      2, 1, 0,
+    ]);
+  });
+
   it("passes the session's poses through and follows your own ball once welcomed", () => {
     const room = new FakeRoom();
     const feed = new NetFeed(room);

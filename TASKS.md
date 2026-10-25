@@ -187,7 +187,7 @@ Nothing right now. Add new questions here.
 **Ali**
 - [ ] Items: Blue & White Boost, Lion Roar (shockwave), Creamery Spill (puddle); item boxes; odds by place
 - [x] Section mechanics: library-step bounces, Lion Shrine bank + jump, Creamery cone ramp + puddles, stadium tunnel, snow/ice surfaces, College Ave boost pads (geometry in the greybox; surface grip, snow drag and boost pads in `race.ts`)
-- [ ] Event-to-effect table (`fx.ts`): particles, sounds and camera shake for every event
+- [ ] Event-to-effect table (`fx.ts`): particles, sounds and camera shake for every event (particles, sounds, captions and music done by Nuris in `apps/web/src/game/fx.ts`; left: the camera shake)
 - [ ] Performance pass: instancing/merging, one shadow light, LOD, freezing static meshes; under 150 draw calls
 - [ ] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown
 - [ ] Railway: check the health check, logs and resource graphs under load
@@ -204,7 +204,7 @@ Nothing right now. Add new questions here.
 - [x] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones) (9 effects in `apps/web/public/assets/fx/`, `SpeedLines` in `apps/web/src/ui`; preview at `/ui` > fx; [ASSETS.md](docs/ASSETS.md#vfx-v2-files))
 - [x] Full sound pass + mix (big screen vs laptops), crowd cheers; captions for key audio cues
 - [x] Logo, title screen, loading screen with progress, brag card, favicons (`TitleScreen` on `/`, `BragCard`; previews at `/ui` > title, loading, brag; how they're made: [your guide](docs/team/nuris-art-ui.md#branding))
-- [ ] Event-to-effect table (`apps/web/src/game/fx.ts`): the particles and sound for every game event, from your VFX files and sound bank. Ali adds the camera shake in his camera polish ([your guide](docs/team/nuris-art-ui.md#event-to-effect-table-fxts))
+- [x] Event-to-effect table (`apps/web/src/game/fx.ts`): the particles and sound for every game event, from your VFX files and sound bank. Ali adds the camera shake in his camera polish ([your guide](docs/team/nuris-art-ui.md#event-to-effect-table-fxts)) (wired into `game.ts`; try each effect from the local-mode panel > Effects; [ASSETS.md](docs/ASSETS.md#event-to-effect-table-fxts))
 - [ ] Planet balls 5–8: Mercury, Venus, Uranus, Neptune ([your guide](docs/team/nuris-art-ui.md#planet-balls-58))
 - [ ] Animated props: item boxes, flags, arch, crowd cards ([your guide](docs/team/nuris-art-ui.md#animated-props))
 - [ ] Landmarks: Beaver Stadium bowl + scoreboard prop, Mount Nittany backdrop (budgets in [Ali's guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Ali checks that anything a ball touches still matches the collision

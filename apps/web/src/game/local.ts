@@ -1,6 +1,6 @@
 import GUI from "lil-gui";
 import { WebIO } from "@gltf-transform/core";
-import type { SnapMsg } from "@raceball/shared";
+import type { GameEvent, SnapMsg } from "@raceball/shared";
 import {
   createFlatRace,
   createRace,
@@ -65,7 +65,8 @@ export class LocalSession implements BallFeed {
   private tick = 0;
   private prev: SnapMsg;
   private curr: SnapMsg;
-  private gui: GUI;
+  /** The tuning panel; game.ts adds the effects test buttons to it */
+  readonly gui: GUI;
   readonly stats: LocalStats = {
     speed: 0,
     phase: "lobby",
@@ -81,6 +82,7 @@ export class LocalSession implements BallFeed {
     heading: 0,
   };
   private race: Race;
+  private events: GameEvent[] = [];
   private readonly makeRace: () => Promise<Race>;
   private readonly timer: LocalLapTimer;
   private disposed = false;
@@ -140,7 +142,7 @@ export class LocalSession implements BallFeed {
       let respawned = false;
       for (const e of this.race.drainEvents()) {
         if (e.type === "respawn" && e.player === OWN_ID) respawned = true;
-        console.debug("[local] event", e);
+        this.events.push(e);
       }
       const from = this.prev.balls.find((b) => b.id === OWN_ID);
       const to = this.curr.balls.find((b) => b.id === OWN_ID);
@@ -164,6 +166,11 @@ export class LocalSession implements BallFeed {
       this.stats.position = own.p;
       this.stats.heading = own.h;
     }
+  }
+
+  /** Game events since the last call, for the effects (fx.ts) */
+  drainEvents(): GameEvent[] {
+    return this.events.splice(0);
   }
 
   look(id: string): BallLook | undefined {

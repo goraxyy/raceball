@@ -5,6 +5,7 @@ import {
   PROTOCOL_VERSION,
   SERVER_PORT,
   padUrl,
+  type GameEvent,
   type JoinOptions,
   type Laps,
   type StatusMsg,
@@ -44,6 +45,7 @@ export class NetSession {
   /** The room is gone (left, or reconnection failed) */
   closed = false;
   private listeners = new Set<() => void>();
+  private eventListeners = new Set<(evt: GameEvent) => void>();
   private pinger: ReturnType<typeof setInterval>;
   readonly room: Room;
 
@@ -59,6 +61,9 @@ export class NetSession {
     room.onMessage("snap", (msg: SnapMsg) =>
       this.buffer.push(msg, performance.now()),
     );
+    room.onMessage("evt", (evt: GameEvent) => {
+      for (const listener of this.eventListeners) listener(evt);
+    });
     room.onMessage("welcome", (msg: WelcomeMsg) => {
       this.playerId = msg.playerId;
       this.pairToken = msg.pairToken;
@@ -137,6 +142,17 @@ export class NetSession {
   subscribe(listener: () => void) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** Game events (bumps, laps, finishes…) as the server sends them. Returns an unsubscribe function */
+  onEvent(listener: (evt: GameEvent) => void) {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
+
+  /** Server time now, ms (clock sync) */
+  serverNow() {
+    return this.clock.serverNow();
   }
 
   async leave() {

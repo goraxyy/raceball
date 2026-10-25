@@ -6,14 +6,14 @@ You own **how RaceBall looks, sounds and feels**:
 - every screen of UI: lobby, HUD, big-screen overlay, results, and the look of the phone controller
 - branding
 
-**Ali builds the 3D models** (balls, landmarks, props, the track dressing kit) and runs the model pipeline. You review them against the art bible.
+**Ali builds** the first four planets, the track dressing kit and the landmarks a ball touches, and runs the model pipeline. **You build** planets 5–8, the animated props, Beaver Stadium, the Mount Nittany backdrop and the event-to-effect table ([M3 below](#m3-models-and-effects-taken-over-from-ali)). You review Ali's models against the art bible.
 
 | Area | Where |
 |---|---|
 | Art bible, budgets, credits | [docs/ASSETS.md](../ASSETS.md) |
 | Map art direction, landmark list | [docs/MAP.md](../MAP.md) |
 | Raw sources (`.psd`, `.wav`, references) | Drive: `RaceBall/assets-src/` |
-| Optimized runtime assets | `apps/web/public/assets/` (`fx/`, `sfx/`, `mus/`, `ui/`). Ali owns `models/`, `maps/`, `tex/` and `mat/` |
+| Optimized runtime assets | `apps/web/public/assets/` (`fx/`, `sfx/`, `mus/`, `ui/`). Ali owns `maps/`, `tex/` and `mat/`. `models/` is shared: your planets and animated props go there next to Ali's models |
 | Shared theme: fonts, tokens, buttons, shapes, planet balls | `packages/shared/theme/theme.css` (imported by the pad and the web app) |
 | React UI components | `apps/web/src/ui/` (styles in `ui.css`; preview them all at `/ui` in dev) |
 | Phone controller look | `apps/pad/src/style.css` + the markup in `apps/pad/screens.html` |
@@ -173,6 +173,22 @@ Built:
 Each error is a trackside road sign on a post, so even a failure looks like part of race day. Room not found is a yellow "?" diamond, the full grid is a board with all 8 player colors lit, an update is a blue refresh disc, motion off is a prohibition sign over a phone, the dropped connection is a struck-out Wi-Fi diamond, and a wrong address is a green U-turn board. Each one has a code plate (room + code, for whoever's debugging), a plain headline and one button that fixes it. The sign drops in on its post and wobbles to a stop.
 
 One source for both apps: `packages/shared/src/errors.ts` (copy, signs, `errorKindFor`) and `.error-screen` in `theme.css`. The laptop uses `<ErrorScreen>`, and the pad uses `errorHtml`. It sits side by side when there's room and stacks on a phone held upright. Preview: `/ui` > errors and the pad's `screens.html`. Wiring `/host` and `/play` is Rasim's ([Rasim's guide](rasim-platform.md#m3-hardening)).
+
+### M3: Models and effects taken over from Ali
+
+These four used to be Ali's. Ali's guide has the [model pipeline](ali-game.md#m0-run-one-asset-through-the-whole-pipeline) and the [checklist](ali-game.md#before-you-commit-a-model); his model scripts in `tools/models/` already do most of the work.
+
+#### Event-to-effect table (`fx.ts`)
+One table in `apps/web/src/game/fx.ts`: for every `GameEvent` (`bump`, `item`, `overtake`, `lap`, `finish`, `respawn`, in `packages/shared/src/protocol.ts`), which particle files from `fx/` play, where (on the ball, or the big screen only), which sound from your sound bank, and which caption. Export a small `playFx(event, ...)` that does it with `ParticleSystem.Parse` and your mixer. Ali calls it from the event stream in `game.ts` and adds the camera shake. Agree the function signature with him first.
+
+#### Planet balls 5–8
+Mercury, Venus, Uranus, Neptune, with the same rules as the first four (art bible, one material, 1024² at most, the `ring` mesh). `tools/models/build_planet_balls.py` builds them: give each a base color and details in `PLANETS`, run it in Blender, optimize with `gltf-transform` as in Ali's guide, then add the planet to `PLANET_MODELS` in `apps/web/src/game/balls.ts`.
+
+#### Animated props
+Item boxes (spin + bob), flags, the arch, crowd cards (2-frame sprite cards). Animate in Blender, export with Animation on, and give every animation a clear name (`anim_itembox_spin`), because the game plays them by name. Put them on the dressing kit's palette texture where you can (`tools/models/build_dressing_kit.py`).
+
+#### Beaver Stadium and Mount Nittany
+Model over the greybox boxes in `assets-src/happy_valley.blend`, in the `visual` collection, and don't touch `collision` or `markers` (Ali's guide: [how to model over the greybox](ali-game.md#m3-how-to-model-over-the-greybox)). The stadium tunnel walls are collision, so the bowl must leave the tunnel clear. Budgets: 40k triangles for the stadium (instance one stand segment around the bowl), a card or texture for Mount Nittany. The map visuals are rebuilt by `tools/track/build_happy_valley.py`, so agree with Ali how your models get placed (imported by the script, or a separate `maps/` file) before you start.
 
 ---
 

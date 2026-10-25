@@ -1,6 +1,6 @@
 # Ali: Game guide
 
-You own **the game**: how the ball moves, the race rules, the track, the items, and everything you see in 3D, including **the 3D models** (balls, landmarks, props) and their pipeline.
+You own **the game**: how the ball moves, the race rules, the track, the items, and everything you see in 3D, including most **3D models** (the first four planets, the dressing kit, the landmarks a ball touches) and their pipeline. Nuris builds planets 5–8, the animated props, Beaver Stadium, the Mount Nittany backdrop and the event-to-effect table.
 
 | Area | Where |
 |---|---|
@@ -532,7 +532,7 @@ Notes:
 - Load assets with `LoadAssetContainerAsync(url, scene)` while in the lobby, and report the progress to Nuris's loading UI. Call `container.addAllToScene()` at race start.
 - **Particles:** `ParticleSystem.Parse(json, scene, "/assets/fx/")`. Set `emitter` to the ball mesh, then `start()` and `stop()` them from events.
 - **Sounds:** trigger them from the same events. Give the rolling loop a pitch of `0.8 + speed / maxSpeed * 0.6`.
-- Keep an `fx.ts` table mapping each event to its particles, sound and camera shake, so Nuris can tweak names without digging through your code.
+- **The `fx.ts` table is Nuris's** (M3): each event's particles and sound, from her VFX files and sound bank. You call it from the event stream in `game.ts`, and add the camera shake in your camera polish.
 
 ### Performance pass (target: 60 fps on the demo laptops)
 - **Inspector > Statistics:** keep draw calls under 150.
@@ -554,7 +554,7 @@ Notes:
 
 ## Assets: 3D models and pipeline
 
-You build the 3D models: balls, landmarks, props and the track dressing kit. **Nuris's art bible in [ASSETS.md](../ASSETS.md) sets the style**, so ask Nuris to review each model before it's merged. Nuris still makes the particles, sounds and UI.
+You build the first four planets, the track dressing kit and the landmarks a ball touches (Old Main, Lion Shrine, Creamery + cone, Pattee Library). **Nuris builds** planets 5–8, the animated props, Beaver Stadium and the Mount Nittany backdrop with the same scripts and pipeline ([her guide](nuris-art-ui.md#m3-models-and-effects-taken-over-from-ali)); check that anything of hers a ball touches still matches the collision. **Nuris's art bible in [ASSETS.md](../ASSETS.md) sets the style**, so ask Nuris to review each of your models before it's merged.
 
 ### M0: Kenney track and prop packs
 Download and look through the **Kenney Marble Kit** and **Racing Kit** (both CC0). Add the track pieces and props you'd use to the shortlist in ASSETS.md. Put the downloads in `assets-src/packs/` in Drive.
@@ -654,14 +654,14 @@ Barriers, fall trees (2–3 variants), lamp posts, benches, the start/finish arc
 ### M3: Landmark order and budgets
 From [MAP.md](../MAP.md).
 
-| Order | Landmark | Triangle budget | Notes |
-|---|---|---|---|
-| 1 | Old Main + start/finish arch | 25k | The judges see this first. Bell tower silhouette |
-| 2 | Lion Shrine | 8k | Original low-poly lion on a rock |
-| 3 | Creamery + giant cone | 15k | The cone is also a ramp. Match your collision shape |
-| 4 | Beaver Stadium bowl + tunnel + scoreboard prop | 40k total | Build one stand segment and instance it around the bowl |
-| 5 | Pattee Library facade + steps | 12k | Steps must line up with the collision steps |
-| 6 | Mount Nittany backdrop | Card or texture | A far-away silhouette layer, not real geometry |
+| Order | Landmark | Owner | Triangle budget | Notes |
+|---|---|---|---|---|
+| 1 | Old Main + start/finish arch | Ali | 25k | The judges see this first. Bell tower silhouette |
+| 2 | Lion Shrine | Ali | 8k | Original low-poly lion on a rock |
+| 3 | Creamery + giant cone | Ali | 15k | The cone is also a ramp. Match your collision shape |
+| 4 | Beaver Stadium bowl + tunnel + scoreboard prop | Nuris | 40k total | Build one stand segment and instance it around the bowl. The tunnel walls are collision, so model over them |
+| 5 | Pattee Library facade + steps | Ali | 12k | Steps must line up with the collision steps |
+| 6 | Mount Nittany backdrop | Nuris | Card or texture | A far-away silhouette layer, not real geometry |
 
 ### M3: How to model over the greybox
 1. Open `happy_valley.blend` in Drive. Your greybox boxes and collision meshes are there.
@@ -670,11 +670,8 @@ From [MAP.md](../MAP.md).
 4. Use the shared palette texture where you can. Only hero pieces (Old Main, the lion, the cone) get their own textures.
 5. Export the `visual` collection to `apps/web/public/assets/maps/happy_valley.glb`, optimize it, check the size, commit.
 
-### M3: Remaining planets
-Mercury, Venus, Uranus, Neptune. Same rules as the first four.
-
-### M3: Animated props
-Item boxes (spin + bob), flags, the arch, crowd cards (2-frame sprite cards). Animate in Blender, then export with Animation on. Give every animation a clear name (`anim_itembox_spin`), because your code plays them by name.
+### M3: Planets 5–8 and animated props (Nuris)
+Moved to [Nuris's guide](nuris-art-ui.md#m3-models-and-effects-taken-over-from-ali). You still play the animations by name in code and load new planets through `PLANET_MODELS` in `balls.ts`.
 
 ### Before you commit a model
 

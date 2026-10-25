@@ -113,6 +113,9 @@ importers:
       '@colyseus/sdk':
         specifier: ^0.18.6
         version: 0.18.6(@colyseus/core@0.18.23)(typescript@6.0.3)(zod@4.6.7)
+      '@raceball/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@raceball/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -165,10 +168,16 @@ importers:
       '@gltf-transform/core':
         specifier: ^4.5.1
         version: 4.5.1
+      '@raceball/shared':
+        specifier: workspace:*
+        version: link:../shared
       gl-matrix:
         specifier: ^3.4.4
         version: 3.4.4
     devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

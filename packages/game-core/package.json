@@ -12,9 +12,11 @@
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
     "@gltf-transform/core": "^4.5.1",
+    "@raceball/shared": "workspace:*",
     "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
+    "@types/node": "^24.19.2",
     "typescript": "~6.0.3",
     "vitest": "^5.0.5"
   }

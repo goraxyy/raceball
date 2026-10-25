@@ -177,6 +177,16 @@ addEventListener("keydown", async (e) => {
 
 **You own Railway end to end:** the project, the service settings, deploys and logs, and the files it builds from. Rasim owns the server code; it listens on `process.env.PORT` and answers `/health`. Do this once the bootstrap PR is merged.
 
+**Current setup (done):**
+
+| | |
+|---|---|
+| Project / service | `raceball` / `raceball-server`, deploying `main` |
+| Domain | `raceball-server-production.up.railway.app` (port 2567), so `VITE_SERVER_URL=wss://raceball-server-production.up.railway.app` |
+| Variables | `PORT=2567`, so the server listens on the port the domain points to |
+| Plan | **Free** for now: the server sleeps when idle and Railway placed it in `sfo`, even though `railway.json` asks for US East |
+| Before M1's latency measurement and the event | Upgrade to **Hobby** (railway.com > workspace settings > Plans), then set Region to US East and turn app sleeping off |
+
 **Files in the repo** (already added by the bootstrap PR; they sit at the repo root so the Docker build can see the workspace packages).
 
 `apps/server/Dockerfile`:
@@ -228,12 +238,15 @@ apps/web/public/assets
    - **Region:** US East (Virginia).
    - **Replicas:** exactly **1**. Rooms live in memory, so a second replica would split players into different rooms.
    - **Serverless / app sleeping:** **off**, so the server never sleeps.
-   - **Networking:** Generate Domain. Ours is `raceball-server-production.up.railway.app`.
+   - **Networking:** Generate Domain, targeting port 2567. Ours is `raceball-server-production.up.railway.app`.
 4. **Push to `main`.** Railway builds and deploys on its own. After that, every push that touches the watch paths redeploys the server. Doc and asset changes don't.
 5. **Check:** `curl https://raceball-server-production.up.railway.app/health` should return `ok`. Logs are under the service's Deployments tab.
 6. **Optional CLI** (`npm i -g @railway/cli`): `railway login`, `railway link` (pick the project), `railway logs`, and `railway up` (a manual deploy from your machine).
 
-**Cost:** the trial's one-time $5 credit covers the event. After that, Hobby is $5/month with $5 of usage included, which one small Node service fits in. After the event, delete the project (Project Settings > Danger), or keep it if we want to keep playing.
+**Cost:**
+- **Now:** the Free plan, $0. It gives $1 of usage per month, about three weeks of our idle server. It also allows only 1 project and 1 project member.
+- **From the M1 latency measurement through the event:** Hobby, $5/month with $5 of usage included, which one small Node service fits in.
+- **After the event:** delete the project (Project Settings > Danger, then Delete Immediately), or keep it if we want to keep playing.
 
 **Fallback (Fly.io):** if Railway ever causes trouble, the same Dockerfile runs on Fly.io in `iad` (Ashburn). That needs `flyctl`, a `fly.toml` with `internal_port = 2567`, `auto_stop_machines = "off"`, `min_machines_running = 1`, and exactly one machine (`fly scale count 1`).
 

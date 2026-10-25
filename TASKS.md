@@ -78,12 +78,15 @@ Nothing right now. Add new questions here.
 
 **Ali**
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
-- [ ] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
+- [x] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
 - [x] Create and configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy the hello-world Colyseus server; `/health` returns `ok` ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway))
+  - Deployed: project `raceball`, service `raceball-server` deploys `main` with the `railway.json` settings, `PORT=2567`, and `https://raceball-server-production.up.railway.app/health` returns `ok`
+  - Still on the Free plan: it puts the server in `sfo` and makes it sleep when idle; both need Hobby, before the M1 latency measurement and the event
 - [x] Import `apps/web` and `apps/pad` into Vercel with Rasim's settings ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). As repo owner, only you can grant them GitHub access
-- [ ] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
-- [ ] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
-- [ ] Dev-only Inspector toggle (`Shift+I`)
+  - `raceball-web` (root `apps/web`) and `raceball-pad` (builds `@raceball/pad` from the repo root) deploy `main`, with Vercel Authentication off for phone testing. Both have `VITE_SERVER_URL`; web also has `VITE_PAD_URL`
+- [x] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
+- [x] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
+- [x] Dev-only Inspector toggle (`Shift+I`)
 - [ ] Review the Kenney Marble Kit and Racing Kit; add track pieces and props to the shortlist
 - [ ] Take 1 ball + 1 track piece through the pipeline; verify in the Sandbox; commit to `apps/web/public/assets/`
 - [ ] Create the shared Drive folder `RaceBall/assets-src`, with `happy_valley.blend` inside
@@ -105,13 +108,13 @@ Nothing right now. Add new questions here.
 **Done when:** one phone steers one ball on one laptop through the **Railway** server, and the p95 delay is measured and written here: `p95 = ____ ms`.
 
 **Ali**
-- [ ] Ball control: heading + turn rate from `steer`, force from `gas`, grip, damping from `brake`, max speed, ground check, a little air control
+- [x] Ball control: heading + turn rate from `steer`, force from `gas`, grip, damping from `brake`, max speed, ground check, a little air control
 - [ ] **Greybox of the full Happy Valley route** in Blender (Kenney pieces + boxes for landmarks), with gameplay markers ([marker table](docs/ASSETS.md#blender-is-our-level-editor))
 - [ ] `game-core` `loadTrack()`: trimesh colliders + markers from `packages/game-core/tracks/happy_valley_col.glb`, with a Vitest test
 - [ ] Respawn at the right `respawn_*` marker when the ball falls below y = -10 or gets stuck
-- [ ] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
+- [x] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
 - [ ] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly
-- [ ] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
+- [x] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
 - [ ] 4 planet balls (Earth, Mars, Jupiter, Saturn), each with the player-color orbit ring ([art bible](docs/ASSETS.md#balls-the-eight-planets))
 - [ ] Track dressing kit on one shared palette texture: barriers, fall trees, lamp posts, start/finish arch; HDRI as `.env`
 

@@ -1,5 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "lib": ["ES2023"], "noEmit": true },
+  // Node types (no DOM): @raceball/shared's pairing helpers use URL, and game-core must never touch document/window
+  "compilerOptions": { "lib": ["ES2023"], "types": ["node"], "noEmit": true },
   "include": ["src"]
 }

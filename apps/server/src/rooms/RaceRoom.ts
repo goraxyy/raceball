@@ -39,7 +39,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   /** playerId → pairToken */
   private tokenOf = new Map<string, string>();
   /** playerId → latest input from their pad, and when it arrived (ms) */
-  private inputs = new Map<string, { msg: InputMsg; at: number }>();
+  private padInputs = new Map<string, { msg: InputMsg; at: number }>();
 
   async onCreate() {
     this.roomId = await claimRoomCode(this.presence);
@@ -57,9 +57,9 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     this.onMessage("input", (client, msg: InputMsg) => {
       const seat = this.seats.get(client.sessionId);
       if (seat?.role !== "pad" || !seat.playerId) return; // only a bound pad may drive
-      const last = this.inputs.get(seat.playerId);
+      const last = this.padInputs.get(seat.playerId);
       if (last && msg.seq <= last.msg.seq) return; // latest wins
-      this.inputs.set(seat.playerId, { msg, at: Date.now() });
+      this.padInputs.set(seat.playerId, { msg, at: Date.now() });
     });
     this.clock.setInterval(() => this.sendNetStats(), NETSTAT_MS);
   }
@@ -159,7 +159,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
 
   /** Latest input for the simulation loop (M1), with when it arrived */
   latestInput(playerId: string) {
-    return this.inputs.get(playerId);
+    return this.padInputs.get(playerId);
   }
 
   /** Tell each player's pad and laptop how fresh their input is at the server */
@@ -167,7 +167,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     const now = Date.now();
     for (const client of this.clients) {
       const playerId = this.seats.get(client.sessionId)?.playerId;
-      const input = playerId && this.inputs.get(playerId);
+      const input = playerId && this.padInputs.get(playerId);
       if (input)
         client.send("netstat", {
           inputAge: now - input.at,
@@ -178,7 +178,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   /** Remove a player and their pairing token, and disconnect their paired pad */
   private removePlayer(playerId: string) {
     this.state.players.delete(playerId);
-    this.inputs.delete(playerId);
+    this.padInputs.delete(playerId);
     const token = this.tokenOf.get(playerId);
     if (token) this.pairTokens.delete(token);
     this.tokenOf.delete(playerId);

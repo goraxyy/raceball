@@ -125,8 +125,8 @@ Nothing right now. Add new questions here.
 - [ ] 4 ball skins (Lion, Creamery scoop, football, snowball), with a player-color ring
 - [ ] Track dressing kit on one shared palette texture: barriers, fall trees, lamp posts, start/finish arch; HDRI as `.env`
 - [ ] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen`
-- [ ] Pad screens in Figma; agree the markup contract with Rasim; write `apps/pad/src/style.css`
-- [ ] First sound set: rolling loop, bump, countdown, UI click
+- [ ] Pad screens in Figma; agree the markup contract with Rasim; write `apps/pad/src/style.css` (style.css done; every screen and its markup is in `apps/pad/screens.html` instead of Figma; waiting on Rasim to agree the markup)
+- [x] First sound set: rolling loop, bump, countdown, UI click
 
 ---
 

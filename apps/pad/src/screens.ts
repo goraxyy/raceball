@@ -11,6 +11,11 @@ import {
   type PlayerShape,
   type PlayerView,
 } from "@raceball/shared";
+import {
+  DEAD_ZONE_RANGE,
+  SENSITIVITY_RANGE,
+  type PadSettings,
+} from "./settings";
 
 /** How a player looks: their slot's color and shape, and their planet */
 export interface Look {
@@ -93,6 +98,24 @@ export const calibrateHtml = () => `
     </button>
   </section>`;
 
+/** Accessibility settings (built from Nuris's pieces: .field, .btn; no markup for it in screens.html yet) */
+export const settingsHtml = (s: PadSettings) => `
+  <section class="screen settings">
+    <h1>Settings</h1>
+    <label class="field">
+      <span><input type="checkbox" name="autoGas"${s.autoGas ? " checked" : ""} /> Auto-gas: always on, hold left to brake</span>
+    </label>
+    <label class="field">
+      Steering: full lock at <b class="value" data-for="sensitivityDeg">${s.sensitivityDeg}°</b>
+      <input type="range" name="sensitivityDeg" min="${SENSITIVITY_RANGE.min}" max="${SENSITIVITY_RANGE.max}" step="5" value="${s.sensitivityDeg}" />
+    </label>
+    <label class="field">
+      Dead zone: <b class="value" data-for="deadZone">${Math.round(s.deadZone * 100)}%</b>
+      <input type="range" name="deadZone" min="${DEAD_ZONE_RANGE.min}" max="${DEAD_ZONE_RANGE.max}" step="0.01" value="${s.deadZone}" />
+    </label>
+    <button class="btn" type="button">Done</button>
+  </section>`;
+
 /** While the SDK reconnects a dropped connection */
 export const connectionLostHtml = () => `
   <section class="screen connection-lost">
@@ -136,6 +159,7 @@ export const readyHtml = (look: Look) => `
       <span class="player-name">${escape(look.name)}</span>
       <button class="btn ready-btn" type="button">Ready</button>
       <button class="btn btn-ghost" type="button">Recalibrate</button>
+      <button class="btn btn-ghost settings-btn" type="button">Settings</button>
       <p class="ready-status"></p>
     </div>
   </section>`;

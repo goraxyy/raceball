@@ -5,6 +5,8 @@ import {
   MAX_PLAYERS,
   PROTOCOL_VERSION,
   type JoinOptions,
+  type PackedSnapMsg,
+  unpackSnap,
   type WelcomeMsg,
 } from "@raceball/shared";
 import {
@@ -265,7 +267,9 @@ describe("simulation loop", () => {
   /** Collect snapshots a screen receives */
   const collect = (client: Awaited<ReturnType<typeof join>>) => {
     const snaps: Snap[] = [];
-    client.onMessage("snap", (s: Snap) => snaps.push(s));
+    client.onMessage("snap", (s: PackedSnapMsg) =>
+      snaps.push(unpackSnap(s) as Snap),
+    );
     return snaps;
   };
 
@@ -434,7 +438,7 @@ describe("host controls", () => {
     await sleep(100);
     const [botId] = [...room.state.players.keys()];
     const snaps: { balls: { id: string; p: number[] }[] }[] = [];
-    host.onMessage("snap", (s) => snaps.push(s));
+    host.onMessage("snap", (s: PackedSnapMsg) => snaps.push(unpackSnap(s)));
     host.send("start", { laps: 1 });
     await sleep(COUNTDOWN_MS + 200);
     const a = snaps.at(-1)!.balls.find((b) => b.id === botId)!.p;
@@ -578,5 +582,20 @@ describe("reconnection", () => {
     await sleep(200);
     const p = room.state.players.get(playerId)!;
     expect([p.connected, p.name, p.ball]).toEqual([true, "Ana", "neptune"]);
+  });
+});
+
+describe("standings", () => {
+  test("place and lap reach the synced state while racing", async () => {
+    const host = await join({ role: "host" });
+    host.send("addBot");
+    host.send("addBot");
+    await new Promise((r) => setTimeout(r, 100));
+    host.send("start", { laps: 3 });
+    await new Promise((r) => setTimeout(r, COUNTDOWN_MS + 500));
+    const players = [...room.state.players.values()];
+    expect(players.map((p) => p.place).sort()).toEqual([1, 2]);
+    expect(players.every((p) => p.lap >= 1)).toBe(true);
+    expect(players.every((p) => p.wins === 0 && p.bestLap === 0)).toBe(true);
   });
 });

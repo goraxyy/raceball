@@ -12,7 +12,8 @@ import {
   type NetStatMsg,
   type PongMsg,
   type RaceStateView,
-  type SnapMsg,
+  type PackedSnapMsg,
+  unpackSnap,
   type WelcomeMsg,
 } from "@raceball/shared";
 
@@ -58,8 +59,8 @@ export class NetSession {
       "netstat",
       (msg: NetStatMsg) => (this.inputAge = msg.inputAge),
     );
-    room.onMessage("snap", (msg: SnapMsg) =>
-      this.buffer.push(msg, performance.now()),
+    room.onMessage("snap", (msg: PackedSnapMsg) =>
+      this.buffer.push(unpackSnap(msg), performance.now()),
     );
     room.onMessage("evt", (event: GameEvent) => {
       for (const listener of this.eventListeners) listener(event);

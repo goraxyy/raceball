@@ -15,7 +15,7 @@ import {
 } from "@babylonjs/core";
 import { MAX_PLAYERS, PLAYER_COLORS } from "@raceball/shared";
 import type { BallLook, BallPose } from "./balls";
-import { FirstPersonCamera } from "./cameras";
+import { DriverCamera } from "./cameras";
 
 /** Split-screen views on the big screen: one per player */
 export const MAX_TILES = MAX_PLAYERS;
@@ -101,12 +101,12 @@ export function framePack(
 }
 
 interface Tile {
-  eye: FirstPersonCamera;
+  eye: DriverCamera;
   drawn: boolean;
 }
 
 /**
- * The big screen's cameras: a split screen with a first-person view for every player (up to MAX_TILES), each drawn
+ * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player (up to MAX_TILES), each drawn
  * into the frame the page lays out on top of the canvas (`setRects`). If the fps can't take a render pass per
  * player, the split screen goes for good and the overview frames the pack, with a name tag on every ball.
  */
@@ -210,7 +210,7 @@ export class BigScreen {
     }
     for (const id of ids) {
       if (this.tiles.has(id)) continue;
-      const eye = new FirstPersonCamera(this.scene, `tile-${id}`);
+      const eye = new DriverCamera(this.scene, `tile-${id}`);
       this.tiles.set(id, { eye, drawn: false });
     }
     this.tileIds = ids;

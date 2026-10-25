@@ -19,6 +19,8 @@ const player = (over: Partial<PlayerView>): PlayerView => ({
   place: 0,
   finishedAt: 0,
   connected: true,
+  wins: 0,
+  bestLap: 0,
   ...over,
 });
 

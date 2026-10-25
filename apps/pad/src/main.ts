@@ -27,8 +27,10 @@ import {
   errorHtml,
   racingHtml,
   readyHtml,
+  settingsHtml,
   startHtml,
 } from "./screens";
+import { settings, updateSettings } from "./settings";
 import { startFromTap } from "./start";
 import { steering } from "./steering";
 import { bindZones } from "./touch";
@@ -244,7 +246,36 @@ function showReady() {
     if (p === "countdown" || p === "racing") showRacing(); // joined mid-race
   });
   recalibrateBtn.addEventListener("click", showCalibrate);
+  screen
+    .querySelector(".settings-btn")!
+    .addEventListener("click", showSettings);
   onStatus(status);
+}
+
+// ---------------------------------------------------------------- settings
+
+function showSettings() {
+  const screen = show(settingsHtml(settings));
+  const autoGas = screen.querySelector<HTMLInputElement>(
+    'input[name="autoGas"]',
+  )!;
+  autoGas.addEventListener("change", () =>
+    updateSettings({ autoGas: autoGas.checked }),
+  );
+  for (const name of ["sensitivityDeg", "deadZone"] as const) {
+    const input = screen.querySelector<HTMLInputElement>(
+      `input[name="${name}"]`,
+    )!;
+    const label = screen.querySelector(`.value[data-for="${name}"]`)!;
+    input.addEventListener("input", () => {
+      updateSettings({ [name]: Number(input.value) });
+      label.textContent =
+        name === "deadZone"
+          ? `${Math.round(settings.deadZone * 100)}%`
+          : `${settings.sensitivityDeg}°`;
+    });
+  }
+  screen.querySelector(".btn")!.addEventListener("click", showReady);
 }
 
 /** The room moved on: race when it starts, back to Ready after a rematch */
@@ -282,6 +313,7 @@ function onStatus(s: ConnectionStatus) {
 
 function showRacing() {
   const screen = show(racingHtml(lookOf(myPlayer()), laps()));
+  screen.classList.toggle("auto-gas", settings.autoGas); // Nuris's style: the gas zone shows it's always on
   const unbindZones = bindZones(screen);
   screen.querySelector(".item-btn")!.addEventListener("click", fireItem);
   const steerEl = screen.querySelector<HTMLElement>(".steer")!;

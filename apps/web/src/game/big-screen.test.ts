@@ -1,4 +1,10 @@
-import { ArcRotateCamera, NullEngine, Scene, Vector3 } from "@babylonjs/core";
+import {
+  ArcRotateCamera,
+  NullEngine,
+  Scene,
+  type TargetCamera,
+  Vector3,
+} from "@babylonjs/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BallPose } from "./balls";
 import {
@@ -134,21 +140,26 @@ describe("BigScreen", () => {
     big.dispose();
   });
 
-  it("puts each view's eye on top of its ball, looking along the heading", () => {
+  it("puts each view low behind its ball, looking along the heading, so the ball is in shot", () => {
     const big = new BigScreen(scene, overview);
     const poses = new Map([["a", { ...at(10, 20), h: Math.PI / 2 }]]); // heading +x
     big.update(poses, players(["a"]), 1 / 60, 60);
     big.setRects(
       new Map([["a", { left: 0, top: 0, width: 1280, height: 720 }]]),
     );
-    const camera = scene.activeCameras![0];
-    expect(camera.position.x).toBeGreaterThan(10); // a little ahead of the ball, along the heading
-    expect(camera.position.x).toBeLessThan(11);
+    const camera = scene.activeCameras![0] as TargetCamera;
+    expect(camera.position.x).toBeLessThan(9); // behind the ball
     expect(camera.position.z).toBeCloseTo(20);
-    expect(camera.position.y).toBeGreaterThan(1); // over the top of the 1 m ball
+    expect(camera.position.y).toBeGreaterThan(1); // above the 1 m ball
+    // the ball itself is in front of the camera and inside its view
+    const toBall = new Vector3(10, 0.5, 20)
+      .subtract(camera.position)
+      .normalize();
     const forward = camera.getForwardRay().direction;
-    expect(forward.x).toBeGreaterThan(0.9); // looks along +x
-    expect(forward.y).toBeLessThan(0); // and a little down at the road
+    expect(forward.x).toBeGreaterThan(0.9); // looking down the road, along +x
+    expect(Vector3.Dot(toBall, forward)).toBeGreaterThan(
+      Math.cos(camera.fov / 2),
+    );
     big.dispose();
   });
 

@@ -196,6 +196,8 @@ Done: `tools/models/build_animated_props.py` builds them all on the kit's palett
 #### Beaver Stadium and Mount Nittany
 Model over the greybox boxes in `assets-src/happy_valley.blend`, in the `visual` collection, and don't touch `collision` or `markers` (Ali's guide: [how to model over the greybox](ali-game.md#m3-how-to-model-over-the-greybox)). The stadium tunnel walls are collision, so the bowl must leave the tunnel clear. Budgets: 40k triangles for the stadium (instance one stand segment around the bowl), a card or texture for Mount Nittany. The map visuals are rebuilt by `tools/track/build_happy_valley.py`, so agree with Ali how your models get placed (imported by the script, or a separate `maps/` file) before you start.
 
+Done as a separate `maps/` file, so Ali's map script stays as it is: `tools/models/build_landmarks.py` builds both in map coordinates into `maps/happy_valley_landmarks.glb`, and `apps/web/src/game/landmarks.ts` loads it over the map and hides the greybox pieces it replaces. What's in it, the clearances and what Ali can drop from the greybox: [ASSETS.md > Landmarks](../ASSETS.md#landmarks-beaver-stadium-and-mount-nittany).
+
 ---
 
 ## Before you commit an asset

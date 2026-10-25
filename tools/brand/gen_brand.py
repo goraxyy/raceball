@@ -12,6 +12,8 @@ Writes:
     apps/pad/public/favicon.svg                 mark on a gas orange tile (tells the tabs apart)
 
     tools/brand/icons/touch_*.svg               sources for the home-screen PNGs
+    tools/brand/wordmark_outline.json           the wordmark's outlines as polygons, for 3D signs
+                                                (tools/models/build_landmarks.py: the stadium scoreboard)
 
 Then run `node tools/brand/render_icons.mjs` for the PNG icons.
 Needs: pip install fonttools brotli. Run: python3 tools/brand/gen_brand.py
@@ -19,6 +21,9 @@ Needs: pip install fonttools brotli. Run: python3 tools/brand/gen_brand.py
 
 from pathlib import Path
 
+import json
+
+from fontTools.pens.recordingPen import RecordingPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
@@ -90,6 +95,49 @@ def word_paths(text, size, x, baseline, track=-0.01):
     return " ".join(ds), pen_x
 
 
+def word_contours(text, track=-0.01, steps=6):
+    """Closed polygons of `text` in em units (cap height 0.7), curves flattened, for extruding in 3D.
+    Each contour is [glyph index, points], so a sign can color the letters separately."""
+    font = TTFont(FONT)
+    glyphs = font.getGlyphSet()
+    cmap = font.getBestCmap()
+    hmtx = font["hmtx"]
+    upm = font["head"].unitsPerEm
+    contours, x = [], 0.0
+    for g, ch in enumerate(text):
+        name = cmap[ord(ch)]
+        pen = RecordingPen()
+        glyphs[name].draw(pen)
+        pts = []
+        for op, args in pen.value:
+            if op == "moveTo":
+                pts = [args[0]]
+            elif op == "lineTo":
+                pts.append(args[0])
+            elif op == "qCurveTo":  # TrueType: a run of off-curve points, implied on-curve midpoints
+                *offs, end = args
+                start = pts[-1]
+                ons = [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) for a, b in zip(offs, offs[1:])] + [end]
+                for off, on in zip(offs, ons):
+                    for i in range(1, steps + 1):
+                        t = i / steps
+                        pts.append(tuple((1 - t) ** 2 * start[k] + 2 * (1 - t) * t * off[k] + t * t * on[k] for k in (0, 1)))
+                    start = on
+            elif op == "curveTo":  # CFF cubic
+                c1, c2, end = args
+                start = pts[-1]
+                for i in range(1, steps + 1):
+                    t = i / steps
+                    pts.append(tuple((1 - t) ** 3 * start[k] + 3 * (1 - t) ** 2 * t * c1[k] + 3 * (1 - t) * t * t * c2[k]
+                                     + t ** 3 * end[k] for k in (0, 1)))
+            elif op in ("closePath", "endPath"):
+                if len(pts) > 2:
+                    contours.append([g, [[round((px + x) / upm, 4), round(py / upm, 4)] for px, py in pts]])
+                pts = []
+        x += hmtx[name][0] + track * upm
+    return {"text": text, "width": round(x / upm, 4), "cap": 0.7, "contours": contours}
+
+
 def sticker_text(d, fill, stroke=None):
     """The UI's sticker look: a paper offset, an ink offset, then the letters."""
     out = f'<path d="{d}" fill="{INK}" transform="translate(6 6)"/>'
@@ -152,6 +200,7 @@ def main():
     # sources for render_icons.mjs, not served
     write("tools/brand/icons/touch_web.svg", touch(PAPER))
     write("tools/brand/icons/touch_pad.svg", touch(GAS))
+    write("tools/brand/wordmark_outline.json", json.dumps(word_contours("RACEBALL")) + "\n")
 
 
 if __name__ == "__main__":

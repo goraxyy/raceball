@@ -207,7 +207,7 @@ Nothing right now. Add new questions here.
 - [x] Event-to-effect table (`apps/web/src/game/fx.ts`): the particles and sound for every game event, from your VFX files and sound bank. Ali adds the camera shake in his camera polish ([your guide](docs/team/nuris-art-ui.md#event-to-effect-table-fxts)) (wired into `game.ts`; try each effect from the local-mode panel > Effects; [ASSETS.md](docs/ASSETS.md#event-to-effect-table-fxts))
 - [x] Planet balls 5–8: Mercury, Venus, Uranus, Neptune ([your guide](docs/team/nuris-art-ui.md#planet-balls-58)) (in `PLANET_MODELS`; review at `/ui` > models)
 - [x] Animated props: item boxes, flags, arch, crowd cards ([your guide](docs/team/nuris-art-ui.md#animated-props)) (`models/kit_animated.glb`, animation names in [ASSETS.md](docs/ASSETS.md#animated-props-modelskit_animatedglb); review at `/ui` > models > Props)
-- [ ] Landmarks: Beaver Stadium bowl + scoreboard prop, Mount Nittany backdrop (budgets in [Ali's guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Ali checks that anything a ball touches still matches the collision
+- [x] Landmarks: Beaver Stadium bowl + scoreboard prop, Mount Nittany backdrop (budgets in [Ali's guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Ali checks that anything a ball touches still matches the collision (a separate layer, `maps/happy_valley_landmarks.glb`, loaded over the map; nothing in it reaches a road or rail; [ASSETS.md](docs/ASSETS.md#landmarks-beaver-stadium-and-mount-nittany))
 
 ---
 

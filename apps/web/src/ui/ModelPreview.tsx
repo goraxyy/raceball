@@ -23,6 +23,7 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import { PLANETS, PLAYER_COLORS } from "@raceball/shared";
+import { REPLACED } from "../game/landmarks";
 
 interface Shelf {
   label: string;
@@ -40,6 +41,12 @@ interface Shelf {
   place?: Record<string, [number, number, number?]>;
   /** Where the camera looks, m */
   target?: [number, number, number];
+  /** Meshes to hide, by name prefix (greybox pieces a layer replaces) */
+  hide?: string[];
+  /** Which way the camera starts looking (ArcRotateCamera alpha); default from the south-west */
+  alpha?: number;
+  /** A whole map: no shadow casting, as in the game (only balls cast), or a 400 m shadow map draws it all dark */
+  map?: boolean;
 }
 
 const SHELVES: Shelf[] = [
@@ -68,6 +75,18 @@ const SHELVES: Shelf[] = [
       prop_crowd_card_b: [-4.2, -1.8, Math.PI],
       prop_crowd_card_c: [-3.2, -1.5, Math.PI],
     },
+  },
+  {
+    // the landmarks layer over Ali's map, as the game shows it (game/landmarks.ts)
+    label: "Landmarks",
+    files: ["maps/happy_valley.glb", "maps/happy_valley_landmarks.glb"],
+    gap: 0,
+    radius: 150,
+    close: 60,
+    target: [195, 8, 50],
+    hide: REPLACED,
+    alpha: Math.PI / 2 + 0.5, // from the south, as the race comes in: the scoreboard faces you
+    map: true,
   },
 ];
 
@@ -113,7 +132,7 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
 
   const camera = new ArcRotateCamera(
     "cam",
-    -Math.PI / 2,
+    shelf.alpha ?? -Math.PI / 2,
     1.15,
     shelf.radius,
     shelf.target ? Vector3.FromArray(shelf.target) : new Vector3(0, 0.6, 0),
@@ -149,8 +168,8 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
           roots.push(prop); // click a prop to look closer
         }
         for (const mesh of container.meshes) {
-          shadows.addShadowCaster(mesh);
-          mesh.receiveShadows = true;
+          if (!shelf.map) shadows.addShadowCaster(mesh);
+          mesh.receiveShadows = !shelf.map;
           if (!shelf.rings || mesh.name !== "ring") continue;
           const tinted = (mesh.material as PBRMaterial).clone(`ring-${i}`);
           tinted.albedoColor = Color3.FromHexString(
@@ -163,6 +182,9 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
           spinners.push(root);
         }
         for (const group of container.animationGroups) group.play(true);
+        for (const mesh of container.meshes)
+          if (shelf.hide?.some((prefix) => mesh.name.startsWith(prefix)))
+            mesh.setEnabled(false);
       },
       (error: unknown) => console.warn(`${file} failed to load`, error),
     );

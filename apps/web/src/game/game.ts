@@ -22,6 +22,7 @@ import { BallViews, type BallFeed } from "./balls";
 import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera } from "./cameras";
 import { GameFx, type FxEvent } from "./fx";
+import { loadLandmarks } from "./landmarks";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
 
@@ -130,6 +131,7 @@ export function createGame(
   let feed: BallFeed | undefined;
   let disposed = false;
   let container: AssetContainer | undefined;
+  let landmarks: AssetContainer | undefined;
   let publishAfter = 0;
   const abort = new AbortController();
   void loadSky().catch((error: unknown) => {
@@ -231,6 +233,12 @@ export function createGame(
   /** Adds the map to the scene, freezes it (it never moves) and frames the overview camera on it */
   function showMap(assets: AssetContainer): void {
     assets.addAllToScene();
+    // Nuris's stadium and Mount Nittany go over the greybox once they're in; the race doesn't wait for them
+    void loadLandmarks(scene, assets, () => disposed)
+      .then((layer) => (landmarks = layer))
+      .catch((error: unknown) => {
+        if (!disposed) console.warn("Landmarks failed to load", error);
+      });
     const meshes = assets.meshes.filter((mesh) => mesh.getTotalVertices() > 0);
     for (const mesh of meshes) {
       mesh.receiveShadows = true;
@@ -370,6 +378,8 @@ export function createGame(
       local = net = feed = undefined;
       container?.dispose();
       container = undefined;
+      landmarks?.dispose();
+      landmarks = undefined;
       big?.dispose();
       fx.dispose();
       balls.dispose();

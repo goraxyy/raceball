@@ -138,6 +138,8 @@ Built in `apps/web/src/ui/Results.tsx`: a drawn toy podium on the left (gold, si
 ### Music
 A lobby loop and a race loop. Use CC0 or royalty-free music only, and list every track in the credits.
 
+Done as original tracks: `tools/audio/gen_music.py` composes and renders `mus_lobby_loop.wav` (100 BPM, swung, F major) and `mus_race_loop.wav` (148 BPM, G major) into `apps/web/public/assets/mus/`. Change a part or the mix in the script and rerun it (about 10 s). `/ui` > music plays them looped, with the final-lap speed-up and the laptop mix. How the game should play them is in [ASSETS.md](../ASSETS.md#audio).
+
 ---
 
 ## M3: VFX, sound and branding

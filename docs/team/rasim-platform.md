@@ -9,7 +9,7 @@ You own **everything between the players' hands and the game state**: the monore
 | Protocol, the contract (everyone reviews changes) | `packages/shared` |
 | Connection, snapshot buffer, interpolation, React hooks | `apps/web/src/net` |
 | Phone controller logic (Nuris owns `style.css` and the visual markup) | `apps/pad` |
-| Hosting: Railway server, Vercel apps | `railway.json`, `apps/server/Dockerfile`, the Railway and Vercel dashboards |
+| Vercel settings for web + pad (Ali imports the projects; Railway is Ali's) | `apps/web/vercel.json`, the settings you give Ali |
 
 ## How your work connects to the others
 
@@ -98,71 +98,9 @@ export default config({
 
 Keep `experimentalDecorators: true` and `useDefineForClassFields: false` in the **server** tsconfig. Colyseus schema decorators break without them. Schema classes live only in `apps/server`. Clients read state without importing them.
 
-### 3. Deploying the server to Railway
+### 3. Railway hosting (Ali)
 
-**Who does what:** only the repo owner can give Railway and Vercel access to the GitHub repo. So **Ali** does the first clicks (creating the projects and inviting you), and **you** configure everything after that.
-
-**Files to add at the repo root** (so the Docker build can see the workspace packages).
-
-`apps/server/Dockerfile`:
-
-```dockerfile
-FROM node:24-slim
-WORKDIR /app
-RUN corepack enable
-COPY . .
-RUN pnpm install --frozen-lockfile && pnpm --filter @raceball/server build
-ENV NODE_ENV=production TRACK_PATH=/app/packages/game-core/tracks/happy_valley_col.glb
-# Railway sets PORT itself. The server must listen on process.env.PORT (default 2567 locally)
-CMD ["node", "apps/server/dist/index.js"]
-```
-
-`.dockerignore`:
-
-```
-**/node_modules
-**/dist
-.git
-apps/web/public/assets
-```
-
-`railway.json` (config as code, so the settings live in git; check field names against Railway's "Config as Code" reference):
-
-```json
-{
-  "$schema": "https://railway.com/railway.schema.json",
-  "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "apps/server/Dockerfile",
-    "watchPatterns": ["apps/server/**", "packages/**", "pnpm-lock.yaml"]
-  },
-  "deploy": {
-    "healthcheckPath": "/health",
-    "restartPolicyType": "ON_FAILURE",
-    "multiRegionConfig": { "us-east4-eqdc4a": { "numReplicas": 1 } }
-  }
-}
-```
-
-**Steps:**
-1. **Ali:**
-   1. Sign in at railway.com with GitHub.
-   2. New Project > Deploy from GitHub repo. Authorize Railway for `goraxyy/raceball`, then select it.
-   3. Project Settings > Members: invite Rasim.
-2. **Rasim, in the service settings:**
-   - **Root Directory:** leave it **empty**, so Railway builds from the repo root and sees the whole workspace.
-   - **Builder:** taken from `railway.json`. Without it, set the variable `RAILWAY_DOCKERFILE_PATH=apps/server/Dockerfile`, spelled exactly like that.
-   - **Region:** US East (Virginia).
-   - **Replicas:** exactly **1**. Rooms live in memory, so a second replica would split players into different rooms.
-   - **Serverless / app sleeping:** **off**, so the server never sleeps.
-   - **Networking:** Generate Domain. Edit the prefix to `raceball-server` if it's free, giving `raceball-server.up.railway.app`.
-3. **Push to `main`.** Railway builds and deploys on its own. After that, every push that touches the watch paths redeploys the server. Doc and asset changes don't.
-4. **Check:** `curl https://raceball-server.up.railway.app/health` should return `ok`. Logs are under the service's Deployments tab.
-5. **Optional CLI** (`npm i -g @railway/cli`): `railway login`, `railway link` (pick the project), `railway logs`, and `railway up` (a manual deploy from your machine).
-
-**Cost:** the trial's one-time $5 credit covers the event. After that, Hobby is $5/month with $5 of usage included, which one small Node service fits in. After the event, delete the project (Project Settings > Danger), or keep it if we want to keep playing.
-
-**Fallback (Fly.io):** if Railway ever causes trouble, the same Dockerfile runs on Fly.io in `iad` (Ashburn). That needs `flyctl`, a `fly.toml` with `internal_port = 2567`, `auto_stop_machines = "off"`, `min_machines_running = 1`, and exactly one machine (`fly scale count 1`).
+**Ali owns Railway end to end:** the project, the service settings, deploys and logs, plus `apps/server/Dockerfile`, `.dockerignore` and `railway.json` ([his guide](ali-game.md#6-deploying-the-server-to-railway)). Your part is the server code it relies on: listen on `process.env.PORT` and answer `/health` (section 2). Tell Ali when the server needs a new environment variable or a new workspace package.
 
 ### 4. Deploying web and pad to Vercel
 
@@ -186,7 +124,7 @@ apps/web/public/assets
 - Load Eruda only when `?debug=1` is set, so there's an in-page console.
 - Open it on an iPhone and an Android phone through the Vercel preview, or a tunnel.
 
-**Done when:** `pnpm dev` runs all three apps, the Railway health check returns `ok`, and both phones show live gravity values.
+**Done when:** `pnpm dev` runs all three apps and both phones show live gravity values.
 
 ---
 
@@ -468,7 +406,7 @@ See [CONTROLLER.md](../CONTROLLER.md#steering-math-use-gravity-in-the-device-fra
 
 ## Pitfalls
 
-- **Rooms in memory:** two replicas means two separate sets of rooms, and players can't find each other. Keep Railway at exactly 1 replica.
+- **Rooms in memory:** two replicas means two separate sets of rooms, and players can't find each other. Ali keeps Railway at exactly 1 replica.
 - **Not listening on `PORT`:** Railway sets `PORT` itself. If the server ignores it, the deploy goes green but the domain never answers.
 - **Mixed content:** an HTTPS page can't connect to `ws://`. Always use `wss://`.
 - **Missing schema settings:** without `useDefineForClassFields: false` in the server tsconfig, schema fields silently never sync.

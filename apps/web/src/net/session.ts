@@ -1,5 +1,6 @@
 import { Client, type Room } from "@colyseus/sdk";
 import {
+  Clock,
   PAD_PORT,
   PROTOCOL_VERSION,
   SERVER_PORT,
@@ -10,7 +11,7 @@ import {
   type SnapMsg,
   type WelcomeMsg,
 } from "@raceball/shared";
-import { Clock } from "./clock";
+
 import { SnapshotBuffer, type BallPose } from "./snapshot-buffer";
 
 const PING_MS = 1000;

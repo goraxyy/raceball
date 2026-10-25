@@ -5,6 +5,7 @@ import {
   MAX_PLAYERS,
   PROTOCOL_VERSION,
   type JoinOptions,
+  type PongMsg,
   type Role,
   type WelcomeMsg,
 } from "@raceball/shared";
@@ -43,6 +44,9 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       if (seat.role === "viewer")
         msg.pairToken = this.tokenOf.get(seat.playerId);
       client.send("welcome", msg);
+    });
+    this.onMessage("ping", (client, c: number) => {
+      client.send("pong", { c, s: Date.now() } satisfies PongMsg);
     });
   }
 

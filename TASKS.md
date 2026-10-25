@@ -65,7 +65,7 @@ Nothing right now. Add new questions here.
 |---|---|---|---|
 | Ali | | | |
 | Rasim | iPhone 18 Pro | iOS, Safari | Windows 11 laptop |
-| Nuris | | | |
+| Nuris | iPhone 14 | iOS, Safari | Asus Zenbook 14 (Windows 11) |
 
 ---
 

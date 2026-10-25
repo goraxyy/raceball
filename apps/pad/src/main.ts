@@ -20,6 +20,7 @@ import {
 } from "./screens";
 import { startFromTap } from "./start";
 import { steering } from "./steering";
+import { bindZones } from "./touch";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const FLIP_KEY = "raceball:flipped";
@@ -160,7 +161,17 @@ function onStatus(s: ConnectionStatus) {
 // ---------------------------------------------------------------- racing
 
 function showRacing() {
-  show(racingHtml(lookOf(myPlayer()), laps()));
+  const screen = show(racingHtml(lookOf(myPlayer()), laps()));
+  const unbindZones = bindZones(screen);
+  const steerEl = screen.querySelector<HTMLElement>(".steer")!;
+  everyFrame(() =>
+    steerEl.style.setProperty("--steer", steering.read().toFixed(3)),
+  );
+  const stopFrames = stopScreen;
+  stopScreen = () => {
+    stopFrames();
+    unbindZones();
+  };
 }
 
 // ---------------------------------------------------------------- boot

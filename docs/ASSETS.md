@@ -329,6 +329,44 @@ Nine more effects in the same folder and from the same atlas. The atlas is now *
   - **Lobby → race:** crossfade over about 1 s when the countdown starts, so the music never stops dead.
   - **Mix:** the big screen plays music at full level. Laptops play it **8 dB quieter** (gain ≈ 0.4), so their own ball's sounds stay on top.
 
+### Sound pass: the bank, the mix and captions
+
+Every sound the game plays is in one manifest, `apps/web/src/audio/sounds.ts` (`SOUNDS`), and plays through one mixer, `apps/web/src/audio/mixer.ts`. Don't load sound files by hand. Listen to all of it at `/ui` > sound: every cue, the game-event combos, and the big-screen / laptop switch.
+
+```ts
+const mix = new Mixer("big"); // or "laptop"
+await mix.load(); // after the first tap: browsers block audio until then
+mix.music("musicLobby"); // crossfades over 1 s; mix.music("musicRace") when the countdown starts
+mix.event("bumpHard", { strength }); // a game event: plays everything in EVENT_SOUNDS
+mix.loop("roll", true, { strength: speed01, rate: 0.6 + speed01 }); // call every frame while rolling
+mix.finalLap(); // race music up about a semitone
+```
+
+- **Events → sounds** (`EVENT_SOUNDS`): `bump`; `bumpHard` (bump + heavy layer + crowd oooh); `overtake` (crowd cheer); `lap`; `finalLap`; `finish` (fanfare + cheer); `respawn` (fall, then the respawn); `boost`; `roar` (the roar + its whoomp); `spill`; `snowday`. Sounds with several files pick one at random, and some vary the rate a little (`spread`), so repeats never sound copied.
+- **Two mixes.** Each sound has a level per screen (`gain.big`, `gain.laptop`), and goes through a bus: music 0.55, race cues 1, effects 0.85, crowd 0.7, UI 0.6.
+  - **Big screen:** everything, with music at full level and the crowd.
+  - **Laptop:** music 8 dB down, **no crowd**, and the player's own ball a little louder, so their sounds stay on top of the room.
+- **Ducking:** lap, final lap, finish, the results sting and the Lion Roar dip the music for about half a second, so they read over the race.
+- **Loudness:** one-shots are matched per group, so a category sits together: race cues −14 LUFS, items −15, the ball −16, UI −20. Peaky sounds go through a soft limiter first, so short hits aren't buried.
+- **Captions:** every cue that carries information shows a sticker on the big screen. `<Captions mixer={mix} />` shows them by itself whenever the mixer plays a captioned cue; they stay up 1.8 s, three at most. Keep captions to 16 characters (a test checks).
+
+  | Cue | Caption | Sticker |
+  |---|---|---|
+  | Countdown go | Go! | Go green |
+  | Lap | New lap | Brake blue |
+  | Final lap | Final lap! | Stop red |
+  | Finish | Finish! | Flag yellow |
+  | Boost | Boost! | Gas orange |
+  | Lion Roar | Lion Roar! | Flag yellow |
+  | Creamery Spill | Creamery Spill! | White |
+  | Snow Day | Snow Day! | Brake blue |
+
+- **Files:** `tools/audio/build_sfx.py` turns the Kenney shortlist below into 33 MP3s plus the `sfx_boost_loop.wav` thruster loop (trimmed, faded, mono, loudness-matched; it reads the packs from `assets-src/packs/`). `tools/audio/gen_sfx.py` now also synthesizes the three sounds the packs don't have:
+  - **`sfx_crowd_cheer`:** 48 voices whooping up on "yeah / hey / wahh", with claps and a stadium tail.
+  - **`sfx_crowd_oooh`:** 40 voices on "oooh", swelling up and falling away.
+  - **`sfx_lion_roar`:** a growl that opens up and closes, with a sub-octave for size and a snarl.
+- **Tests:** `apps/web/src/audio/sounds.test.ts` checks that every file in the bank exists, that loops are WAVs, that levels are in range with no crowd on laptops, and that every game event maps to real sounds.
+
 ## Where assets come from (check every license)
 
 - **Kenney Marble Kit:** CC0, 150+ track pieces + marbles, includes glTF. A near-perfect base for a ball racer.
@@ -414,7 +452,7 @@ All 80 are white on transparent at 512², so we tint them with the art bible pal
 | Hover / select | `interface-sounds/select_007` | 40 ms |
 | Back | `interface-sounds/back_002` | |
 
-**Gaps, which need another source:** **crowd cheer** and **crowd "oooh"** for Beaver Stadium, the **lobby and race music loops** (the packs only have jingles), and the **Lion Roar** itself. Look for CC0 first (freesound.org with the CC0 filter, OpenGameArt), and log every license in [Credits](#credits).
+**Gaps, now filled with originals:** the **crowd cheer**, the **crowd "oooh"** and the **Lion Roar** are synthesized by `tools/audio/gen_sfx.py`, and the music loops are composed by `tools/audio/gen_music.py` (see [Audio](#audio)).
 
 ## Git and big files
 
@@ -429,7 +467,8 @@ All 80 are white on transparent at 512², so we tint them with the art bible pal
 | Mood board photos `docs/moodboard/01–09` | Dough4872, George Chriss, JohnDziak, Nathaniel C. Sheetz, adeans, Acroterion, photochem_PA (via Wikimedia Commons) | CC BY-SA 4.0 / 3.0, CC BY 2.5 / 2.0 (per image) | [docs/moodboard/README.md](moodboard/README.md#credits) | Team reference only, not shipped |
 | Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`packages/shared/theme/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad, web and big-screen UI, art bible sheets |
 | `mus_lobby_loop`, `mus_race_loop` | RaceBall team (composed by `tools/audio/gen_music.py`) | Original, MIT with the code | This repo | Lobby and race music |
-| `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |
+| `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click`, `sfx_crowd_cheer`, `sfx_crowd_oooh`, `sfx_lion_roar` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI, the crowd, the Lion Roar |
+| `sfx_lap`, `sfx_final_lap`, `sfx_finish`, `mus_results_sting` and the other `sfx_*` made by `tools/audio/build_sfx.py` (items, ball, UI; see the shortlist) | Kenney (Music Jingles, Digital Audio, Sci-Fi Sounds, Impact Sounds, Interface Sounds), processed by the RaceBall team | CC0 | https://kenney.nl/assets/category:Audio | Race cues, items, ball, lobby UI |
 | RaceBall logo, ball mark, favicons, `apple-touch-icon.png` | RaceBall team (drawn by `tools/brand/gen_brand.py`; the wordmark is Barlow Condensed, see the font row) | Original, MIT with the code | This repo | Logo, title screen, browser tabs, home-screen icons |
 | `fx_atlas.png`, `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof`, `fx_respawn_stars`, and the v2 `fx_boost_*`, `fx_roar_*`, `fx_spill_*`, `fx_snowfall`, `fx_snow_puff`, `fx_confetti` | RaceBall team (drawn by `tools/fx/gen_fx_textures.py`, built by `tools/fx/build_fx.mjs`) | Original, MIT with the code | This repo | All particle effects (VFX v1 + v2) |
 | Marble Kit 2.0: `tree-large` | Kenney | CC0 | https://kenney.nl/assets/marble-kit | Trees in `maps/happy_valley.glb` |

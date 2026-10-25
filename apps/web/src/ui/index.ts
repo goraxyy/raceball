@@ -3,6 +3,8 @@ import "./ui.css";
 
 export { BragCard } from "./BragCard";
 export type { BragCardProps } from "./BragCard";
+export { Captions } from "./Captions";
+export type { CaptionsProps } from "./Captions";
 export { Countdown } from "./Countdown";
 export type { CountdownProps } from "./Countdown";
 export { FollowTile } from "./FollowTile";

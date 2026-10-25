@@ -2418,3 +2418,227 @@
     animation: none;
   }
 }
+
+/* ---- captions for key audio cues (big screen): stickers that slap on and peel away */
+
+.captions {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  z-index: 8;
+  translate: -50% 0;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.18em 0.55em 0.12em 0.4em;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: var(--tone);
+  box-shadow: var(--drop) var(--drop) 0 var(--ink);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: clamp(30px, 5.2vmin, 58px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  rotate: var(--tilt);
+  animation: caption-life var(--hold) linear both;
+}
+
+.caption.is-dark {
+  color: #fff;
+  -webkit-text-stroke: 1.5px var(--ink);
+  paint-order: stroke fill;
+}
+
+.caption-wave {
+  width: 0.62em;
+  height: 0.62em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+/* slap on with an overshoot, sit still, then peel up and away */
+@keyframes caption-life {
+  0% {
+    opacity: 0;
+    scale: 1.6;
+  }
+  7% {
+    opacity: 1;
+    scale: 0.94;
+  }
+  11% {
+    scale: 1;
+  }
+  82% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caption {
+    animation-name: caption-fade;
+  }
+}
+
+@keyframes caption-fade {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---- the sound board (/ui > sound), a rack of pads in the livery */
+
+.sound-preview {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: clamp(18px, 3vmin, 30px);
+  padding-block: clamp(24px, 5vmin, 56px);
+  padding-right: 120px; /* clear of the gallery nav */
+  overflow-y: auto;
+}
+
+.sound-preview > .btn {
+  margin-top: 8px;
+}
+
+.sound-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(100%, 1180px);
+}
+
+.sound-screens {
+  display: flex;
+  gap: 12px;
+}
+
+.sound-screens .toggle {
+  flex-direction: column;
+  align-items: start;
+  gap: 2px;
+}
+
+.sound-rack {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 22px;
+  width: min(100%, 1180px);
+}
+
+.sound-group {
+  position: relative;
+  padding: 34px 16px 16px;
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--drop) var(--drop) 0 var(--ink);
+}
+
+/* the group name as a tab of tape across the top edge */
+.sound-group h2 {
+  position: absolute;
+  top: -16px;
+  left: 14px;
+  margin: 0;
+  padding: 0.1em 0.5em 0.05em;
+  border: var(--line) solid var(--ink);
+  border-radius: 4px;
+  background: var(--tone);
+  color: var(--ink);
+  font-size: 22px !important;
+  rotate: -2deg;
+}
+
+.sound-group:first-child h2,
+.sound-group.is-combos h2 {
+  color: #fff;
+}
+
+.sound-pads {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.sound-pad {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-height: 68px;
+  padding: 8px 6px;
+  border: var(--line) solid var(--ink);
+  border-radius: 7px;
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    translate 60ms ease,
+    box-shadow 60ms ease,
+    background 120ms ease;
+}
+
+.sound-pad-label {
+  font-family: var(--display);
+  font-size: 21px;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.sound-pad small {
+  font: 800 11px var(--text);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sound-pad:active,
+.sound-pad.is-on {
+  translate: 3px 3px;
+  box-shadow: 0 0 0 var(--ink);
+  background: var(--tone);
+}
+
+.sound-group:first-child .sound-pad.is-on,
+.sound-group.is-combos .sound-pad.is-on {
+  color: #fff;
+}
+.sound-group:first-child .sound-pad.is-on small,
+.sound-group.is-combos .sound-pad.is-on small {
+  color: rgb(255 255 255 / 0.75);
+}
+
+.sound-pad.is-muted {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.55;
+}

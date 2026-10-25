@@ -1,4 +1,4 @@
-"""Generate RaceBall's first sound set from scratch (no samples, so no licenses).
+"""Generate RaceBall's original sounds from scratch (no samples, so no licenses).
 
     python tools/audio/gen_sfx.py
 
@@ -112,6 +112,121 @@ def ui_click():
     return fade(tick + 0.4 * snap, 0.0003, 0.01)
 
 
+# ---------------------------------------------------------------- crowd + lion (sound pass)
+
+# vowel formants (F1, F2, F3) in Hz, with bandwidths, for the voices
+VOWELS = {
+    "ae": (660, 1720, 2410),  # "yeah"
+    "ey": (480, 2000, 2650),  # "hey"
+    "ah": (760, 1150, 2500),  # "wahh"
+    "oo": (310, 870, 2250),  # "oooh"
+    "oh": (450, 800, 2300),
+    "aw": (650, 1000, 2500),  # lion, mouth open
+}
+
+
+def formants(src, vowel, gains=(1.0, 0.55, 0.25)):
+    """A parallel formant filter: the vocal tract shaping a buzz into a vowel."""
+    out = np.zeros_like(src)
+    for f, g in zip(VOWELS[vowel], gains):
+        bw = 80 + f * 0.08
+        out += g * band(src, max(40, f - bw), f + bw)
+    return out
+
+
+def glottal(f0):
+    """A buzzy voice source from a pitch contour (Hz per sample): a soft sawtooth plus breath."""
+    ph = np.cumsum(f0) / SR
+    saw = 2 * (ph % 1) - 1
+    return band(saw, 60, 5000) + 0.08 * rng.standard_normal(len(f0))
+
+
+def room(x, seconds=0.7, tone=3500):
+    """A stadium-ish tail: convolve with a short burst of decaying, darkened noise."""
+    from scipy.signal import fftconvolve
+
+    t = t_axis(seconds)
+    ir = band(rng.standard_normal(len(t)), 120, tone) * np.exp(-t / (seconds / 4))
+    ir[0] = 3.0  # keep the dry sound on top of the tail
+    return fftconvolve(x, ir)[: len(x) + len(t)] / 4
+
+
+def voice(length, f0, vowel, contour, onset, hold):
+    """One person in the crowd: their own pitch, vowel, timing and a little vibrato."""
+    t = t_axis(length)
+    k = np.clip((t - onset) / hold, 0, 1)
+    pitch = f0 * contour(k) * (1 + 0.012 * np.sin(2 * np.pi * rng.uniform(4.5, 6.5) * t))
+    env = np.clip((t - onset) / 0.06, 0, 1) * np.exp(-np.clip(t - onset - hold * 0.55, 0, None) / (hold * 0.45))
+    voiced = formants(glottal(pitch), vowel, (1.0, 0.75, 0.5))
+    # the breathy h of hey / yeah: a short puff of bright noise as the voice comes in
+    h = band(rng.standard_normal(len(t)), 1800, 6500) * np.exp(-np.clip(t - onset, 0, None) / 0.08) * (t >= onset)
+    return (voiced + 0.6 * h) * env
+
+
+def crowd_cheer():
+    """Beaver Stadium on an overtake: 48 voices whooping up, with claps and a stadium tail."""
+    length = 2.6
+    out = np.zeros(int(length * SR))
+    for _ in range(48):
+        f0 = rng.choice([rng.uniform(105, 160), rng.uniform(190, 290)])  # lower and higher voices
+        rise = rng.uniform(1.12, 1.35)
+        out += voice(
+            length,
+            f0,
+            rng.choice(["ae", "ey", "ah"]),
+            lambda k, r=rise: 0.85 + (r - 0.85) * np.minimum(1, k * 3) - 0.08 * k,  # a "whoo" that peaks early
+            onset=rng.uniform(0.0, 0.35),
+            hold=rng.uniform(1.0, 1.8),
+        ) * rng.uniform(0.5, 1.0)
+    t = t_axis(length)
+    for _ in range(90):  # scattered claps, thinning out
+        at = rng.uniform(0.15, 2.2) ** 1.2
+        i = int(at * SR)
+        c = band(rng.standard_normal(int(0.03 * SR)), 1500, 6500) * np.exp(-t_axis(0.03) / 0.006)
+        out[i : i + len(c)] += c[: len(out) - i] * rng.uniform(0.6, 1.4) * np.exp(-at)
+    wash = band(rng.standard_normal(len(t)), 400, 5000) * np.clip(t / 0.2, 0, 1) * np.exp(-t / 1.4)
+    out += 0.25 * wash
+    out += 0.12 * band(rng.standard_normal(len(t)), 3500, 9000) * np.clip(t / 0.15, 0, 1) * np.exp(-t / 1.0)  # breath and hiss of a big room
+    return fade(room(out), 0.002, 0.3)
+
+
+def crowd_oooh():
+    """A near miss: 40 voices on "oooh", swelling up and falling away."""
+    length = 1.9
+    out = np.zeros(int(length * SR))
+    for _ in range(40):
+        f0 = rng.choice([rng.uniform(110, 150), rng.uniform(200, 260)])
+        out += voice(
+            length,
+            f0,
+            rng.choice(["oo", "oo", "oh"]),
+            lambda k: 1.0 + 0.22 * np.sin(np.pi * np.minimum(1, k * 1.6)) - 0.18 * k,  # up, then down
+            onset=rng.uniform(0.0, 0.18),
+            hold=rng.uniform(1.1, 1.5),
+        ) * rng.uniform(0.5, 1.0)
+    return fade(band(room(out), 190, 8000), 0.002, 0.3)
+
+
+def lion_roar():
+    """A cartoon lion roar for the Lion Roar item: a growl that opens up and closes, with breath."""
+    length = 1.35
+    t = t_axis(length)
+    k = t / length
+    f0 = 92 + 70 * np.sin(np.pi * np.minimum(1, k * 1.25)) ** 1.5 - 20 * k  # rises, then sags
+    growl = 1 + 0.65 * np.sin(2 * np.pi * 28 * t + 1.5 * np.sin(2 * np.pi * 3 * t))  # throat rattle
+    src = glottal(f0) * growl + 0.6 * glottal(f0 / 2)  # a sub-octave for size
+    breath = band(rng.standard_normal(len(t)), 400, 3200) * 0.35
+    shut = formants(src + breath, "ah", (1, 0.4, 0.15))
+    open_ = formants(src + breath, "aw", (1, 0.85, 0.5))
+    mouth = np.sin(np.pi * np.minimum(1, k * 1.15)) ** 0.8  # opens through the middle of the roar
+    x = shut * (1 - mouth) + open_ * mouth
+    chest = band(src, 55, 320) * 0.9  # the body of the growl, which the vowel filter took out
+    hiss = band(rng.standard_normal(len(t)), 1500, 5000) * 0.35 * mouth  # the snarl
+    x = x + chest + hiss
+    env = np.clip(t / 0.09, 0, 1) * (0.55 + 0.45 * mouth) * np.exp(-np.clip(t - 0.95, 0, None) / 0.18)
+    x = np.tanh(2.2 * x * env / (np.max(np.abs(x * env)) + 1e-9))  # snarl
+    return fade(room(x, 0.45, 2500), 0.004, 0.15)
+
 # ---------------------------------------------------------------- output
 
 
@@ -161,3 +276,7 @@ if __name__ == "__main__":
     one_shot("sfx_countdown_beep", countdown_beep())
     one_shot("sfx_countdown_go", countdown_go())
     one_shot("sfx_ui_click", ui_click())
+    # sound pass: the gaps the Kenney packs left (generated last, so the sounds above stay identical)
+    one_shot("sfx_crowd_cheer", crowd_cheer())
+    one_shot("sfx_crowd_oooh", crowd_oooh())
+    one_shot("sfx_lion_roar", lion_roar())

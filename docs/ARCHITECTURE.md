@@ -4,7 +4,7 @@
 
 | Role | Runs on | Does |
 |---|---|---|
-| **host** | The big-screen laptop (or a monitor/projector), `/host` | Creates the room and shows the code + the phone-only QR code. Renders the overview camera, live track map, standings, **follow-cam tiles for phone-only players**, and results |
+| **host** | The big-screen laptop (or a monitor/projector), `/host` | Creates the room and shows the code + the phone-only QR code. During the race, **splits the screen into a first-person view per player** (up to 8), and shows results |
 | **viewer** | A player's laptop, `/play` (optional) | Joins with name and ball, shows the pairing QR code, renders that player's chase camera and HUD |
 | **pad** | Each player's phone (`apps/pad`) | Reads sensors and touch, sends input, plays sounds and visual feedback. A phone-only player's pad also shows position, lap and item |
 | **server** | Railway, US East (Virginia) | Runs the **only** physics simulation, and sends snapshots and events |
@@ -38,7 +38,7 @@ sequenceDiagram
   end
 ```
 
-A phone-only player picks their name and ball on the pad itself. The big screen shows **up to 4 follow-cam tiles** (picture-in-picture chase cameras). If the big screen drops below 50 fps, it falls back to name tags on the overview camera. This is a performance safety valve, since every extra camera draws the scene again.
+A phone-only player picks their name and ball on the pad itself. During the race the big screen is a **split screen**: one first-person view per player, up to 8 (1 fills the screen, 2 side by side, 3–4 in 2×2, 5–8 in two rows). If the big screen drops below 50 fps for 3 s, it falls back to the overview camera with a name tag on every ball. This is a performance safety valve, since every view draws the scene again.
 
 ## The server is authoritative
 
@@ -128,7 +128,7 @@ A rolling ball has momentum, which hides latency far better than a twitchy kart 
 ## Protocol v1 (draft, lives in `packages/shared/src/protocol.ts`)
 
 ```ts
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -153,7 +153,11 @@ export interface InputMsg {
   item: boolean;  // true in exactly one message when a shake/tap fires the item
 }
 
-/** server → host + viewers: 60 Hz */
+/**
+ * A snapshot of every ball, server → host + viewers at 60 Hz. On the wire it's packed into integer arrays
+ * (PackedSnapMsg in packages/shared/src/snap.ts: positions and velocities in cm, quaternions × 32767,
+ * heading in mrad). packSnap() / unpackSnap() convert.
+ */
 export interface SnapMsg {
   tick: number;
   t: number;          // server time in ms
@@ -254,11 +258,11 @@ Colyseus schema (synced automatically):
 ```
 RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[] }
 PlayerState{ name, ball, color, shape, phoneOnly, bot, paired, calibrated, assetsLoaded, ready,
-             lap, checkpoint, place, finishedAt, connected }
+             lap, checkpoint, place, finishedAt, connected, wins, bestLap }
 ItemBox    { id, x, y, z, active }
 ```
 
-Later, if snapshots need to shrink, quantize them: positions in centimeters as `Int16`/`Int32`, and quaternions in smallest-three form.
+Snapshots are quantized on the wire (`packSnap` in `packages/shared/src/snap.ts`): positions and velocities in centimeters, quaternions × 32767, heading in milliradians, all as integer arrays.
 
 ## Race state machine
 

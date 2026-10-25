@@ -7,9 +7,6 @@ import {
 import type { BallPose } from "../net";
 import type { BallFeed, BallLook } from "./balls";
 
-/** Events kept for the renderer between frames; older ones are stale by the time it draws */
-const MAX_QUEUED = 64;
-
 /** The part of Rasim's NetSession the renderer reads (tests pass a fake) */
 export interface SnapshotSource {
   readonly playerId?: string;
@@ -18,8 +15,8 @@ export interface SnapshotSource {
   readonly version: number;
   sample(): { balls: Map<string, BallPose>; ownId?: string };
   subscribe(listener: () => void): () => void;
-  /** Game events as they arrive, for the effects (fx.ts) */
-  onEvent?(listener: (evt: GameEvent) => void): () => void;
+  /** Game events as the server sends them. Returns an unsubscribe function */
+  onEvent?(listener: (event: GameEvent) => void): () => void;
   /** Server time now, ms: the countdown beeps land on the same beat as the countdown numbers */
   serverNow?(): number;
 }
@@ -30,27 +27,33 @@ export interface SnapshotSource {
  * cached on every state patch so the renderer can ask once per ball per frame.
  */
 export class NetFeed implements BallFeed {
+  /** Called with every game event the server sends this screen */
+  onEvent?: (event: GameEvent) => void;
   private readonly session: SnapshotSource;
   private readonly unsubscribe: () => void;
-  private readonly unlisten?: () => void;
-  private events: GameEvent[] = [];
+  private readonly unsubscribeEvents?: () => void;
+  private racePhase: Phase = "lobby";
   private places = new Map<string, number>();
-  /** The race's phase, lap count and countdown end (server ms), as of the last state patch */
-  phase: Phase = "lobby";
+  /** The race's lap count and countdown end (server ms), as of the last state patch */
   laps = 3;
   countdownEndsAt = 0;
   private looks = new Map<string, BallLook>();
   private names = new Map<string, string>();
   private phoneOnlyIds: string[] = [];
+  private allIds: string[] = [];
 
   constructor(session: SnapshotSource) {
     this.session = session;
     this.unsubscribe = session.subscribe(() => this.refresh());
-    this.unlisten = session.onEvent?.((evt) => {
-      this.events.push(evt);
-      if (this.events.length > MAX_QUEUED) this.events.shift(); // nobody drained them (still loading)
-    });
+    this.unsubscribeEvents = session.onEvent?.((event) =>
+      this.onEvent?.(event),
+    );
     this.refresh();
+  }
+
+  /** The race phase, as of the last state patch */
+  get phase(): Phase {
+    return this.racePhase;
   }
 
   /** Your own ball on a laptop; null on the big screen */
@@ -74,30 +77,30 @@ export class NetFeed implements BallFeed {
     return this.places.get(id) ?? 0;
   }
 
-  /** Events since the last call */
-  drainEvents(): GameEvent[] {
-    return this.events.splice(0);
-  }
-
   /** Server time now, ms, if the session keeps a clock */
   serverNow(): number | undefined {
     return this.session.serverNow?.();
   }
 
-  /** Players without a laptop, in join order: the big screen gives them follow-cam tiles */
+  /** Every player in join order: the big screen splits into a view for each */
+  get all(): readonly string[] {
+    return this.allIds;
+  }
+
+  /** Players without a laptop, in join order */
   get phoneOnly(): readonly string[] {
     return this.phoneOnlyIds;
   }
 
   dispose(): void {
     this.unsubscribe();
-    this.unlisten?.();
+    this.unsubscribeEvents?.();
   }
 
   private refresh(): void {
-    // right after joining, the room's first state may not have arrived: no players yet
+    // right after joining, the room's first state may not have arrived: no phase or players yet
     const state: Partial<RaceStateView> = this.session.state;
-    this.phase = state.phase ?? "lobby";
+    this.racePhase = state.phase ?? "lobby";
     this.laps = state.laps || 3;
     this.countdownEndsAt = state.countdownEndsAt ?? 0;
     const players = Object.entries(state.players ?? {});
@@ -110,6 +113,7 @@ export class NetFeed implements BallFeed {
     );
     this.names = new Map(players.map(([id, p]) => [id, p.name]));
     this.places = new Map(players.map(([id, p]) => [id, p.place]));
+    this.allIds = players.map(([id]) => id);
     this.phoneOnlyIds = players
       .filter(([, p]) => p.phoneOnly)
       .map(([id]) => id);

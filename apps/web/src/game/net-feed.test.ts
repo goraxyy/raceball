@@ -19,6 +19,8 @@ const player = (over: Partial<PlayerView>): PlayerView => ({
   place: 0,
   finishedAt: 0,
   connected: true,
+  wins: 0,
+  bestLap: 0,
   ...over,
 });
 
@@ -36,17 +38,6 @@ class FakeRoom implements SnapshotSource {
   };
   balls = new Map<string, BallPose>();
   listeners = new Set<() => void>();
-  eventListeners = new Set<(evt: GameEvent) => void>();
-
-  onEvent(listener: (evt: GameEvent) => void) {
-    this.eventListeners.add(listener);
-    return () => this.eventListeners.delete(listener);
-  }
-
-  send(evt: GameEvent) {
-    for (const listener of this.eventListeners) listener(evt);
-  }
-
   sample() {
     return { balls: this.balls, ownId: this.playerId };
   }
@@ -54,6 +45,17 @@ class FakeRoom implements SnapshotSource {
   subscribe(listener: () => void) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  eventListeners = new Set<(event: GameEvent) => void>();
+
+  onEvent(listener: (event: GameEvent) => void) {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
+
+  send(event: GameEvent) {
+    for (const listener of this.eventListeners) listener(event);
   }
 
   patch(players: Record<string, PlayerView>, playerId = this.playerId) {
@@ -65,20 +67,6 @@ class FakeRoom implements SnapshotSource {
 }
 
 describe("NetFeed", () => {
-  it("queues game events for the effects until the renderer takes them, then stops listening", () => {
-    const room = new FakeRoom();
-    const feed = new NetFeed(room);
-    room.send({ type: "lap", player: "p1", lap: 2 });
-    room.send({ type: "respawn", player: "p2" });
-    expect(feed.drainEvents()).toEqual([
-      { type: "lap", player: "p1", lap: 2 },
-      { type: "respawn", player: "p2" },
-    ]);
-    expect(feed.drainEvents()).toEqual([]);
-    feed.dispose();
-    expect(room.eventListeners.size).toBe(0);
-  });
-
   it("keeps the phase, laps and places from the latest patch", () => {
     const room = new FakeRoom();
     const feed = new NetFeed(room);
@@ -137,11 +125,37 @@ describe("NetFeed", () => {
     expect(feed.look("p1")).toEqual({ ball: "earth", color: 0 });
   });
 
+  it("follows the race phase from the state patches", () => {
+    const room = new FakeRoom();
+    room.state = { ...room.state, phase: "countdown" };
+    const feed = new NetFeed(room);
+    expect(feed.phase).toBe("countdown");
+    room.state = { ...room.state, phase: "racing" };
+    room.patch({});
+    expect(feed.phase).toBe("racing");
+    room.state = {} as RaceStateView; // before the first state
+    room.patch({});
+    expect(feed.phase).toBe("lobby");
+  });
+
+  it("hands on the server's game events", () => {
+    const room = new FakeRoom();
+    const feed = new NetFeed(room);
+    const heard: GameEvent[] = [];
+    room.send({ type: "lap", player: "p1", lap: 2 }); // nobody listening yet
+    feed.onEvent = (event) => heard.push(event);
+    const bump: GameEvent = { type: "bump", a: "p1", b: "p2", strength: 0.5 };
+    room.send(bump);
+    expect(heard).toEqual([bump]);
+  });
+
   it("stops listening when disposed", () => {
     const room = new FakeRoom();
     const feed = new NetFeed(room);
     expect(room.listeners.size).toBe(1);
+    expect(room.eventListeners.size).toBe(1);
     feed.dispose();
     expect(room.listeners.size).toBe(0);
+    expect(room.eventListeners.size).toBe(0);
   });
 });

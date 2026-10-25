@@ -1,5 +1,6 @@
 import type { Room } from "@colyseus/sdk";
 import type { InputMsg } from "@raceball/shared";
+import { settings } from "./settings";
 import { steering } from "./steering";
 
 /** Send rate: 60 Hz */
@@ -18,7 +19,8 @@ export const controls = { gas: 0, brake: false, item: false };
 const current = (): InputMsg => ({
   seq: ++seq,
   steer: steering.read(),
-  gas: controls.gas,
+  // auto-gas (accessibility): always on, unless the left thumb is braking
+  gas: settings.autoGas && !controls.brake ? 1 : controls.gas,
   brake: controls.brake,
   item: controls.item,
 });

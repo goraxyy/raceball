@@ -13,13 +13,13 @@ import {
   Vector3,
   Viewport,
 } from "@babylonjs/core";
-import { PLAYER_COLORS } from "@raceball/shared";
+import { MAX_PLAYERS, PLAYER_COLORS } from "@raceball/shared";
 import type { BallLook, BallPose } from "./balls";
-import { ChaseCamera } from "./cameras";
+import { DriverCamera } from "./cameras";
 
-/** Follow-cam tiles on the big screen, one per phone-only player */
-export const MAX_TILES = 4;
-/** Below this fps for LOW_FPS_SECONDS, the tiles go and name tags take over */
+/** Split-screen views on the big screen: one per player */
+export const MAX_TILES = MAX_PLAYERS;
+/** Below this fps for LOW_FPS_SECONDS, the split screen goes and the overview with name tags takes over */
 export const MIN_FPS = 50;
 const LOW_FPS_SECONDS = 3;
 /** Right after the tiles change (new render passes, shader compiles) the fps doesn't count, s */
@@ -41,8 +41,10 @@ export interface TileRect {
   height: number;
 }
 
-/** Who a ball belongs to, for tiles and name tags */
+/** Who a ball belongs to, for the split screen and name tags */
 export interface BigScreenPlayers {
+  /** Every player in join order: each gets a split-screen view */
+  readonly all: readonly string[];
   /** Phone-only players in join order */
   readonly phoneOnly: readonly string[];
   name(id: string): string | undefined;
@@ -99,14 +101,14 @@ export function framePack(
 }
 
 interface Tile {
-  chase: ChaseCamera;
+  eye: DriverCamera;
   drawn: boolean;
 }
 
 /**
- * The big screen's cameras: the overview frames the pack, and up to MAX_TILES phone-only players get a chase-cam
- * tile drawn into the frame the page puts on top of the canvas (`setRects`). If the fps can't take the extra
- * passes, the tiles go for good and every ball gets a name tag instead.
+ * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player (up to MAX_TILES), each drawn
+ * into the frame the page lays out on top of the canvas (`setRects`). If the fps can't take a render pass per
+ * player, the split screen goes for good and the overview frames the pack, with a name tag on every ball.
  */
 export class BigScreen {
   /** Players with a tile now, in order. The page draws a frame for each and reports its rect */
@@ -170,14 +172,14 @@ export class BigScreen {
     }
     const want = this.nameTags
       ? []
-      : players.phoneOnly.filter((id) => poses.has(id)).slice(0, MAX_TILES);
+      : players.all.filter((id) => poses.has(id)).slice(0, MAX_TILES);
     if (want.join() !== this.tileIds.join()) {
       this.setTiles(want);
       changed = true;
     }
     for (const id of this.tileIds) {
       const pose = poses.get(id)!;
-      this.tiles.get(id)!.chase.follow(Vector3.FromArray(pose.p), pose.h, dt);
+      this.tiles.get(id)!.eye.follow(Vector3.FromArray(pose.p), pose.h, dt);
     }
     if (this.nameTags) this.syncTags(poses, players);
     return changed;
@@ -203,20 +205,19 @@ export class BigScreen {
   private setTiles(ids: string[]): void {
     for (const [id, tile] of this.tiles) {
       if (ids.includes(id)) continue;
-      tile.chase.camera.dispose();
+      tile.eye.camera.dispose();
       this.tiles.delete(id);
     }
     for (const id of ids) {
       if (this.tiles.has(id)) continue;
-      const chase = new ChaseCamera(this.scene);
-      chase.camera.name = `tile-${id}`;
-      this.tiles.set(id, { chase, drawn: false });
+      const eye = new DriverCamera(this.scene, `tile-${id}`);
+      this.tiles.set(id, { eye, drawn: false });
     }
     this.tileIds = ids;
     this.applyCameras();
   }
 
-  /** The overview fills the screen; each tile with a frame draws on top of it, inside that frame */
+  /** Each player's view draws inside its frame and the overview isn't drawn; with no views, the overview fills the screen */
   private applyCameras(): void {
     const engine: AbstractEngine = this.scene.getEngine();
     const canvas = engine.getRenderingCanvasClientRect();
@@ -227,19 +228,19 @@ export class BigScreen {
       tile.drawn = !!rect && !!canvas && canvas.width > 0 && canvas.height > 0;
       if (!tile.drawn || !rect || !canvas) continue;
       // viewports are 0-1 of the canvas, with y up from the bottom
-      tile.chase.camera.viewport = new Viewport(
+      tile.eye.camera.viewport = new Viewport(
         (rect.left - canvas.left) / canvas.width,
         1 - (rect.top - canvas.top + rect.height) / canvas.height,
         rect.width / canvas.width,
         rect.height / canvas.height,
       );
-      drawn.push(tile.chase.camera);
+      drawn.push(tile.eye.camera);
     }
     const key = drawn.map((camera) => camera.name).join();
     if (key !== this.drawnKey) this.guard.restart(); // new render passes: judge the fps afresh
     this.drawnKey = key;
-    this.scene.activeCamera = this.overview;
-    this.scene.activeCameras = drawn.length ? [this.overview, ...drawn] : [];
+    this.scene.activeCamera = drawn[0] ?? this.overview;
+    this.scene.activeCameras = drawn.length ? drawn : [];
   }
 
   /** A billboard over each ball with the player's name, sized by distance so it reads the same at any zoom */

@@ -316,7 +316,7 @@ Nine more effects in the same folder and from the same atlas. The atlas is now *
 - **Big screen vs laptop:** the big screen plays everything and tells the race story (the leader's laps, a new leader, every finish). A laptop plays its own ball at full level and other balls quieter with distance, silent past 45 m; laps, finishes and pickups are only yours.
 - **Always on:** dust behind every ball (by speed, none in the air), boost flames on any ball over normal top speed (so boost pads light up too), the rolling sound of your own ball (pitch follows speed), and the music by phase: lobby loop, silence for the countdown with beeps on 3-2-1 and the horn on Go (on server time), the race loop from Go, the results sting.
 - **Items:** the protocol's `item` event is the pickup, as on the pad. When Ali's items fire, call `fx.play({ type: "use", player, item })` (or add a `use` event to the protocol and pass it on).
-- **Camera shake (Ali):** shake in `game.ts` where the events are handed over (`for (const evt of feed.drainEvents())`), e.g. on a `bump` with your own ball or a `roar` nearby; `HARD_BUMP` and `cueFor` from `fx.ts` say which cue an event became.
+- **Camera shake (Ali):** `game.ts` hands every event to one `onEvent`, which shakes the chase camera (`eventShake` in `cameras.ts`) and calls `fx.play(event)`, so the shake and the effects always land together.
 - **Try it:** in local mode (`/play?local=1`), the panel's **Effects (fx.ts)** folder fires every cue on your ball.
 - **Tests:** `fx.test.ts` covers which cue each event becomes on each screen, the captions and the distance fade.
 

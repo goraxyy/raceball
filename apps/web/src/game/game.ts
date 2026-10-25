@@ -16,11 +16,11 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
-import type { Phase } from "@raceball/shared";
+import { COUNTDOWN_MS, type GameEvent } from "@raceball/shared";
 import type { Mixer } from "../audio/mixer";
 import { BallViews, type BallFeed } from "./balls";
 import { BigScreen, type TileRect } from "./big-screen";
-import { ChaseCamera } from "./cameras";
+import { ChaseCamera, eventShake, swoopProgress } from "./cameras";
 import { GameFx, type FxEvent } from "./fx";
 import { loadLandmarks } from "./landmarks";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
@@ -133,10 +133,16 @@ export function createGame(
   let container: AssetContainer | undefined;
   let landmarks: AssetContainer | undefined;
   let publishAfter = 0;
+  let countdown = 0; // s into the countdown, for the grid swoop
   const abort = new AbortController();
   void loadSky().catch((error: unknown) => {
     if (!disposed) console.warn("Sky HDRI failed to load", error);
   });
+  /** Every game event this screen hears, from the local race or the server. Nuris's fx.ts table goes here too */
+  const onEvent = (event: GameEvent) => {
+    chase.shake(eventShake(event, feed?.ownId));
+    fx.play(event); // particles, sound and caption, on the next frame when the poses are current
+  };
   const applyCamera = () => {
     scene.activeCamera = status.overview ? overview : chase.camera;
     if (status.overview) overview.attachControl(true);
@@ -183,6 +189,7 @@ export function createGame(
     void loadLocal().catch(fail);
   } else if (options.session) {
     feed = net = new NetFeed(options.session);
+    net.onEvent = onEvent;
     void loadMap()
       .then((assets) => {
         container = assets;
@@ -298,6 +305,7 @@ export function createGame(
       return;
     local = feed = sessionResult.value;
     addFxButtons(local);
+    local.onEvent = onEvent;
     container = visualResult.value;
     if (container) showMap(container);
     status.state = "ready";
@@ -333,13 +341,24 @@ export function createGame(
       const poses = feed.sample(performance.now());
       balls.sync(poses, (id) => feed?.look?.(id));
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
-      if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
-      for (const evt of feed.drainEvents?.() ?? []) fx.play(evt);
-      const phase = net ? net.phase : (local?.stats.phase as Phase);
+      const phase = local?.phase ?? net?.phase;
+      // local race time starts with the countdown; online it's counted from the state patch that began it
+      if (phase !== "countdown") countdown = 0;
+      else if (local) countdown = local.stats.elapsed;
+      else countdown += dt;
+      const swoop =
+        phase === "countdown"
+          ? swoopProgress(countdown, COUNTDOWN_MS / 1000)
+          : undefined;
+      if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt, swoop);
       if (phase) fx.setPhase(phase);
-      const serverNow = net?.serverNow();
-      if (net && phase === "countdown" && serverNow !== undefined)
-        fx.countdown(net.countdownEndsAt - serverNow);
+      if (phase === "countdown") {
+        // the beeps land on the countdown numbers: race time locally, server time online
+        const serverNow = net?.serverNow();
+        if (local) fx.countdown(COUNTDOWN_MS - local.stats.elapsed * 1000);
+        else if (net && serverNow !== undefined)
+          fx.countdown(net.countdownEndsAt - serverNow);
+      }
       if (local) fx.snow = local.stats.section === "arboretum";
       fx.update(
         dt,

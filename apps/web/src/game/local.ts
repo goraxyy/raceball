@@ -1,6 +1,11 @@
 import GUI from "lil-gui";
 import { WebIO } from "@gltf-transform/core";
-import type { GameEvent, SnapMsg } from "@raceball/shared";
+import {
+  COUNTDOWN_MS,
+  type GameEvent,
+  type Phase,
+  type SnapMsg,
+} from "@raceball/shared";
 import {
   createFlatRace,
   createRace,
@@ -53,6 +58,8 @@ export class LocalSession implements BallFeed {
   readonly ownId = OWN_ID;
   /** The planet your ball wears (`&ball=` in the URL) */
   readonly ball: string;
+  /** Called with every game event the race raises */
+  onEvent?: (event: GameEvent) => void;
   private keys: KeyState = {
     up: false,
     down: false,
@@ -82,7 +89,6 @@ export class LocalSession implements BallFeed {
     heading: 0,
   };
   private race: Race;
-  private events: GameEvent[] = [];
   private readonly makeRace: () => Promise<Race>;
   private readonly timer: LocalLapTimer;
   private disposed = false;
@@ -102,7 +108,11 @@ export class LocalSession implements BallFeed {
     addEventListener("keydown", this.onKeyDown);
     addEventListener("keyup", this.onKeyUp);
     addEventListener("blur", this.onBlur);
-    this.gui = createTuningPanel(this.stats, () => void this.reset());
+    this.gui = createTuningPanel(
+      this.stats,
+      () => void this.reset(),
+      () => this.onEvent?.({ type: "bump", a: OWN_ID, b: "", strength: 1 }),
+    );
   }
 
   static async start(
@@ -142,7 +152,8 @@ export class LocalSession implements BallFeed {
       let respawned = false;
       for (const e of this.race.drainEvents()) {
         if (e.type === "respawn" && e.player === OWN_ID) respawned = true;
-        this.events.push(e);
+        console.debug("[local] event", e);
+        this.onEvent?.(e);
       }
       const from = this.prev.balls.find((b) => b.id === OWN_ID);
       const to = this.curr.balls.find((b) => b.id === OWN_ID);
@@ -168,9 +179,8 @@ export class LocalSession implements BallFeed {
     }
   }
 
-  /** Game events since the last call, for the effects (fx.ts) */
-  drainEvents(): GameEvent[] {
-    return this.events.splice(0);
+  get phase(): Phase {
+    return this.race.phase;
   }
 
   look(id: string): BallLook | undefined {
@@ -283,7 +293,7 @@ async function newRace(ball: string, bytes?: Uint8Array): Promise<Race> {
     ? await createRace(bytes, new WebIO(), { laps: 3 })
     : await createFlatRace({ laps: 3 });
   race.addPlayer(OWN_ID, ball);
-  race.start(0, 3);
+  race.start(COUNTDOWN_MS, 3); // the same countdown as online, for the grid swoop
   return race;
 }
 
@@ -304,10 +314,14 @@ async function timingGates(bytes: Uint8Array): Promise<TimingGate[]> {
     }));
 }
 
-/** lil-gui sliders over the live tuning object. "Copy tuning" puts the values on the clipboard for tuning.ts. */
+/**
+ * lil-gui sliders over the live tuning object. "Copy tuning" puts the values on the clipboard for tuning.ts.
+ * "Test bump" fakes a strength 1 bump on your ball, to tune the camera shake without a second ball.
+ */
 function createTuningPanel(
   stats: { speed: number; phase: string },
   onReset: () => void,
+  onBump: () => void,
 ): GUI {
   const gui = new GUI({ title: "Local mode" });
   gui.add(stats, "speed").name("speed (m/s)").listen().disable();
@@ -322,6 +336,7 @@ function createTuningPanel(
   }
 
   gui.add({ reset: onReset }, "reset").name("Reset race");
+  gui.add({ bump: onBump }, "bump").name("Test bump");
   gui
     .add(
       {

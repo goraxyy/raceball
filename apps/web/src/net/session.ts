@@ -12,7 +12,8 @@ import {
   type NetStatMsg,
   type PongMsg,
   type RaceStateView,
-  type SnapMsg,
+  type PackedSnapMsg,
+  unpackSnap,
   type WelcomeMsg,
 } from "@raceball/shared";
 
@@ -45,7 +46,7 @@ export class NetSession {
   /** The room is gone (left, or reconnection failed) */
   closed = false;
   private listeners = new Set<() => void>();
-  private eventListeners = new Set<(evt: GameEvent) => void>();
+  private eventListeners = new Set<(event: GameEvent) => void>();
   private pinger: ReturnType<typeof setInterval>;
   readonly room: Room;
 
@@ -58,11 +59,11 @@ export class NetSession {
       "netstat",
       (msg: NetStatMsg) => (this.inputAge = msg.inputAge),
     );
-    room.onMessage("snap", (msg: SnapMsg) =>
-      this.buffer.push(msg, performance.now()),
+    room.onMessage("snap", (msg: PackedSnapMsg) =>
+      this.buffer.push(unpackSnap(msg), performance.now()),
     );
-    room.onMessage("evt", (evt: GameEvent) => {
-      for (const listener of this.eventListeners) listener(evt);
+    room.onMessage("evt", (event: GameEvent) => {
+      for (const listener of this.eventListeners) listener(event);
     });
     room.onMessage("welcome", (msg: WelcomeMsg) => {
       this.playerId = msg.playerId;
@@ -144,8 +145,8 @@ export class NetSession {
     return () => this.listeners.delete(listener);
   }
 
-  /** Game events (bumps, laps, finishes…) as the server sends them. Returns an unsubscribe function */
-  onEvent(listener: (evt: GameEvent) => void) {
+  /** Game events (bumps, laps, finishes…) as the server sends them, for VFX and camera shake. Returns an unsubscribe function */
+  onEvent(listener: (event: GameEvent) => void) {
     this.eventListeners.add(listener);
     return () => this.eventListeners.delete(listener);
   }

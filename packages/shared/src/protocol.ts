@@ -1,6 +1,6 @@
 // Protocol v1: the contract between game-core, server, screens and pads.
 // To change it: bump PROTOCOL_VERSION and update docs/ARCHITECTURE.md (see docs/WORKFLOW.md).
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -34,7 +34,7 @@ export interface InputMsg {
   item: boolean;
 }
 
-/** server → host + viewers: 60 Hz */
+/** A snapshot of every ball. On the wire it's a PackedSnapMsg (snap.ts): packSnap() / unpackSnap() */
 export interface SnapMsg {
   tick: number;
   /** Server time in ms */

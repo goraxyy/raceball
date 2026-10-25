@@ -20,10 +20,10 @@ HackPSU judging is **at our table**. Judges walk up, we have a few minutes, and 
 
 | Device | Role | Notes |
 |---|---|---|
-| **Laptop A** (the stronger one) | `/host`: lobby + QR, overview camera, live map, standings, **follow-cam tiles** for the 3 phone-only players | It renders the most (overview + 3 tiles), so use the laptop with the better GPU. Plug it in |
+| **Laptop A** (the stronger one) | `/host`: lobby + QR, then a **split screen** with a first-person view per player | It renders the most (a view per player), so use the laptop with the better GPU. Plug it in |
 | **Laptop B** | `/play`: player 1's personal chase camera + HUD | Shows the "laptop player" mode. Between races it can show the architecture diagram for questions |
 | **Phone 1** | Paired to Laptop B | |
-| **Phones 2–4** | Phone-only players, joined from Laptop A's QR | Each watches their own follow-cam tile on Laptop A |
+| **Phones 2–4** | Phone-only players, joined from Laptop A's QR | Each watches their own view in Laptop A's split screen |
 | **Judges' own phones** (optional) | They can scan Laptop A's QR to join instead of using a team phone | Up to 8 players total |
 | **Router or hotspot** | Our own network for all 6 devices | Never rely on the venue Wi-Fi |
 
@@ -77,7 +77,7 @@ HackPSU judging is **at our table**. Judges walk up, we have a few minutes, and 
 |---|---|
 | The network is slow, or devices can't reach each other | Make sure all 6 devices are on our router or hotspot |
 | The server is down | Check the logs in the Railway dashboard (or `railway logs`), then redeploy from the dashboard. As a last resort, run the server on Laptop B with a `cloudflared` tunnel and point `VITE_SERVER_URL` at it |
-| Laptop A drops below 50 fps | It falls back from follow-cam tiles to name tags on its own. If it's still slow, lower the quality preset |
+| Laptop A drops below 50 fps | It falls back from the split screen to the overview with name tags on its own. If it's still slow, lower the quality preset |
 | A judge's phone won't grant motion access | Hand them a team phone. (iPhone fix: reload, or quit and reopen Safari) |
 | A phone disconnects mid-race | It rejoins its slot by itself within a few seconds. If not, rescan the QR |
 | Fewer than 4 players | Turn on bots |

@@ -3,6 +3,7 @@ import {
   type AssetContainer,
   Color3,
   Color4,
+  CubeTexture,
   DirectionalLight,
   DynamicTexture,
   HemisphericLight,
@@ -20,6 +21,9 @@ import { ChaseCamera } from "./cameras";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 
 export type GameMode = "local" | "viewer" | "host";
+
+/** How strongly the sky HDRI lights PBR models: a fill under the sun, not the main light (art bible, docs/ASSETS.md) */
+const SKY_FILL = 0.6;
 
 export interface Game {
   update(dt: number): void;
@@ -63,7 +67,7 @@ export function createGame(
     });
   scene.clearColor = new Color4(0.62, 0.8, 0.95, 1);
   const sky = new HemisphericLight("sky", new Vector3(0, 1, 0), scene);
-  sky.intensity = 0.65;
+  sky.intensity = 0.3;
   const sun = new DirectionalLight("sun", new Vector3(-0.4, -1, 0.35), scene);
   sun.position = new Vector3(20, 40, -20);
   sun.intensity = 0.9;
@@ -94,6 +98,9 @@ export function createGame(
   let container: AssetContainer | undefined;
   let publishAfter = 0;
   const abort = new AbortController();
+  void loadSky().catch((error: unknown) => {
+    if (!disposed) console.warn("Sky HDRI failed to load", error);
+  });
   const applyCamera = () => {
     scene.activeCamera = status.overview ? overview : chase.camera;
     if (status.overview) overview.attachControl(true);
@@ -136,6 +143,27 @@ export function createGame(
       status.message = error instanceof Error ? error.message : String(error);
       publish();
     });
+  }
+
+  /**
+   * The sky HDRI fills in the light on glTF (PBR) models, so the hemispheric light is turned down to suit; it still
+   * lights the StandardMaterial ground and placeholder balls. It's fetched with the abort signal first: a CubeTexture
+   * load can't be cancelled, and in dev React mounts twice on the same canvas, where a first load that finishes after
+   * its engine is gone leaves the second one rendering black.
+   */
+  async function loadSky(): Promise<void> {
+    const response = await fetch(
+      `${import.meta.env.BASE_URL}assets/tex/env_happy_valley.env`,
+      { signal: abort.signal },
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (disposed) return;
+    const url = URL.createObjectURL(blob);
+    const env = CubeTexture.CreateFromPrefilteredData(url, scene, ".env");
+    env.onLoadObservable.addOnce(() => URL.revokeObjectURL(url));
+    scene.environmentTexture = env;
+    scene.environmentIntensity = SKY_FILL;
   }
 
   async function loadLocal(): Promise<void> {
@@ -249,6 +277,8 @@ export function createGame(
       shadows.dispose();
       sky.dispose();
       sun.dispose();
+      scene.environmentTexture?.dispose();
+      scene.environmentTexture = null;
     },
   };
 }

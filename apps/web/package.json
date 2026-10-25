@@ -1,26 +1,32 @@
 {
   "name": "@raceball/web",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@babylonjs/core": "^9.32.0",
     "@babylonjs/loaders": "^9.32.0",
     "@raceball/game-core": "workspace:*",
     "@raceball/shared": "workspace:*",
+    "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@babylonjs/inspector": "^9.32.0",
+    "@types/node": "^24.19.2",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "lil-gui": "^0.21.0",
-    "vite": "^8.3.5"
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4"
   }
 }

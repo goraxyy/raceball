@@ -1,18 +1,19 @@
 import { GameView } from "./game/GameView";
 
-/** Routes: /play?local=1 runs game-core in the browser. /host and online /play wait for the net library (Rasim). */
-export function App() {
+// Placeholder until the lobby (Nuris) lands. /play?local=1 runs game-core in the browser (Ali).
+export default function App() {
   const params = new URLSearchParams(location.search);
   if (location.pathname === "/play" && params.get("local") === "1") {
     return <GameView mode="local" />;
   }
   return (
-    <main style={{ padding: 24 }}>
+    <main>
       <h1>RaceBall</h1>
+      <p>Web app is running. Routes /host and /play come in M1.</p>
       <p>
-        Local mode: <a href="/play?local=1" style={{ color: "#8ecae6" }}>/play?local=1</a> (drive with W A S D)
+        Local mode: <a href="/play?local=1">/play?local=1</a> (drive with W A S
+        D)
       </p>
-      <p>Online /host and /play arrive with the net library and lobby UI.</p>
     </main>
   );
 }

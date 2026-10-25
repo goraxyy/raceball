@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { InputMsg } from "@raceball/shared";
-import { createFlatRace, NEUTRAL_INPUT, TICK_DT, tuning, type Race } from "../src";
+import {
+  createFlatRace,
+  NEUTRAL_INPUT,
+  TICK_DT,
+  tuning,
+  type Race,
+} from "./index";
 
 const GAS: InputMsg = { ...NEUTRAL_INPUT, gas: 1 };
 
@@ -21,7 +27,8 @@ function run(r: Race, seconds: number, input?: InputMsg) {
   }
 }
 
-const ball = (r: Race, id = "me") => r.snapshot(0, 0).balls.find((b) => b.id === id)!;
+const ball = (r: Race, id = "me") =>
+  r.snapshot(0, 0).balls.find((b) => b.id === id)!;
 
 describe("flat race", () => {
   it("drops the ball onto the ground and lets it settle", async () => {

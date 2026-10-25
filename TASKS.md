@@ -80,15 +80,16 @@ Nothing right now. Add new questions here.
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
 - [x] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
 - [ ] After the bootstrap PR is merged: create the Railway project from the repo and invite Rasim; import `apps/web` and `apps/pad` into Vercel ([steps](docs/team/rasim-platform.md#3-deploying-the-server-to-railway)). As repo owner, only you can grant them GitHub access
-  - Vercel done: `raceball-web` (root `apps/web`) and `raceball-pad` (builds `@raceball/pad` from the repo root, skipped until `apps/pad/package.json` exists) are linked to the repo, with Vercel Authentication off for phone testing. `VITE_SERVER_URL` still to set once the server has a domain
-  - BLOCKED: the Railway trial has expired. Pick a plan in the Railway dashboard, then create the project and invite Rasim
+  - Vercel done: `raceball-web` (root `apps/web`) and `raceball-pad` (builds `@raceball/pad` from the repo root) deploy `main`, with Vercel Authentication off for phone testing. Both have `VITE_SERVER_URL`
+  - Railway done: project `raceball`, service `raceball-server` (`wss://raceball-server-production.up.railway.app`) deploys `main` with the `railway.json` settings, `PORT=2567`. On the Free plan for now, so it sleeps when idle and runs in `sfo`, not US East
+  - BLOCKED: inviting Rasim. The Free plan allows 1 project member; move to Hobby before the M1 latency measurement and the event
 - [x] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
 - [x] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
 - [x] Dev-only Inspector toggle (`Shift+I`)
 
 **Rasim**
-- [ ] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
-- [ ] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
+- [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
+- [x] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
 - [ ] Configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy a hello-world Colyseus server with a `/health` check; give Ali the Vercel settings for web + pad
 - [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
 
@@ -127,8 +128,8 @@ Nothing right now. Add new questions here.
 - [ ] 4 ball skins (Lion, Creamery scoop, football, snowball), with a player-color ring
 - [ ] Track dressing kit on one shared palette texture: barriers, fall trees, lamp posts, start/finish arch; HDRI as `.env`
 - [ ] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen`
-- [ ] Pad screens in Figma; agree the markup contract with Rasim; write `apps/pad/src/style.css`
-- [ ] First sound set: rolling loop, bump, countdown, UI click
+- [ ] Pad screens in Figma; agree the markup contract with Rasim; write `apps/pad/src/style.css` (style.css done; every screen and its markup is in `apps/pad/screens.html` instead of Figma; waiting on Rasim to agree the markup)
+- [x] First sound set: rolling loop, bump, countdown, UI click
 
 ---
 

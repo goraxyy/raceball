@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { KeyboardInput, tuning, type KeyState } from "../src";
+import { KeyboardInput, tuning, type KeyState } from "./index";
 
-const NONE: KeyState = { up: false, down: false, left: false, right: false, item: false };
+const NONE: KeyState = {
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+  item: false,
+};
 const dt = 1 / 60;
 
 function hold(kb: KeyboardInput, keys: KeyState, seconds: number) {
@@ -13,8 +19,14 @@ function hold(kb: KeyboardInput, keys: KeyState, seconds: number) {
 describe("keyboard adapter", () => {
   it("maps W to gas and S to brake", () => {
     const kb = new KeyboardInput();
-    expect(kb.next({ ...NONE, up: true }, dt)).toMatchObject({ gas: 1, brake: false });
-    expect(kb.next({ ...NONE, down: true }, dt)).toMatchObject({ gas: 0, brake: true });
+    expect(kb.next({ ...NONE, up: true }, dt)).toMatchObject({
+      gas: 1,
+      brake: false,
+    });
+    expect(kb.next({ ...NONE, down: true }, dt)).toMatchObject({
+      gas: 0,
+      brake: true,
+    });
   });
 
   it("ramps steering like a wheel instead of snapping", () => {
@@ -28,12 +40,18 @@ describe("keyboard adapter", () => {
 
   it("fires the item in exactly one message per press", () => {
     const kb = new KeyboardInput();
-    const msgs = [true, true, true, false, true].map((item) => kb.next({ ...NONE, item }, dt).item);
+    const msgs = [true, true, true, false, true].map(
+      (item) => kb.next({ ...NONE, item }, dt).item,
+    );
     expect(msgs).toEqual([true, false, false, false, true]);
   });
 
   it("increments seq on every message", () => {
     const kb = new KeyboardInput();
-    expect([kb.next(NONE, dt).seq, kb.next(NONE, dt).seq, kb.next(NONE, dt).seq]).toEqual([1, 2, 3]);
+    expect([
+      kb.next(NONE, dt).seq,
+      kb.next(NONE, dt).seq,
+      kb.next(NONE, dt).seq,
+    ]).toEqual([1, 2, 3]);
   });
 });

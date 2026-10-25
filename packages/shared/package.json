@@ -1,7 +1,14 @@
 {
   "name": "@raceball/shared",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
 }

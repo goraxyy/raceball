@@ -1,6 +1,15 @@
 import {
-  Color3, Color4, DirectionalLight, DynamicTexture, HemisphericLight, MeshBuilder, Scene, ShadowGenerator,
-  StandardMaterial, Texture, Vector3,
+  Color3,
+  Color4,
+  DirectionalLight,
+  DynamicTexture,
+  HemisphericLight,
+  MeshBuilder,
+  Scene,
+  ShadowGenerator,
+  StandardMaterial,
+  Texture,
+  Vector3,
 } from "@babylonjs/core";
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
 import { BallViews, type BallFeed } from "./balls";
@@ -60,11 +69,20 @@ export function createGame(scene: Scene, mode: GameMode): Game {
 /** Matches the flat M0 physics ground in game-core: a 0.2 m slab whose top is at y = 0, with a 2 m grid. */
 function createFlatGround(scene: Scene): void {
   const size = FLAT_GROUND_HALF_SIZE * 2;
-  const ground = MeshBuilder.CreateBox("ground", { width: size, height: 0.2, depth: size }, scene);
+  const ground = MeshBuilder.CreateBox(
+    "ground",
+    { width: size, height: 0.2, depth: size },
+    scene,
+  );
   ground.position.y = -0.1;
   ground.receiveShadows = true;
 
-  const tex = new DynamicTexture("ground-grid", { width: 128, height: 128 }, scene, true);
+  const tex = new DynamicTexture(
+    "ground-grid",
+    { width: 128, height: 128 },
+    scene,
+    true,
+  );
   const ctx = tex.getContext();
   ctx.fillStyle = "#7fb069";
   ctx.fillRect(0, 0, 128, 128);
@@ -82,7 +100,11 @@ function createFlatGround(scene: Scene): void {
   ground.freezeWorldMatrix();
 
   // the start line at z = 0.5, just ahead of the grid
-  const line = MeshBuilder.CreateGround("start-line", { width: 8, height: 0.4 }, scene);
+  const line = MeshBuilder.CreateGround(
+    "start-line",
+    { width: 8, height: 0.4 },
+    scene,
+  );
   line.position.set(0, 0.005, 0.5);
   const lineMat = new StandardMaterial("start-line", scene);
   lineMat.diffuseColor = Color3.White();

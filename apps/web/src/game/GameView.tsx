@@ -11,7 +11,7 @@ export function GameView({ mode }: { mode: GameMode }) {
   useEffect(() => {
     const engine = new Engine(canvasRef.current, true, { stencil: true });
     const scene = new Scene(engine);
-    scene.useRightHandedSystem = true;       // match glTF + Rapier, no conversions
+    scene.useRightHandedSystem = true; // match glTF + Rapier, no conversions
 
     const game = createGame(scene, mode);
     const removeInspector = installInspectorToggle(scene);
@@ -29,5 +29,18 @@ export function GameView({ mode }: { mode: GameMode }) {
     };
   }, [mode]);
 
-  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block", outline: "none" }} />;
+  // fixed to the viewport, so page styles (body padding) never shrink the 3D view
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        display: "block",
+        outline: "none",
+      }}
+    />
+  );
 }

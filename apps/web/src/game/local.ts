@@ -1,15 +1,26 @@
 import GUI from "lil-gui";
 import type { SnapMsg } from "@raceball/shared";
-import { createFlatRace, KeyboardInput, TICK_DT, tuning, type KeyState, type Race } from "@raceball/game-core";
+import {
+  createFlatRace,
+  KeyboardInput,
+  TICK_DT,
+  tuning,
+  type KeyState,
+  type Race,
+} from "@raceball/game-core";
 import type { BallFeed, BallPose } from "./balls";
 
 const OWN_ID = "local";
 
 const KEY_CODES: Record<string, keyof KeyState> = {
-  KeyW: "up", ArrowUp: "up",
-  KeyS: "down", ArrowDown: "down",
-  KeyA: "left", ArrowLeft: "left",
-  KeyD: "right", ArrowRight: "right",
+  KeyW: "up",
+  ArrowUp: "up",
+  KeyS: "down",
+  ArrowDown: "down",
+  KeyA: "left",
+  ArrowLeft: "left",
+  KeyD: "right",
+  ArrowRight: "right",
   Space: "item",
 };
 
@@ -19,7 +30,13 @@ const KEY_CODES: Record<string, keyof KeyState> = {
  */
 export class LocalSession implements BallFeed {
   readonly ownId = OWN_ID;
-  private keys: KeyState = { up: false, down: false, left: false, right: false, item: false };
+  private keys: KeyState = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    item: false,
+  };
   private kb = new KeyboardInput();
   private acc = 0;
   private tick = 0;
@@ -27,8 +44,10 @@ export class LocalSession implements BallFeed {
   private curr: SnapMsg;
   private gui: GUI;
   private stats = { speed: 0, phase: "lobby" };
+  private race: Race;
 
-  private constructor(private race: Race) {
+  private constructor(race: Race) {
+    this.race = race;
     this.prev = this.curr = race.snapshot(0, 0);
     addEventListener("keydown", this.onKeyDown);
     addEventListener("keyup", this.onKeyUp);
@@ -49,11 +68,14 @@ export class LocalSession implements BallFeed {
       this.tick++;
       this.prev = this.curr;
       this.curr = this.race.snapshot(this.tick, this.tick * TICK_DT * 1000);
-      for (const e of this.race.drainEvents()) console.debug("[local] event", e);
+      for (const e of this.race.drainEvents())
+        console.debug("[local] event", e);
       this.acc -= TICK_DT;
     }
     const own = this.curr.balls.find((b) => b.id === OWN_ID);
-    this.stats.speed = own ? Math.round(Math.hypot(own.v[0], own.v[2]) * 10) / 10 : 0;
+    this.stats.speed = own
+      ? Math.round(Math.hypot(own.v[0], own.v[2]) * 10) / 10
+      : 0;
     this.stats.phase = this.race.phase;
   }
 
@@ -64,7 +86,11 @@ export class LocalSession implements BallFeed {
     for (const b of this.curr.balls) {
       const p = this.prev.balls.find((x) => x.id === b.id) ?? b;
       out.set(b.id, {
-        p: [lerp(p.p[0], b.p[0], a), lerp(p.p[1], b.p[1], a), lerp(p.p[2], b.p[2], a)],
+        p: [
+          lerp(p.p[0], b.p[0], a),
+          lerp(p.p[1], b.p[1], a),
+          lerp(p.p[2], b.p[2], a),
+        ],
         q: nlerp(p.q, b.q, a),
         h: lerp(p.h, b.h, a),
       });
@@ -102,7 +128,13 @@ export class LocalSession implements BallFeed {
   };
 
   private onBlur = () => {
-    this.keys = { up: false, down: false, left: false, right: false, item: false };
+    this.keys = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      item: false,
+    };
   };
 }
 
@@ -114,7 +146,10 @@ async function newRace(): Promise<Race> {
 }
 
 /** lil-gui sliders over the live tuning object. "Copy tuning" puts the values on the clipboard for tuning.ts. */
-function createTuningPanel(stats: { speed: number; phase: string }, onReset: () => void): GUI {
+function createTuningPanel(
+  stats: { speed: number; phase: string },
+  onReset: () => void,
+): GUI {
   const gui = new GUI({ title: "Local mode" });
   gui.add(stats, "speed").name("speed (m/s)").listen().disable();
   gui.add(stats, "phase").listen().disable();
@@ -127,7 +162,15 @@ function createTuningPanel(stats: { speed: number; phase: string }, onReset: () 
   }
 
   gui.add({ reset: onReset }, "reset").name("Reset race");
-  gui.add({ copy: () => void navigator.clipboard.writeText(JSON.stringify(tuning, null, 2)) }, "copy").name("Copy tuning");
+  gui
+    .add(
+      {
+        copy: () =>
+          void navigator.clipboard.writeText(JSON.stringify(tuning, null, 2)),
+      },
+      "copy",
+    )
+    .name("Copy tuning");
   return gui;
 }
 

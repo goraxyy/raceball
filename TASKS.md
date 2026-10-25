@@ -148,13 +148,18 @@ Nothing right now. Add new questions here.
 **Done when:** 4+ players (laptop **and** phone-only, real or bots) finish a 3-lap race from lobby to results in the correct order, and reconnecting works.
 
 **Ali**
-- [ ] Checkpoints from markers (sensor events), 3 laps, live ranking (laps, then checkpoint, then distance), finish order
-- [ ] Race phases in `game-core`: lobby, countdown (inputs ignored), racing, results; `start(countdownMs, laps)` takes the lap count
-- [ ] Ball-to-ball collisions that feel good; emit `bump` (with strength) and `overtake` (with section) events
-- [ ] `botInput()` for Rasim's bots
+- [x] Checkpoints from markers (sensor events), 3 laps, live ranking (laps, then checkpoint, then distance), finish order
+  - `standings()` gives place, lap, last checkpoint, `finishedAt` and `progress` (m along the race, measured on the route), with `lap` and `finish` events. Rasim: copy them into the player schema and route the events to pads
+- [x] Race phases in `game-core`: lobby, countdown (inputs ignored), racing, results; `start(countdownMs, laps)` takes the lap count
+  - `results` starts when everyone is in, or `finishGraceSeconds` (30 s) after the winner. Finished balls ignore input and roll to a stop
+- [x] Ball-to-ball collisions that feel good; emit `bump` (with strength) and `overtake` (with section) events
+  - One `bump` per hit (over 50 N, strength = force / 600 N, 0.25 s cooldown per pair) and `overtake` once a racer is 1 m clear, with the section. The collision physics is unchanged (equal masses, restitution 0.3): judge the feel at the next playtest and tune `bump*` / restitution then
+- [x] `botInput()` for Rasim's bots
+  - Follows the route at full gas, braking only into sharp turns: a bot laps Happy Valley in 65 s with no respawns (a test)
 - [x] Own-ball extrapolation in the player view (with Rasim) (Rasim's snapshot buffer, drawn by `NetFeed`; smooth at 65 ms round trip with jitter)
 - [x] Big screen: overview camera + **up to 4 follow-cam tiles** for phone-only players, with an automatic fallback to name tags below 50 fps (overview frames the pack; tiles draw inside Nuris's `FollowTile` frames; [details](docs/team/ali-game.md#big-screen-cameras))
-- [ ] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`
+- [x] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`
+  - `race.path`: the route's centerline as [x, z] points from the finish line (274 points, 1,096 m), from the new `route` marker. Positions are the snapshot's balls, so screens can sample them at 10 Hz. Rasim: send `race.path` to screens once, e.g. when they join
 
 **Rasim**
 - [ ] Lobby flow end to end: create, join, pair, calibrate, assets loaded, ready, host starts. `/host` and `/play` use Nuris's components from `apps/web/src/ui` (`HostLobby`, `ViewerJoin`, `PairingQR`, `LoadingScreen`)

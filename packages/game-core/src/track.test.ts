@@ -7,6 +7,7 @@ import type { InputMsg } from "@raceball/shared";
 import { NEUTRAL_INPUT, TICK_DT, tuning, type Race } from "./index";
 import { createWorld, initPhysics } from "./physics";
 import { createRace } from "./race";
+import { pointAt, project as alongPath } from "./path";
 import { checkTrack, loadTrack, type TrackData } from "./track";
 
 const FACE_PLUS_X: [number, number, number, number] = [
@@ -91,7 +92,12 @@ function mesh(doc: Document, buffer: Buffer, pos: number[], idx: number[]) {
  * - swapGates: gates 1 and 2 trade places, so a ball crosses them out of order
  */
 async function syntheticTrack(
-  opts: { spawns?: boolean; wall?: boolean; swapGates?: boolean } = {},
+  opts: {
+    spawns?: boolean;
+    wall?: boolean;
+    swapGates?: boolean;
+    route?: boolean;
+  } = {},
 ): Promise<Uint8Array> {
   const doc = new Document();
   const buffer = doc.createBuffer();
@@ -155,6 +161,11 @@ async function syntheticTrack(
   add("cam_1", { rb: "camera", section: "start" }, (n) =>
     n.setTranslation([0, 15, -20]),
   );
+  if (opts.route)
+    // a 30 m x 10 m rectangle in the node's space; the node sits 5 m along x
+    add("route", { rb: "route", points: [-5, 0, 25, 0, 25, 10, -5, 10] }, (n) =>
+      n.setTranslation([5, 0, 0]),
+    );
 
   scene.addChild(collision).addChild(markers);
   return new NodeIO().writeBinary(doc);
@@ -197,6 +208,37 @@ describe("loadTrack", () => {
     ]);
     expect(checkTrack(track)).toEqual([]);
     world.free();
+  });
+});
+
+describe("the route marker", () => {
+  it("becomes a closed path in world space, and the race exposes its points", async () => {
+    await initPhysics();
+    const world = createWorld();
+    try {
+      const glb = await syntheticTrack({ route: true });
+      const track = await loadTrack(world, glb, new NodeIO());
+      expect(track.path?.points).toEqual([
+        [0, 0],
+        [30, 0],
+        [30, 10],
+        [0, 10],
+      ]);
+      expect(track.path?.length).toBeCloseTo(80);
+      const race = await createRace(glb, new NodeIO(), { laps: 1 });
+      expect(race.path).toEqual(track.path?.points);
+      race.dispose();
+    } finally {
+      world.free();
+    }
+  });
+
+  it("leaves the path empty on a track without one", async () => {
+    const race = await createRace(await syntheticTrack(), new NodeIO(), {
+      laps: 1,
+    });
+    expect(race.path).toEqual([]);
+    race.dispose();
   });
 });
 
@@ -330,6 +372,7 @@ describe("checkTrack", () => {
       boosts: [],
       surfaces: [],
       cameras: [],
+      path: null,
     };
     expect(checkTrack(track)).toEqual([
       "spawns should be slots 1-8, got [1,2,3]",
@@ -388,6 +431,29 @@ it("happy_valley_col.glb is raceable", async () => {
           project(spawn.pos, track.spawns[i - 2].pos, forward),
         ).toBeCloseTo(-3, 2);
       }
+    }
+
+    // The route: a closed loop from the finish line that runs through every gate, in order
+    const path = track.path!;
+    expect(path).not.toBeNull();
+    expect(path.length).toBeGreaterThan(1000);
+    expect(path.length).toBeLessThan(1200);
+    const [x0, , z0] = track.checkpoints[0].pos;
+    expect(
+      Math.hypot(path.points[0][0] - x0, path.points[0][1] - z0),
+    ).toBeLessThan(1);
+    let previous = -1;
+    for (const gate of track.checkpoints) {
+      const s = alongPath(path, gate.pos[0], gate.pos[2]);
+      const [px, pz] = pointAt(path, s);
+      expect(
+        Math.hypot(px - gate.pos[0], pz - gate.pos[2]),
+        `gate ${gate.index} on the route`,
+      ).toBeLessThan(2);
+      expect(s, `gate ${gate.index} after the one before`).toBeGreaterThan(
+        previous,
+      );
+      previous = gate.index === 0 ? 0 : s;
     }
 
     expect(track.items.length).toBeGreaterThanOrEqual(3);

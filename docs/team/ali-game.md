@@ -357,6 +357,7 @@ The manual steps below are what the script automates.
 - **Markers** (nodes with an `rb` custom property; see the [marker table](../ASSETS.md#blender-is-our-level-editor)) come back in `TrackData`, in world space:
   - `spawns` sorted by slot, `checkpoints` sorted by index
   - `respawns`, `items`, `boosts`, `surfaces`, `cameras`
+  - `path`: the `route` marker's centerline, a closed loop of [x, z] points from the finish line, the racing way. `path.ts` measures along it (`project`, `pointAt`), and the race exposes the points as `race.path` for the big-screen `TrackMap`. `tools/track/build_happy_valley.py` writes it, about every 4 m.
   - Headings come from each marker's rotation.
 - **Checkpoint gates and boost pads** become sensor boxes sized by the Empty's scale. **Surfaces** become a sensor from the mesh's convex hull. Each one keeps its Rapier collider handle, for the lap and boost logic.
 - **Every other mesh** becomes a solid trimesh with the node's world matrix applied, built with Rapier's `FIX_INTERNAL_EDGES` so balls don't bump on the seams between triangles. Optional `friction` (default 1) and `restitution` (default 0) custom properties on a `*_col` object change how it plays, e.g. bouncier library steps.
@@ -426,6 +427,15 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 ## M2: Full race
 
 ### Checkpoints, laps and ranking
+
+**Done** (`race.ts`, tested in `rules.test.ts` on a synthetic loop and on Happy Valley):
+- **Laps:** only the next gate counts. Crossing `cp_00` after the last gate completes a lap and emits `lap` (the lap just started, 2 … laps); the last one emits `finish` with the place. The first crossing of `cp_00` starts the race.
+- **Ranking:** finishers by `finishedAt`, then everyone else by `progress`, the meters along the route from the start line. Within a lap that's the distance past the last gate crossed, clamped to the next gate, so a shortcut or reversing never gains a place. Tracks without a route use straight lines between gates.
+- **Standings:** `{ id, place, lap, checkpoint, finishedAt, progress }`, where `lap` is the lap being raced (1 … laps) and `checkpoint` is the last gate crossed in order (0 = the finish line).
+- **End:** `results` when everyone is in, or `finishGraceSeconds` after the winner. Finished balls ignore input from then on.
+- **Bots:** `botInput(id)` aims at a point ahead on the route (`botLookahead…` in `tuning.ts`), full gas, braking only when that point is far off to the side at speed. It laps Happy Valley in 65 s with no respawns.
+
+How it works:
 - Step with an event queue:
 
   ```ts
@@ -448,6 +458,13 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 - `results`: freeze inputs, and let balls roll to a stop.
 
 ### Collisions and bump events
+
+**Done** (`race.ts`, tested in `rules.test.ts`):
+- **Bump:** ball colliders report contact forces over `bumpForceMin` (50 N); a ball-to-ball one becomes `{ type: "bump", a, b, strength }` with `strength = force / bumpBigHit` (600 N), at most once per pair per `bumpCooldown` (0.25 s). Measured: a 12 m/s rear-end hit is about 370 N (strength 0.6), and pushing contact stays under 20 N, so it never counts. Contact with the track never counts.
+- **Overtake:** the race keeps the unfinished racers in order and emits `{ type: "overtake", player, passed, section }` when one gets `overtakeGap` (1 m) ahead of the racer in front, with the section of the overtaker's last gate. The gap stops side-by-side balls from flickering.
+- **Feel:** the physics is unchanged (equal masses, restitution 0.3). Try `setRestitution(0.5)` at the next playtest if bumps feel flat; it also makes landings a little bouncier.
+
+Notes:
 - Ball-to-ball: `setRestitution(0.5)` feels bouncy. Use the same mass for every ball, unless an item changes it.
 - Set a contact force threshold on ball colliders (`setContactForceEventThreshold`). Then in `q.drainContactForceEvents(e => ...)`, emit `bump` with `strength = clamp(e.totalForceMagnitude() / BIG_HIT, 0, 1)` for both balls.
 - **Overtake:** compare the standings order with the previous tick. Emit `overtake` with the section of the checkpoint where it happened.

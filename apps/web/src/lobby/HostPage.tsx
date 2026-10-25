@@ -7,9 +7,16 @@ import {
 } from "@raceball/shared";
 import { GameView } from "../game/GameView";
 import { NetHud, createAsHost, useRaceState, type NetSession } from "../net";
-import { Countdown, ErrorScreen, HostLobby, LoadingScreen } from "../ui";
+import {
+  Countdown,
+  ErrorScreen,
+  HostLobby,
+  LoadingScreen,
+  Results,
+} from "../ui";
 import "./lobby.css";
 import { lobbyPlayers } from "./players";
+import { useRaceResults } from "./results";
 
 /** /host: the big screen. Creates the room, runs the lobby, then shows the race */
 export function HostPage() {
@@ -42,6 +49,7 @@ function HostRoom({ session }: { session: NetSession }) {
   const state = useRaceState(session);
   const [laps, setLaps] = useState<Laps>(3);
   const racing = !!state.phase && state.phase !== "lobby";
+  const results = useRaceResults(session);
 
   if (session.closed)
     return <ErrorScreen kind="disconnected" room={session.code} />;
@@ -77,6 +85,18 @@ function HostRoom({ session }: { session: NetSession }) {
           canStart={canStart(state)}
           onStart={() => session.start(laps)}
         />
+      )}
+      {/* the race is over: the podium and the final classification, over the last of the race */}
+      {results && (
+        <div className="results-overlay">
+          <Results
+            rows={results.rows}
+            laps={results.laps}
+            lobbyAt={results.lobbyAt}
+            now={results.now}
+            onRematch={() => session.rematch()}
+          />
+        </div>
       )}
       {state.phase === "countdown" && (
         <Countdown

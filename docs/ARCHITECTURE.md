@@ -173,6 +173,20 @@ export type GameEvent =
   | { type: "lap"; player: string; lap: number }
   | { type: "finish"; player: string; place: number }
   | { type: "respawn"; player: string };
+
+/** server → the joining viewer or pad, right after join: which player slot is theirs */
+export interface WelcomeMsg {
+  playerId: string;
+}
+
+/** Close/reject codes the server uses, so clients can show the right error screen */
+export const JoinError = {
+  VersionMismatch: 4001,
+  BadRole: 4002,
+  HostTaken: 4003,
+  RoomFull: 4004,
+  BadPairToken: 4005,
+} as const;
 ```
 
 Colyseus schema (synced automatically):

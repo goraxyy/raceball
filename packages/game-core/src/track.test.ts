@@ -1,0 +1,251 @@
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { Document, NodeIO, type Buffer, type Node } from "@gltf-transform/core";
+import { afterEach, describe, expect, it } from "vitest";
+import { NEUTRAL_INPUT, TICK_DT, type Race } from "./index";
+import { createWorld, initPhysics } from "./physics";
+import { createRace } from "./race";
+import { checkTrack, loadTrack, type TrackData } from "./track";
+
+const FACE_PLUS_X: [number, number, number, number] = [
+  0,
+  Math.SQRT1_2,
+  0,
+  Math.SQRT1_2,
+]; // 90° around +Y: local +Z turns to +X
+
+/** A grid of quads in the XZ plane facing up, so the trimesh has internal edges. */
+function groundMesh(doc: Document, buffer: Buffer, half: number, cells = 4) {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  for (let z = 0; z <= cells; z++)
+    for (let x = 0; x <= cells; x++)
+      pos.push(
+        -half + (2 * half * x) / cells,
+        0,
+        -half + (2 * half * z) / cells,
+      );
+  for (let z = 0; z < cells; z++)
+    for (let x = 0; x < cells; x++) {
+      const a = z * (cells + 1) + x;
+      const c = a + cells + 1;
+      idx.push(a, c, a + 1, a + 1, c, c + 1);
+    }
+  return mesh(doc, buffer, pos, idx);
+}
+
+function boxMesh(doc: Document, buffer: Buffer, h: number) {
+  const pos: number[] = [];
+  for (const x of [-h, h])
+    for (const y of [-h, h]) for (const z of [-h, h]) pos.push(x, y, z);
+  // the surface loader only uses the convex hull, so a few triangles are enough
+  return mesh(doc, buffer, pos, [0, 1, 2, 1, 3, 2, 4, 6, 5, 5, 6, 7]);
+}
+
+function mesh(doc: Document, buffer: Buffer, pos: number[], idx: number[]) {
+  const position = doc
+    .createAccessor()
+    .setType("VEC3")
+    .setArray(new Float32Array(pos))
+    .setBuffer(buffer);
+  const indices = doc
+    .createAccessor()
+    .setType("SCALAR")
+    .setArray(new Uint32Array(idx))
+    .setBuffer(buffer);
+  return doc
+    .createMesh()
+    .addPrimitive(
+      doc
+        .createPrimitive()
+        .setAttribute("POSITION", position)
+        .setIndices(indices),
+    );
+}
+
+/**
+ * A small raceable track, built like the Blender export: a scaled ground under a moved parent,
+ * and markers under their own moved parent, listed out of order.
+ */
+async function syntheticTrack(
+  opts: { spawns?: boolean } = {},
+): Promise<Uint8Array> {
+  const doc = new Document();
+  const buffer = doc.createBuffer();
+  const scene = doc.createScene();
+
+  const collision = doc.createNode("collision").setTranslation([0, -1, 0]);
+  collision.addChild(
+    doc
+      .createNode("ground_col")
+      .setScale([2, 1, 2])
+      .setMesh(groundMesh(doc, buffer, 20)),
+  );
+  const markers = doc.createNode("markers").setTranslation([0, -1, 0]);
+  const add = (
+    name: string,
+    extras: Record<string, unknown>,
+    setup?: (n: Node) => void,
+  ) => {
+    const n = doc.createNode(name).setExtras(extras);
+    setup?.(n);
+    markers.addChild(n);
+  };
+
+  if (opts.spawns !== false)
+    for (let slot = 8; slot >= 1; slot--)
+      add(`spawn_${slot}`, { rb: "spawn", slot }, (n) =>
+        n
+          .setTranslation([-3 * slot, 0, slot % 2 ? -1.5 : 1.5])
+          .setRotation(FACE_PLUS_X),
+      );
+  for (const index of [2, 0, 3, 1]) {
+    add(
+      `cp_0${index}`,
+      { rb: "checkpoint", index, section: `s${index}` },
+      (n) =>
+        n
+          .setTranslation([index * 8, 1, 0])
+          .setScale([0.5, 2, 3])
+          .setRotation(FACE_PLUS_X),
+    );
+    add(`respawn_0${index}`, { rb: "respawn", checkpoint: index }, (n) =>
+      n.setTranslation([index * 8 + 2, 0, 0]).setRotation(FACE_PLUS_X),
+    );
+  }
+  add("item_1", { rb: "item" }, (n) => n.setTranslation([12, 0, 4]));
+  add("boost_1", { rb: "boost", power: 2 }, (n) =>
+    n.setTranslation([20, 0, 0]),
+  );
+  add("surface_1", { rb: "surface", grip: 0.2, kind: "icecream" }, (n) =>
+    n.setTranslation([0, 0, 10]).setMesh(boxMesh(doc, buffer, 1)),
+  );
+  add("cam_1", { rb: "camera", section: "start" }, (n) =>
+    n.setTranslation([0, 15, -20]),
+  );
+
+  scene.addChild(collision).addChild(markers);
+  return new NodeIO().writeBinary(doc);
+}
+
+describe("loadTrack", () => {
+  it("reads every marker type, in world space, sorted", async () => {
+    await initPhysics();
+    const world = createWorld();
+    const track = await loadTrack(world, await syntheticTrack(), new NodeIO());
+
+    expect(track.spawns.map((s) => s.slot)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(track.spawns[0].pos).toEqual([-3, -1, -1.5]); // parent moved it down 1 m
+    expect(track.spawns[0].heading).toBeCloseTo(Math.PI / 2);
+
+    expect(track.checkpoints.map((c) => [c.index, c.section])).toEqual([
+      [0, "s0"],
+      [1, "s1"],
+      [2, "s2"],
+      [3, "s3"],
+    ]);
+    const gate = world.getCollider(track.checkpoints[1].collider);
+    expect(gate.isSensor()).toBe(true);
+    expect(gate.halfExtents()).toEqual({ x: 0.5, y: 2, z: 3 }); // the Empty's scale
+
+    expect(track.respawns).toHaveLength(4);
+    expect(track.respawns.find((r) => r.checkpoint === 3)?.pos).toEqual([
+      26, -1, 0,
+    ]);
+    expect(track.items).toEqual([{ pos: [12, -1, 4] }]);
+    expect(track.boosts[0]).toMatchObject({
+      pos: [20, -1, 0],
+      power: 2,
+      heading: 0,
+    });
+    expect(track.surfaces).toMatchObject([{ kind: "icecream", grip: 0.2 }]);
+    expect(world.getCollider(track.surfaces[0].collider).isSensor()).toBe(true);
+    expect(track.cameras).toMatchObject([
+      { section: "start", pos: [0, 14, -20] },
+    ]);
+    expect(checkTrack(track)).toEqual([]);
+    world.free();
+  });
+});
+
+describe("createRace on a loaded track", () => {
+  let race: Race | undefined;
+  afterEach(() => {
+    race?.dispose();
+    race = undefined;
+  });
+
+  it("drops balls on the scaled, moved ground mesh and drives them along the spawn heading", async () => {
+    race = await createRace(await syntheticTrack(), new NodeIO(), { laps: 1 });
+    race.addPlayer("me", "lion");
+    race.start(0, 1);
+    const run = (s: number, gas = 0) => {
+      for (let i = 0; i < s / TICK_DT; i++) {
+        race!.setInput("me", { ...NEUTRAL_INPUT, gas });
+        race!.step(TICK_DT);
+      }
+    };
+    run(2);
+    let b = race.snapshot(0, 0).balls[0];
+    expect(b.p[1]).toBeCloseTo(-0.5, 1); // ground at y = -1, ball radius 0.5
+    expect(b.h).toBeCloseTo(Math.PI / 2);
+
+    run(1.5, 1);
+    b = race.snapshot(0, 0).balls[0];
+    expect(b.p[0]).toBeGreaterThan(5); // spawn faces +X
+    expect(b.p[1]).toBeCloseTo(-0.5, 1); // stays on the trimesh instead of falling through
+    expect(Math.abs(b.v[1])).toBeLessThan(0.5); // no bumping on the grid's internal edges
+  });
+
+  it("refuses a track without spawns", async () => {
+    await expect(
+      createRace(await syntheticTrack({ spawns: false }), new NodeIO(), {
+        laps: 1,
+      }),
+    ).rejects.toThrow("no spawn_* markers");
+  });
+});
+
+describe("checkTrack", () => {
+  it("names what's missing", () => {
+    const track: TrackData = {
+      spawns: [1, 2, 3].map((slot) => ({ slot, pos: [0, 0, 0], heading: 0 })),
+      checkpoints: [0, 1, 3].map((index) => ({
+        index,
+        section: "",
+        pos: [0, 0, 0],
+        collider: 0,
+      })),
+      respawns: [{ checkpoint: 0, pos: [0, 0, 0], heading: 0 }],
+      items: [],
+      boosts: [],
+      surfaces: [],
+      cameras: [],
+    };
+    expect(checkTrack(track)).toEqual([
+      "spawns should be slots 1-8, got [1,2,3]",
+      "checkpoint 2 is missing",
+      "no respawn for checkpoint 1",
+      "no respawn for checkpoint 3",
+    ]);
+  });
+});
+
+// Runs once the greybox is exported (docs/team/ali-game.md, M1 step 2)
+const realTrack = fileURLToPath(
+  new URL("../tracks/happy_valley_col.glb", import.meta.url),
+);
+it.skipIf(!existsSync(realTrack))(
+  "happy_valley_col.glb is raceable",
+  async () => {
+    await initPhysics();
+    const world = createWorld();
+    const track = await loadTrack(
+      world,
+      new Uint8Array(readFileSync(realTrack)),
+      new NodeIO(),
+    );
+    expect(checkTrack(track)).toEqual([]);
+    world.free();
+  },
+);

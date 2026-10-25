@@ -4,7 +4,12 @@ import type { GameEvent, InputMsg, Phase, SnapMsg } from "@raceball/shared";
 import { addBall, applyControls, BALL_RADIUS, type PlayerSim } from "./ball";
 import { NEUTRAL_INPUT } from "./input";
 import { createWorld, initPhysics, TICK_DT } from "./physics";
-import { createFlatTrack, type Spawn, type TrackData } from "./track";
+import {
+  createFlatTrack,
+  loadTrack,
+  type Spawn,
+  type TrackData,
+} from "./track";
 import { tuning, type Tuning } from "./tuning";
 
 export interface RaceConfig {
@@ -36,30 +41,34 @@ export interface Race {
   dispose(): void; // frees the Rapier world (room disposed, page left)
 }
 
-/** The real map. Needs loadTrack(), which lands in M1; until then use createFlatRace(). */
-/* eslint-disable @typescript-eslint/no-unused-vars -- stub keeps the agreed signature until M1 */
+/** A race on a map exported from Blender (happy_valley_col.glb). io: NodeIO on the server, WebIO in the browser. */
 export async function createRace(
-  _trackGlb: Uint8Array,
-  _io: PlatformIO,
-  _cfg: RaceConfig,
+  trackGlb: Uint8Array,
+  io: PlatformIO,
+  cfg: RaceConfig,
+  t: Tuning = tuning,
 ): Promise<Race> {
-  throw new Error(
-    "createRace: loadTrack() isn't implemented yet (M1). Use createFlatRace() for now",
-  );
+  await initPhysics();
+  const world = createWorld();
+  const track = await loadTrack(world, trackGlb, io);
+  if (track.spawns.length === 0) {
+    world.free();
+    throw new Error("createRace: the track has no spawn_* markers");
+  }
+  return new TrackRace(world, track, cfg, t);
 }
-/* eslint-enable @typescript-eslint/no-unused-vars */
 
-/** A race on the flat M0 ground. Used by local mode and the tests, and by the server until the map exists. */
+/** A race on the flat M0 ground. Used by local mode and the tests. */
 export async function createFlatRace(
   cfg: RaceConfig,
   t: Tuning = tuning,
 ): Promise<Race> {
   await initPhysics();
   const world = createWorld();
-  return new FlatRace(world, createFlatTrack(world), cfg, t);
+  return new TrackRace(world, createFlatTrack(world), cfg, t);
 }
 
-class FlatRace implements Race {
+class TrackRace implements Race {
   phase: Phase = "lobby";
   laps: number;
   private readonly world: RAPIER.World;
@@ -192,7 +201,7 @@ class FlatRace implements Race {
     this.players.clear();
   }
 
-  /** Back to the grid for now; M1 uses the respawn marker of the last checkpoint instead. */
+  /** Back to the grid for now; the respawn task uses the respawn marker of the last checkpoint instead. */
   private respawn(p: PlayerSim): void {
     const spawn = this.track.spawns.find((s) => s.slot === p.slot) as Spawn;
     p.body.setTranslation(

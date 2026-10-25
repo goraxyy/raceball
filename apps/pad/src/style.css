@@ -1,30 +1,924 @@
-/* Nuris owns the pad's look. This is just a neutral placeholder. */
+/*
+ * RaceBall pad: the look of the phone controller.
+ * Owner: Nuris. Markup for every screen is in apps/pad/screens.html (open /screens.html in dev).
+ *
+ * Sizes use container units (cqh, cqw, cqmin), not vw/vh: the UI is rotated by code
+ * on iPhone, and container units follow the rotated box while viewport units don't.
+ */
+
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+
+  --bg: #0e1326;
+  --bg-2: #161d3a;
+  --surface: #1e2749;
+  --surface-2: #2a3561;
+  --line: #36427a;
+  --ink: #fbf6ec;
+  --muted: #aeb4d0;
+
+  --accent: #ff7a1a; /* fall orange: gas, main actions */
+  --accent-2: #ffb347;
+  --accent-ink: #1d1004;
+  --ice: #7cc8ff; /* brake */
+  --ok: #4ad99a;
+  --danger: #ff5d5d;
+
+  /* set per player by the pad code: style="--player: #56B4E9" (colors in docs/team/nuris-art-ui.md) */
+  --player: #e69f00;
+
+  --radius: 18px;
+  --font:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  /* the pad is a controller, not a page: no zoom, scroll, selection or callouts */
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* #ui is the box the rotation code turns (docs/CONTROLLER.md). #app is today's root. */
+#app,
+#ui {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  overflow: hidden;
+  container-type: size;
+}
+
+h1,
+h2,
+p {
   margin: 0;
 }
 
+/* ------------------------------------------------------------------ screens */
+
 .screen {
-  min-height: 100dvh;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  padding: 1rem;
-  box-sizing: border-box;
+  gap: clamp(10px, 4cqmin, 28px);
+  padding: max(16px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
   text-align: center;
+  background:
+    radial-gradient(
+      120% 90% at 50% 110%,
+      color-mix(in srgb, var(--accent) 22%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(90% 70% at 50% -20%, var(--bg-2), transparent 70%),
+    var(--bg);
 }
 
-.start-button {
-  font-size: 1.5rem;
-  padding: 1rem 2.5rem;
-  border-radius: 999px;
+.screen h1 {
+  font-size: clamp(28px, 9cqmin, 64px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
+
+.screen p {
+  max-width: 34ch;
+  font-size: clamp(15px, 4.2cqmin, 22px);
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.eyebrow {
+  font-size: clamp(12px, 3.2cqmin, 16px);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+/* ------------------------------------------------------------------ buttons */
+
+.start-button,
+.btn {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85em 2.2em;
+  min-height: 56px;
+  font: 900 clamp(18px, 5.5cqmin, 30px) / 1 var(--font);
+  letter-spacing: 0.02em;
+  color: var(--accent-ink);
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  box-shadow:
+    0 6px 0 color-mix(in srgb, var(--accent) 55%, black),
+    0 14px 30px color-mix(in srgb, var(--accent) 35%, transparent);
+  cursor: pointer;
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease;
+}
+
+.start-button:active,
+.btn:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 2px 0 color-mix(in srgb, var(--accent) 55%, black),
+    0 6px 16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.btn-ghost {
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid var(--line);
+  box-shadow: none;
+  font-size: clamp(14px, 4cqmin, 20px);
+  min-height: 44px;
+  padding: 0.6em 1.4em;
+}
+
+.btn-ghost:active {
+  transform: translateY(2px);
+  box-shadow: none;
+  background: var(--surface);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------------ logo + ball */
+
+.logo {
+  font-size: clamp(36px, 13cqmin, 88px);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.logo span {
+  color: var(--accent);
+}
+
+/* a glossy ball in the player color, with their shape on it */
+.ball {
+  --size: clamp(64px, 26cqmin, 180px);
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(
+      circle at 32% 28%,
+      rgb(255 255 255 / 0.85),
+      rgb(255 255 255 / 0) 22%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      var(--player),
+      color-mix(in srgb, var(--player) 55%, black) 100%
+    );
+  box-shadow:
+    inset -6px -10px 18px rgb(0 0 0 / 0.35),
+    0 calc(var(--size) * 0.12) calc(var(--size) * 0.18) rgb(0 0 0 / 0.45);
+}
+
+.ball .shape {
+  --shape-size: calc(var(--size) * 0.38);
+  background: rgb(255 255 255 / 0.92);
+}
+
+.ball-roll {
+  animation: ball-bounce 1.4s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+/* ------------------------------------------------------------------ player shapes */
+/* <span class="shape" data-shape="star"></span>: shape + color, never color alone */
+
+.shape {
+  --shape-size: 1em;
+  display: inline-block;
+  flex: none;
+  width: var(--shape-size);
+  height: var(--shape-size);
+  background: var(--player);
+}
+
+.shape[data-shape="circle"] {
+  border-radius: 50%;
+}
+.shape[data-shape="square"] {
+  border-radius: 12%;
+  transform: scale(0.88);
+}
+.shape[data-shape="triangle"] {
+  clip-path: polygon(50% 6%, 96% 90%, 4% 90%);
+}
+.shape[data-shape="star"] {
+  clip-path: polygon(
+    50% 2%,
+    62% 36%,
+    98% 37%,
+    69% 59%,
+    80% 95%,
+    50% 74%,
+    20% 95%,
+    31% 59%,
+    2% 37%,
+    38% 36%
+  );
+}
+.shape[data-shape="diamond"] {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.shape[data-shape="cross"] {
+  clip-path: polygon(
+    35% 0,
+    65% 0,
+    65% 35%,
+    100% 35%,
+    100% 65%,
+    65% 65%,
+    65% 100%,
+    35% 100%,
+    35% 65%,
+    0 65%,
+    0 35%,
+    35% 35%
+  );
+}
+.shape[data-shape="pentagon"] {
+  clip-path: polygon(50% 2%, 98% 38%, 79% 96%, 21% 96%, 2% 38%);
+}
+.shape[data-shape="hexagon"] {
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+}
+
+/* ------------------------------------------------------------------ start */
+
+.start .logo {
+  margin-bottom: 2cqmin;
+}
+
+.hint-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hint-list li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: clamp(12px, 3.3cqmin, 15px);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ permission help + connection lost */
+
+.permission-help h1,
+.connection-lost h1 {
+  color: var(--danger);
+}
+
+.spinner {
+  width: clamp(40px, 12cqmin, 72px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 6px solid var(--surface-2);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+
+/* ------------------------------------------------------------------ picker (phone-only players) */
+
+.picker {
+  justify-content: flex-start;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 420px);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 800 20px var(--font);
+  text-transform: none;
+  letter-spacing: 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ball-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: min(100%, 420px);
+}
+
+.ball-option {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ball-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ball-option .ball {
+  --size: 44px;
+}
+
+.ball-option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ calibrate */
+
+.steps {
+  display: flex;
+  gap: 8px;
+}
+
+.step {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  background: var(--surface);
+  color: var(--muted);
+  border: 2px solid var(--line);
+}
+
+.step.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.step.is-done {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--accent-ink);
+}
+
+/* a phone drawn sideways, held like a wheel */
+.wheel {
+  position: relative;
+  width: clamp(120px, 42cqmin, 260px);
+  aspect-ratio: 2 / 1;
+  display: grid;
+  place-items: center;
+}
+
+.wheel-phone {
+  width: 100%;
+  height: 100%;
+  border-radius: 16% / 32%;
+  border: 4px solid var(--ink);
+  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+  position: relative;
+}
+
+.wheel-phone::before,
+.wheel-phone::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 18%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: 0 -50%;
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.wheel-phone::before {
+  left: 8%;
+  background: color-mix(in srgb, var(--ice) 70%, transparent);
+}
+.wheel-phone::after {
+  right: 8%;
+}
+
+.calibrate[data-step="1"] .wheel-phone {
+  animation: hold-level 2.4s ease-in-out infinite;
+}
+
+.calibrate[data-step="2"] .wheel-phone {
+  animation: turn-right 1.6s ease-in-out infinite;
+}
+
+.meter {
+  width: min(70cqw, 360px);
+  height: 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* style="--progress: 0.4" from the pad code, 0 to 1 */
+.meter-fill {
+  height: 100%;
+  width: calc(var(--progress, 0) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 120ms linear;
+}
+
+/* ------------------------------------------------------------------ ready */
+
+.ready .ball {
+  --size: clamp(80px, 34cqmin, 200px);
+}
+
+.player-name {
+  font-size: clamp(22px, 7cqmin, 44px);
+  font-weight: 900;
+}
+
+.tile-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 2px solid var(--player);
+  font-size: clamp(14px, 4cqmin, 20px);
+  font-weight: 800;
+}
+
+.ready-btn.is-ready {
+  color: var(--accent-ink);
+  background: linear-gradient(180deg, #8ff0c2, var(--ok));
+  box-shadow:
+    0 6px 0 color-mix(in srgb, var(--ok) 50%, black),
+    0 14px 30px color-mix(in srgb, var(--ok) 35%, transparent);
+}
+
+/* ------------------------------------------------------------------ racing */
+/* landscape, held like a wheel: left half brake, right half gas, item top center */
+
+.racing {
+  padding: 0;
+  gap: 0;
+  display: block;
+  background: var(--bg);
+}
+
+.zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 0 max(14cqh, 20px);
+  touch-action: none;
+  transition: background 60ms linear;
+}
+
+.zone-left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: max(8cqw, 24px, env(safe-area-inset-left));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ice) 14%, var(--bg)),
+    var(--bg)
+  );
+  border-right: 1px solid var(--line);
+}
+
+.zone-right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: max(8cqw, 24px, env(safe-area-inset-right));
+  background: linear-gradient(
+    270deg,
+    color-mix(in srgb, var(--accent) 16%, var(--bg)),
+    var(--bg)
+  );
+}
+
+.zone-label {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-size: clamp(18px, 7cqh, 34px);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* the round thumb target */
+.zone-label::before {
+  content: "";
+  width: clamp(72px, 34cqh, 150px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 4px solid currentColor;
+  opacity: 0.55;
+  transition:
+    transform 60ms ease,
+    opacity 60ms ease;
+}
+
+.zone-left .zone-label {
+  color: var(--ice);
+}
+.zone-right .zone-label {
+  color: var(--accent);
+}
+
+/* the pad code adds .is-down while a thumb is on the zone */
+.zone.is-down .zone-label::before {
+  transform: scale(0.9);
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.zone-left.is-down {
+  background: color-mix(in srgb, var(--ice) 26%, var(--bg));
+}
+.zone-right.is-down {
+  background: color-mix(in srgb, var(--accent) 30%, var(--bg));
+}
+
+/* auto-gas (accessibility): gas is always on, so the right zone shows that */
+.racing.auto-gas .zone-right .zone-label::after {
+  content: "auto";
+  font-size: 0.5em;
+  letter-spacing: 0.2em;
+}
+
+.status {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 3cqw, 22px);
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.45);
+  border: 2px solid var(--player);
+  font-weight: 900;
+  font-size: clamp(14px, 6cqh, 26px);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.status .shape {
+  --shape-size: 1.1em;
+}
+
+.status-place b {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+.status-place small {
+  font-size: 0.7em;
+  vertical-align: super;
+}
+
+.status-lap {
+  color: var(--muted);
+}
+
+.final-lap .status-lap {
+  color: var(--accent-2);
+}
+
+.item-btn {
+  position: absolute;
+  top: calc(max(10px, env(safe-area-inset-top)) + clamp(44px, 16cqh, 70px));
+  left: 50%;
+  translate: -50% 0;
+  width: clamp(84px, 34cqh, 150px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 4px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font: 900 clamp(13px, 5cqh, 20px) / 1.1 var(--font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.item-btn:disabled {
+  opacity: 0.6;
+}
+
+/* data-item="boost" | "roar" | "spill" | "snowday" while an item is held */
+.item-btn[data-item]:not([data-item=""]) {
+  color: var(--accent-ink);
+  border-color: #fff;
+  background: radial-gradient(
+    circle at 35% 30%,
+    #fff,
+    var(--item-color, var(--accent-2)) 45%,
+    var(--item-color-2, var(--accent)) 100%
+  );
+  animation: item-glow 1.1s ease-in-out infinite;
+}
+
+.item-btn[data-item="boost"] {
+  --item-color: #9fd4ff;
+  --item-color-2: #2f6fff;
+}
+.item-btn[data-item="roar"] {
+  --item-color: #ffd27a;
+  --item-color-2: #e07a00;
+}
+.item-btn[data-item="spill"] {
+  --item-color: #fff2d6;
+  --item-color-2: #a06a3a;
+}
+.item-btn[data-item="snowday"] {
+  --item-color: #ffffff;
+  --item-color-2: #9ad7ff;
+}
+
+.item-btn:active {
+  transform: scale(0.94);
+}
+
+.shake-hint {
+  display: block;
+  font-size: 0.6em;
+  letter-spacing: 0.12em;
+  opacity: 0.75;
+}
+
+.wrong-way {
+  position: absolute;
+  left: 50%;
+  bottom: 12cqh;
+  translate: -50% 0;
+  padding: 8px 20px;
+  border-radius: 12px;
+  background: var(--danger);
+  color: #fff;
+  font-weight: 900;
+  font-size: clamp(16px, 7cqh, 30px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: blink 0.6s steps(2, jump-none) infinite;
+  z-index: 2;
+}
+
+.wrong-way[hidden] {
+  display: none;
+}
+
+/*
+ * Event cues: phones have no vibration, so every event gets a sound + a visual.
+ * The pad code sets data-cue="bump" (or item, boost, lap, finallap, finish, edge) on .racing,
+ * then removes it on animationend. Restart a cue by removing it, forcing a reflow, and adding it again.
+ */
+.cue {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  border-radius: inherit;
+}
+
+.racing[data-cue] .cue {
+  animation: cue-flash 420ms ease-out;
+}
+
+.racing[data-cue="bump"] .cue {
+  --cue: var(--danger);
+  animation: cue-flash 320ms ease-out;
+}
+.racing[data-cue="bump"] {
+  animation: shake 300ms ease-out;
+}
+.racing[data-cue="item"] .cue {
+  --cue: var(--accent-2);
+}
+.racing[data-cue="boost"] .cue {
+  --cue: #6fb6ff;
+  animation: cue-flash 600ms ease-out;
+}
+.racing[data-cue="lap"] .cue,
+.racing[data-cue="finallap"] .cue {
+  --cue: var(--ok);
+  animation: cue-flash 700ms ease-out;
+}
+.racing[data-cue="finish"] .cue {
+  --cue: #fff;
+  animation: cue-flash 1s ease-out;
+}
+.racing[data-cue="edge"] .cue {
+  --cue: var(--danger);
+  animation: cue-edge 300ms ease-out;
+}
+
+/* a big word over the pad for lap and finish cues: <div class="cue-text">Final lap!</div> */
+.cue-text {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  translate: -50% -50%;
+  font-size: clamp(28px, 16cqh, 72px);
+  font-weight: 900;
+  font-style: italic;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  text-shadow: 0 4px 0 rgb(0 0 0 / 0.5);
+  animation: cue-pop 1.1s ease-out forwards;
+}
+
+/* ------------------------------------------------------------------ results */
+
+.results .place {
+  font-size: clamp(64px, 30cqmin, 180px);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--player);
+  text-shadow: 0 6px 0 rgb(0 0 0 / 0.4);
+}
+
+.results .place small {
+  font-size: 0.4em;
+  vertical-align: super;
+}
+
+.results[data-place="1"] .place {
+  color: #ffd54a;
+}
+
+.stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.stat {
+  min-width: 96px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  display: grid;
+  gap: 2px;
+}
+
+.stat b {
+  font-size: clamp(18px, 6cqmin, 28px);
+  font-weight: 900;
+}
+
+.stat span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.brag-title {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--player) 25%, var(--surface));
+  border: 2px solid var(--player);
+  font-weight: 900;
+  font-size: clamp(14px, 4cqmin, 20px);
+}
+
+/* short screens (landscape phones): put results side by side */
+@container (max-height: 420px) and (min-aspect-ratio: 4 / 3) {
+  .results {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    column-gap: 7cqw;
+  }
+
+  .results .place {
+    font-size: 42cqh;
+  }
+
+  .results .results-main {
+    flex: 0 0 auto;
+  }
+
+  .results .results-side {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+  }
+
+  .ready {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+  }
+
+  .ready .ready-side {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+  }
+}
+
+/* ------------------------------------------------------------------ debug overlay (Rasim) */
 
 .debug-overlay {
   position: fixed;
@@ -40,4 +934,135 @@ body {
   background: rgb(0 0 0 / 0.7);
   pointer-events: none;
   z-index: 1000;
+}
+
+/* ------------------------------------------------------------------ animations */
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes ball-bounce {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -10%;
+  }
+}
+
+@keyframes hold-level {
+  0%,
+  100% {
+    rotate: -3deg;
+  }
+  50% {
+    rotate: 3deg;
+  }
+}
+
+@keyframes turn-right {
+  0%,
+  15% {
+    rotate: 0deg;
+  }
+  55%,
+  80% {
+    rotate: 35deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+
+@keyframes item-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--item-color-2) 70%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
+@keyframes cue-flash {
+  from {
+    box-shadow: inset 0 0 0 9999px
+      color-mix(in srgb, var(--cue, #fff) 35%, transparent);
+  }
+  to {
+    box-shadow: inset 0 0 0 9999px transparent;
+  }
+}
+
+@keyframes cue-edge {
+  from {
+    box-shadow: inset 0 0 40px 16px var(--cue);
+  }
+  to {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+
+@keyframes cue-pop {
+  0% {
+    scale: 0.4;
+    opacity: 0;
+  }
+  15% {
+    scale: 1.1;
+    opacity: 1;
+  }
+  25% {
+    scale: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: -6px 2px;
+  }
+  50% {
+    translate: 5px -2px;
+  }
+  75% {
+    translate: -3px 1px;
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* players who turned on reduced motion get flashes but no shaking or bouncing */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+  }
+
+  .racing[data-cue="bump"],
+  .ball-roll,
+  .calibrate .wheel-phone,
+  .item-btn[data-item]:not([data-item=""]),
+  .wrong-way {
+    animation: none !important;
+  }
 }

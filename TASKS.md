@@ -127,7 +127,7 @@ Nothing right now. Add new questions here.
 - [ ] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 
 **Nuris**
-- [ ] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen`
+- [x] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen` (in `apps/web/src/ui`, preview at `/ui`)
 - [ ] Pad screens in `apps/pad/screens.html`; agree the markup contract with Rasim; write `apps/pad/src/style.css` (screens and style.css done; waiting on Rasim to agree the markup)
 - [x] First sound set: rolling loop, bump, countdown, UI click
 

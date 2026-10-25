@@ -181,7 +181,7 @@ addEventListener("keydown", async (e) => {
 
 | | |
 |---|---|
-| Project / service | `raceball` / `raceball-server`, deploying `main` |
+| Project / service | `raceball` / `raceball-server`, deploying `main` of `raceball/raceball` (Railway's GitHub app has access to the `raceball` org) |
 | Domain | `raceball-server-production.up.railway.app` (port 2567), so `VITE_SERVER_URL=wss://raceball-server-production.up.railway.app` |
 | Variables | `PORT=2567`, so the server listens on the port the domain points to |
 | Plan | **Free** for now: the server sleeps when idle and Railway placed it in `sfo`, even though `railway.json` asks for US East |

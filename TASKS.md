@@ -80,10 +80,10 @@ Nothing right now. Add new questions here.
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
 - [x] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
 - [x] Create and configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy the hello-world Colyseus server; `/health` returns `ok` ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway))
-  - Deployed: project `raceball`, service `raceball-server` deploys `main` with the `railway.json` settings, `PORT=2567`, and `https://raceball-server-production.up.railway.app/health` returns `ok`
+  - Deployed: project `raceball`, service `raceball-server` deploys `main` of `raceball/raceball` (switched from `goraxyy/raceball` after the move) with the `railway.json` settings, `PORT=2567`, and `https://raceball-server-production.up.railway.app/health` returns `ok`
   - Still on the Free plan: it puts the server in `sfo` and makes it sleep when idle; both need Hobby, before the M1 latency measurement and the event
 - [x] Import `apps/web` and `apps/pad` into Vercel with Rasim's settings ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). As repo owner, only you can grant them GitHub access
-  - `raceball-web` (root `apps/web`) and `raceball-pad` (builds `@raceball/pad` from the repo root) deploy `main`, with Vercel Authentication off for phone testing. Both have `VITE_SERVER_URL`; web also has `VITE_PAD_URL`
+  - Replaced: since the move to the `raceball` org, Rasim's projects `raceball-web` and `raceball` (the pad) in his account build every PR and deploy `main` ([his guide](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). Ali's old `raceball-web` and `raceball-pad` projects no longer get pushes and can be deleted
 - [x] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
 - [x] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
 - [x] Dev-only Inspector toggle (`Shift+I`)

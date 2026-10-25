@@ -196,7 +196,7 @@ Nothing right now. Add new questions here.
 **Nuris**
 - [ ] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones)
 - [ ] Full sound pass + mix (big screen vs laptops), crowd cheers; captions for key audio cues
-- [ ] Logo, title screen, loading screen with progress, brag card, favicons
+- [x] Logo, title screen, loading screen with progress, brag card, favicons (`TitleScreen` on `/`, `BragCard`; previews at `/ui` > title, loading, brag; how they're made: [your guide](docs/team/nuris-art-ui.md#branding))
 
 ---
 

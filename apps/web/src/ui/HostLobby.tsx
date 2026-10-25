@@ -1,4 +1,5 @@
 import { MAX_PLAYERS } from "@raceball/shared";
+import { Logo } from "./pieces";
 import { PlayerList } from "./PlayerList";
 import { QrCode } from "./QrCode";
 import type { LobbyPlayer } from "./types";
@@ -34,7 +35,7 @@ export function HostLobby({
     <section className="ui-screen host-lobby">
       <div className="host-join">
         <div className="logo">
-          Race<span>Ball</span>
+          <Logo />
         </div>
         <div className="room-code">
           <span className="eyebrow">Room code</span>

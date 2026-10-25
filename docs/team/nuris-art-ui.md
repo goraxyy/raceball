@@ -191,6 +191,8 @@ Done: all four are in `PLANETS` in the script (Mercury's craters have a pale rim
 #### Animated props
 Item boxes (spin + bob), flags, the arch, crowd cards (2-frame sprite cards). Animate in Blender, export with Animation on, and give every animation a clear name (`anim_itembox_spin`), because the game plays them by name. Put them on the dressing kit's palette texture where you can (`tools/models/build_dressing_kit.py`).
 
+Done: `tools/models/build_animated_props.py` builds them all on the kit's palette into `models/kit_animated.glb`: the item box, a checkered and a blue-and-white flag, the finish arch with a swinging banner and flags on top, and three crowd cards. It imports the dressing kit script for its palette and helpers (that script's build now runs in `build()`, unchanged). The prop list and every animation name for Ali are in [ASSETS.md > Animated props](../ASSETS.md#animated-props-modelskit_animatedglb).
+
 #### Beaver Stadium and Mount Nittany
 Model over the greybox boxes in `assets-src/happy_valley.blend`, in the `visual` collection, and don't touch `collision` or `markers` (Ali's guide: [how to model over the greybox](ali-game.md#m3-how-to-model-over-the-greybox)). The stadium tunnel walls are collision, so the bowl must leave the tunnel clear. Budgets: 40k triangles for the stadium (instance one stand segment around the bowl), a card or texture for Mount Nittany. The map visuals are rebuilt by `tools/track/build_happy_valley.py`, so agree with Ali how your models get placed (imported by the script, or a separate `maps/` file) before you start.
 

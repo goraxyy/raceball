@@ -36,6 +36,10 @@ interface Shelf {
   rings?: boolean;
   /** Camera radius when you click a model to look closer */
   close: number;
+  /** A kit file holds every prop at the origin: place its root nodes by name, [x, z, turn] */
+  place?: Record<string, [number, number, number?]>;
+  /** Where the camera looks, m */
+  target?: [number, number, number];
 }
 
 const SHELVES: Shelf[] = [
@@ -46,6 +50,24 @@ const SHELVES: Shelf[] = [
     radius: 9,
     rings: true,
     close: 2.6,
+  },
+  {
+    label: "Props",
+    files: ["models/kit_animated.glb"],
+    gap: 0,
+    radius: 21,
+    close: 5,
+    target: [0, 2.5, 3],
+    // a little race-day scene: the arch, flags either side, an item box on the line, fans watching
+    place: {
+      prop_finish_arch_animated: [0, 8],
+      prop_flag_checker: [-9.5, 6],
+      prop_flag_bluewhite: [9.5, 6],
+      prop_item_box: [0, 2],
+      prop_crowd_card_a: [-5.2, -1.5, Math.PI],
+      prop_crowd_card_b: [-4.2, -1.8, Math.PI],
+      prop_crowd_card_c: [-3.2, -1.5, Math.PI],
+    },
   },
 ];
 
@@ -80,7 +102,7 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
   const width = (shelf.files.length - 1) * shelf.gap;
   const ground = MeshBuilder.CreateGround(
     "lawn",
-    { width: width + 30, height: 30 },
+    { width: width + 80, height: 80 },
     scene,
   );
   const lawn = new StandardMaterial("lawn", scene);
@@ -94,7 +116,7 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
     -Math.PI / 2,
     1.15,
     shelf.radius,
-    new Vector3(0, shelf.rings ? 0.6 : 1.5, 0),
+    shelf.target ? Vector3.FromArray(shelf.target) : new Vector3(0, 0.6, 0),
     scene,
   );
   camera.lowerRadiusLimit = 1.5;
@@ -118,6 +140,14 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
         root.position.x = i * shelf.gap - width / 2;
         roots.push(root);
         for (const node of container.rootNodes) node.parent = root;
+        for (const [name, [x, z, turn]] of Object.entries(shelf.place ?? {})) {
+          const prop = scene.getTransformNodeByName(name);
+          if (!prop) continue;
+          prop.position.set(x, 0, z);
+          prop.rotationQuaternion = null;
+          prop.rotation.y = turn ?? 0;
+          roots.push(prop); // click a prop to look closer
+        }
         for (const mesh of container.meshes) {
           shadows.addShadowCaster(mesh);
           mesh.receiveShadows = true;

@@ -6,18 +6,24 @@ import {
   laps,
   myPlayer,
   phase,
+  planetsTaken,
+  sendProfile,
   sendStatus,
   status,
   type ConnectionStatus,
 } from "./connection";
-import type { Phase } from "@raceball/shared";
+import { readPadParams, type Phase } from "@raceball/shared";
 import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
 import { lockDownGestures } from "./lockdown";
+import { showEvent } from "./feedback";
+import { fireItem } from "./input-loop";
 import { flip, keepUpright } from "./orientation";
 import {
   CALIBRATE_TEXT,
   calibrateHtml,
+  connectionLostHtml,
   lookOf,
+  pickerHtml,
   errorHtml,
   racingHtml,
   readyHtml,
@@ -59,15 +65,81 @@ function showStart() {
   const screen = show(startHtml());
   screen.querySelector("button")!.addEventListener("click", async () => {
     if (!(await startFromTap())) return showPermissionHelp();
-    void connect(onStatus, onPhase);
-    const saved = loadCalibration();
-    if (saved) {
-      steering.calib = saved;
-      sendStatus({ calibrated: true });
-      showReady();
-    } else {
-      showCalibrate();
+    void connect(onStatus, onPhase, (evt, me) => showEvent(evt, me, laps()));
+    const { room, pairToken } = readPadParams(location.search);
+    // Phone-only (the big screen's QR has no pairing token): name and planet first
+    if (room && !pairToken) return showPicker(room);
+    calibrateOrReady();
+  });
+}
+
+/** Straight to Ready if this phone is already calibrated, otherwise calibrate */
+function calibrateOrReady() {
+  const saved = loadCalibration();
+  if (saved) {
+    steering.calib = saved;
+    sendStatus({ calibrated: true });
+    showReady();
+  } else {
+    showCalibrate();
+  }
+}
+
+// ---------------------------------------------------------------- picker
+
+const NAME_KEY = "raceball:name";
+
+function savedName() {
+  try {
+    return localStorage.getItem(NAME_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Phone-only players: name + planet. Join stays disabled until the server has given us a slot */
+function showPicker(room: string) {
+  const screen = show(
+    pickerHtml(room, lookOf(myPlayer()), savedName(), planetsTaken()),
+  );
+  const input = screen.querySelector<HTMLInputElement>(".field input")!;
+  const radios = [
+    ...screen.querySelectorAll<HTMLInputElement>('input[name="ball"]'),
+  ];
+  const join = screen.querySelector<HTMLButtonElement>(".btn")!;
+  let assigned = false;
+
+  // Other players pick planets too: keep the greyed-out ones current
+  const refresh = () => {
+    const joined = status.state === "joined";
+    join.disabled = !joined;
+    const taken = planetsTaken();
+    for (const r of radios) r.disabled = taken.has(r.value);
+    if (joined && !assigned) {
+      assigned = true; // start on the planet the server gave us
+      const mine = radios.find((r) => r.value === myPlayer()?.ball);
+      if (mine) mine.checked = true;
     }
+    const checked = radios.find((r) => r.checked);
+    if (!checked || checked.disabled) {
+      const free = radios.find((r) => !r.disabled);
+      if (free) free.checked = true;
+    }
+  };
+  refresh();
+  const timer = setInterval(refresh, 300);
+  stopScreen = () => clearInterval(timer);
+
+  join.addEventListener("click", () => {
+    const name = input.value.trim();
+    const ball = radios.find((r) => r.checked)?.value;
+    sendProfile({ name: name || undefined, ball });
+    try {
+      if (name) localStorage.setItem(NAME_KEY, name);
+    } catch {
+      // not saved
+    }
+    calibrateOrReady();
   });
 }
 
@@ -145,6 +217,8 @@ const STATUS_TEXT = (s: ConnectionStatus) => {
       return s.phoneOnly
         ? `In race ${s.room}. Watch the big screen!`
         : `Paired with your laptop in race ${s.room}.`;
+    case "reconnecting":
+      return "Reconnecting…";
     case "error":
       return ERROR_COPY[s.kind].title;
   }
@@ -184,6 +258,14 @@ function onPhase(p: Phase) {
 /** Connection changes: refresh the ready screen's text and the player's look */
 function onStatus(s: ConnectionStatus) {
   if (s.state === "error") return showError(s.kind, s.room, s.code);
+  const on = (cls: string) => !!app.querySelector(`.screen.${cls}`);
+  // Dropped mid-game: cover the controls until the SDK gets us back
+  if (s.state === "reconnecting" && (on("ready") || on("racing")))
+    return void show(connectionLostHtml());
+  if (s.state === "joined" && on("connection-lost")) {
+    const p = phase();
+    return p === "countdown" || p === "racing" ? showRacing() : showReady();
+  }
   const screen = app.querySelector<HTMLElement>(".screen.ready");
   if (!screen) return;
   const look = lookOf(myPlayer());
@@ -201,6 +283,7 @@ function onStatus(s: ConnectionStatus) {
 function showRacing() {
   const screen = show(racingHtml(lookOf(myPlayer()), laps()));
   const unbindZones = bindZones(screen);
+  screen.querySelector(".item-btn")!.addEventListener("click", fireItem);
   const steerEl = screen.querySelector<HTMLElement>(".steer")!;
   everyFrame(() =>
     steerEl.style.setProperty("--steer", steering.read().toFixed(3)),

@@ -69,6 +69,7 @@ A phone-only player picks their name and ball on the pad itself. The big screen 
 | `ping` / `pong` | both ways | 1 Hz | Measures round-trip time and the server clock offset |
 | `start { laps }`, `addBot`, `removeBot { id }`, `rematch` | host → server | On click | Only the host may send these. `laps` is 1 (demo) or 3 (default). `start` only works in the lobby once every player is `readyToRace()` |
 | `status { calibrated?, assetsLoaded?, ready? }` | pad / laptop → server | On change | For the sender's own player. Phone-only players have no assets to load |
+| `setProfile { name?, ball? }` | pad / laptop → server | Lobby | Name and planet for the sender's own player. Each planet at most once per room: a taken one is refused, a missing one gets the first free planet |
 
 - **Stale input rule:** if a pad's latest input is older than **200 ms**, treat it as neutral (no gas). Then a locked phone can't send its ball off a cliff.
 - **Bandwidth:** 8 balls × ~40 bytes × 60 Hz ≈ 20 KB/s per screen. That's not a concern.
@@ -127,7 +128,7 @@ A rolling ball has momentum, which hides latency far better than a twitchy kart 
 ## Protocol v1 (draft, lives in `packages/shared/src/protocol.ts`)
 
 ```ts
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -235,6 +236,16 @@ export interface StatusMsg {
   calibrated?: boolean;
   assetsLoaded?: boolean;
   ready?: boolean;
+}
+
+/**
+ * pad or laptop → server: "setProfile", for its own player, in the lobby.
+ * A phone-only player picks their name and planet on the pad. A taken planet is refused.
+ */
+export interface SetProfileMsg {
+  name?: string;
+  /** One of PLANETS */
+  ball?: string;
 }
 ```
 

@@ -79,14 +79,14 @@ describe("RaceRoom", () => {
     const client = await join({
       role: "viewer",
       name: "  Rasim  ",
-      ball: "lion",
+      ball: "earth",
     });
     const welcomed = client.waitForMessage("welcome");
     client.send("hello");
     const welcome = await welcomed;
     const player = room.state.players.get(welcome.playerId)!;
     expect(player.name).toBe("Rasim");
-    expect(player.ball).toBe("lion");
+    expect(player.ball).toBe("earth");
     expect(player.phoneOnly).toBe(false);
     expect(player.paired).toBe(false);
   });
@@ -461,5 +461,122 @@ describe("host controls", () => {
     expect(room.state.players.get(playerId)!.ready).toBe(false);
     expect(players.find((p) => p.bot)!.ready).toBe(true);
     expect(room.state.players.get(playerId)!.calibrated).toBe(true); // no need to recalibrate
+  });
+});
+
+describe("profiles and planets", () => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  test("every player gets a different planet; a taken or missing one gets the first free", async () => {
+    await join({ role: "viewer", ball: "mars" });
+    await join({ role: "viewer", ball: "mars" }); // taken
+    await join({ role: "viewer" }); // none asked
+    await join({ role: "viewer", ball: "pluto" }); // not a planet here
+    const balls = [...room.state.players.values()].map((p) => p.ball);
+    expect(balls[0]).toBe("mars");
+    expect(new Set(balls).size).toBe(4);
+    expect(balls.slice(1)).toEqual(["mercury", "venus", "earth"]);
+  });
+
+  test("setProfile changes your own name and planet, but not to a taken one", async () => {
+    const a = await join({ role: "pad" });
+    const { playerId: aId } = await welcome(a);
+    const b = await join({ role: "pad", ball: "saturn" });
+    const { playerId: bId } = await welcome(b);
+    a.send("setProfile", { name: "  Nuris  ", ball: "jupiter" });
+    await sleep(100);
+    expect(room.state.players.get(aId)!.name).toBe("Nuris");
+    expect(room.state.players.get(aId)!.ball).toBe("jupiter");
+
+    a.send("setProfile", { ball: "saturn" }); // b has it
+    await sleep(100);
+    expect(room.state.players.get(aId)!.ball).toBe("jupiter");
+    expect(room.state.players.get(bId)!.ball).toBe("saturn");
+  });
+
+  test("profiles are locked once the race starts", async () => {
+    const host = await join({ role: "host" });
+    const pad = await join({ role: "pad", name: "Before" });
+    const { playerId } = await welcome(pad);
+    pad.send("status", { calibrated: true, ready: true });
+    await sleep(50);
+    host.send("start", { laps: 1 });
+    await sleep(100);
+    pad.send("setProfile", { name: "After" });
+    await sleep(100);
+    expect(room.state.players.get(playerId)!.name).toBe("Before");
+  });
+});
+
+describe("reconnection", () => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  type SdkRoom = Awaited<ReturnType<typeof join>> & {
+    reconnectionToken: string;
+    connection: { close(code?: number): void };
+    reconnection: { enabled: boolean };
+  };
+
+  test("a dropped phone keeps its slot and comes back into it", async () => {
+    await join({ role: "host" }); // keeps the room alive
+    const laptop = await join({ role: "viewer" });
+    const { playerId, pairToken } = await welcome(laptop);
+    const pad = (await join({ role: "pad", pairToken })) as SdkRoom;
+    pad.reconnection.enabled = false; // we reconnect by hand below, like a reloaded page would
+    const token = pad.reconnectionToken;
+
+    pad.connection.close(4999); // not a goodbye: like a locked phone
+    await sleep(300);
+    const player = room.state.players.get(playerId)!;
+    expect(player.connected).toBe(false);
+    expect(player.paired).toBe(true); // slot held
+
+    const back = await colyseus.sdk.reconnect(token);
+    await sleep(200);
+    expect(player.connected).toBe(true);
+    expect(player.paired).toBe(true);
+    expect(room.state.players.size).toBe(1);
+
+    // and it can still drive: input from the reconnected pad is accepted
+    back.send("input", {
+      seq: 99,
+      steer: 0,
+      gas: 1,
+      brake: false,
+      item: false,
+    });
+    await sleep(100);
+    expect(room.latestInput(playerId)?.msg.seq).toBe(99);
+  });
+
+  test("the SDK reconnects a dropped pad by itself", async () => {
+    await join({ role: "host" });
+    const pad = (await join({ role: "pad", name: "Auto" })) as SdkRoom;
+    const { playerId } = await welcome(pad);
+    await sleep(5100); // the SDK only auto-reconnects rooms it has been in for 5 s
+    pad.connection.close(4010); // MAY_TRY_RECONNECT, like a network drop (1006) on a real phone
+    await sleep(50);
+    expect(room.state.players.get(playerId)!.connected).toBe(false);
+    for (let i = 0; i < 40 && !room.state.players.get(playerId)!.connected; i++)
+      await sleep(100);
+    expect(room.state.players.get(playerId)!.connected).toBe(true);
+  });
+
+  test("a phone-only player who drops keeps their name and planet on return", async () => {
+    await join({ role: "host" });
+    const pad = (await join({
+      role: "pad",
+      name: "Ana",
+      ball: "neptune",
+    })) as SdkRoom;
+    pad.reconnection.enabled = false;
+    const { playerId } = await welcome(pad);
+    const token = pad.reconnectionToken;
+    pad.connection.close(4999);
+    await sleep(300);
+    expect(room.state.players.get(playerId)!.connected).toBe(false);
+    await colyseus.sdk.reconnect(token);
+    await sleep(200);
+    const p = room.state.players.get(playerId)!;
+    expect([p.connected, p.name, p.ball]).toEqual([true, "Ana", "neptune"]);
   });
 });

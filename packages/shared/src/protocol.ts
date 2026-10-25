@@ -1,6 +1,6 @@
 // Protocol v1: the contract between game-core, server, screens and pads.
 // To change it: bump PROTOCOL_VERSION and update docs/ARCHITECTURE.md (see docs/WORKFLOW.md).
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -123,4 +123,14 @@ export interface StatusMsg {
   calibrated?: boolean;
   assetsLoaded?: boolean;
   ready?: boolean;
+}
+
+/**
+ * pad or laptop → server: "setProfile", for its own player, in the lobby.
+ * A phone-only player picks their name and planet on the pad. A taken planet is refused.
+ */
+export interface SetProfileMsg {
+  name?: string;
+  /** One of PLANETS */
+  ball?: string;
 }

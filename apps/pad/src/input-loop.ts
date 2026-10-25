@@ -12,15 +12,15 @@ let target: Room | undefined;
 /** Inputs sent so far (the debug overlay turns this into a rate) */
 export let sentCount = 0;
 
-/** Set by the touch zones (touch.ts). Item comes with shake detection (M2) */
-export const controls = { gas: 0, brake: false };
+/** Gas/brake from the touch zones (touch.ts); item from a shake or the item button */
+export const controls = { gas: 0, brake: false, item: false };
 
 const current = (): InputMsg => ({
   seq: ++seq,
   steer: steering.read(),
   gas: controls.gas,
   brake: controls.brake,
-  item: false,
+  item: controls.item,
 });
 
 const neutral = (): InputMsg => ({
@@ -34,6 +34,13 @@ const neutral = (): InputMsg => ({
 function send(msg: InputMsg) {
   target?.send("input", msg);
   sentCount++;
+  if (msg.item) controls.item = false; // true in exactly one message
+}
+
+/** Fire the held item: goes out right away in the next input */
+export function fireItem() {
+  controls.item = true;
+  sendNow();
 }
 
 function start() {

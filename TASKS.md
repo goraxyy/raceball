@@ -162,15 +162,15 @@ Nothing right now. Add new questions here.
   - `race.path`: the route's centerline as [x, z] points from the finish line (274 points, 1,096 m), from the new `route` marker. Positions are the snapshot's balls, so screens can sample them at 10 Hz. Rasim: send `race.path` to screens once, e.g. when they join
 
 **Rasim**
-- [ ] Lobby flow end to end: create, join, pair, calibrate, assets loaded, ready, host starts. `/host` and `/play` use Nuris's components from `apps/web/src/ui` (`HostLobby`, `ViewerJoin`, `PairingQR`, `LoadingScreen`)
+- [x] Lobby flow end to end: create, join, pair, calibrate, assets loaded, ready, host starts. `/host` and `/play` use Nuris's components from `apps/web/src/ui` (`HostLobby`, `ViewerJoin`, `PairingQR`, `LoadingScreen`) (the laptop reports "assets loaded" when Ali's renderer has loaded the map behind the lobby)
 - [x] Host controls: lap selector (1 or 3, default 3), add/remove bots, start, rematch (`start`, `addBot`, `removeBot`, `rematch` messages)
-- [ ] **Phone-only join:** pad joins from the big-screen QR with no token; `setProfile` with name/ball; `phoneOnly` in the schema
-- [ ] **One planet per player:** each of the 8 `PLANETS` at most once per room; a missing or taken `ball` gets the first free planet; send the taken list so the pad and laptop pickers can grey them out
-- [ ] Phases synced in the schema: lobby, countdown, racing, results, back to lobby (lobby → countdown → racing → lobby done; results → lobby after 15 s is wired, waiting on game-core to reach `results`)
-- [ ] Reconnection for pad + viewer into the same slot (`allowReconnection`); stale input becomes neutral after 200 ms
-- [ ] Fill-up bots (server-side, using `botInput`) and a load-test bot script (8 pads against Railway) (server-side bots done; load-test script to do)
-- [ ] Route `evt` messages to the right pads; pad sound + visual cues for each event
-- [ ] Shake detection for firing items
+- [x] **Phone-only join:** pad joins from the big-screen QR with no token; `setProfile` with name/ball; `phoneOnly` in the schema
+- [x] **One planet per player:** each of the 8 `PLANETS` at most once per room; a missing or taken `ball` gets the first free planet; send the taken list so the pad and laptop pickers can grey them out (the taken list is the synced state, via `takenPlanets()`; the laptop's join form can't know it before joining, so the server reassigns a taken pick)
+- [ ] Phases synced in the schema: lobby, countdown, racing, results, back to lobby (lobby → countdown → racing → lobby tested; results → lobby after 15 s is wired, still to check in a full race now that game-core reaches `results`)
+- [x] Reconnection for pad + viewer into the same slot (`allowReconnection`); stale input becomes neutral after 200 ms
+- [x] Fill-up bots (server-side, using `botInput`) and a load-test bot script (8 pads against Railway) (`pnpm --filter @raceball/server bots <ROOM>`; tested with 8 bots locally, still to run against Railway)
+- [x] Route `evt` messages to the right pads; pad sound + visual cues for each event
+- [x] Shake detection for firing items (threshold 18 m/s², 600 ms cooldown: tune on a real phone)
 
 **Nuris**
 - [x] Big-screen overlay: `TrackMap` (SVG, color + shape markers), `Standings`, `Countdown`, `FollowTile` frames (in `apps/web/src/ui`, live preview at `/ui` > race)

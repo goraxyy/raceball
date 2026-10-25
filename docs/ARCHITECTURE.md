@@ -4,7 +4,7 @@
 
 | Role | Runs on | Does |
 |---|---|---|
-| **host** | The big-screen laptop (or a monitor/projector), `/host` | Creates the room and shows the code + the phone-only QR code. Renders the overview camera, live track map, standings, **follow-cam tiles for phone-only players**, and results |
+| **host** | The big-screen laptop (or a monitor/projector), `/host` | Creates the room and shows the code + the phone-only QR code. During the race, **splits the screen into a first-person view per player** (up to 8), and shows results |
 | **viewer** | A player's laptop, `/play` (optional) | Joins with name and ball, shows the pairing QR code, renders that player's chase camera and HUD |
 | **pad** | Each player's phone (`apps/pad`) | Reads sensors and touch, sends input, plays sounds and visual feedback. A phone-only player's pad also shows position, lap and item |
 | **server** | Railway, US East (Virginia) | Runs the **only** physics simulation, and sends snapshots and events |
@@ -38,7 +38,7 @@ sequenceDiagram
   end
 ```
 
-A phone-only player picks their name and ball on the pad itself. The big screen shows **up to 4 follow-cam tiles** (picture-in-picture chase cameras). If the big screen drops below 50 fps, it falls back to name tags on the overview camera. This is a performance safety valve, since every extra camera draws the scene again.
+A phone-only player picks their name and ball on the pad itself. During the race the big screen is a **split screen**: one first-person view per player, up to 8 (1 fills the screen, 2 side by side, 3–4 in 2×2, 5–8 in two rows). If the big screen drops below 50 fps for 3 s, it falls back to the overview camera with a name tag on every ball. This is a performance safety valve, since every view draws the scene again.
 
 ## The server is authoritative
 

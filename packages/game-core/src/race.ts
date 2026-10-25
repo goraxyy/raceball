@@ -4,12 +4,7 @@ import type { GameEvent, InputMsg, Phase, SnapMsg } from "@raceball/shared";
 import { addBall, applyControls, BALL_RADIUS, type PlayerSim } from "./ball";
 import { NEUTRAL_INPUT } from "./input";
 import { createWorld, initPhysics, TICK_DT } from "./physics";
-import {
-  createFlatTrack,
-  loadTrack,
-  type Spawn,
-  type TrackData,
-} from "./track";
+import { createFlatTrack, loadTrack, type TrackData, type Vec3 } from "./track";
 import { tuning, type Tuning } from "./tuning";
 
 export interface RaceConfig {
@@ -68,13 +63,24 @@ export async function createFlatRace(
   return new TrackRace(world, createFlatTrack(world), cfg, t);
 }
 
+/** A ball in the race, plus its progress around the track. */
+interface Racer extends PlayerSim {
+  collider: number; // handle of the ball's collider, for gate events
+  next: number; // position in track.checkpoints of the gate to cross next
+  last: number; // position of the last gate crossed, -1 before the first
+  stuckFor: number; // seconds of gas while barely moving
+}
+
 class TrackRace implements Race {
   phase: Phase = "lobby";
   laps: number;
   private readonly world: RAPIER.World;
   private readonly track: TrackData;
   private readonly t: Tuning;
-  private players = new Map<string, PlayerSim>();
+  private readonly queue = new RAPIER.EventQueue(true);
+  private readonly gateOrder = new Map<number, number>(); // collider handle → position in track.checkpoints
+  private readonly byCollider = new Map<number, Racer>();
+  private players = new Map<string, Racer>();
   private events: GameEvent[] = [];
   private countdownLeftMs = 0;
 
@@ -88,6 +94,7 @@ class TrackRace implements Race {
     this.track = track;
     this.t = t;
     this.laps = cfg.laps;
+    track.checkpoints.forEach((c, i) => this.gateOrder.set(c.collider, i));
   }
 
   addPlayer(id: string, ball: string): void {
@@ -97,7 +104,7 @@ class TrackRace implements Race {
     const spawn = this.track.spawns.find((s) => !taken.has(s.slot));
     if (!spawn) throw new Error("race is full");
     const body = addBall(this.world, ...spawn.pos);
-    this.players.set(id, {
+    const racer: Racer = {
       id,
       ball,
       slot: spawn.slot,
@@ -106,12 +113,19 @@ class TrackRace implements Race {
       input: { ...NEUTRAL_INPUT },
       maxSpeedMul: 1,
       surfaceGrip: 1,
-    });
+      collider: body.collider(0).handle,
+      next: 0,
+      last: -1,
+      stuckFor: 0,
+    };
+    this.players.set(id, racer);
+    this.byCollider.set(racer.collider, racer);
   }
 
   removePlayer(id: string): void {
     const p = this.players.get(id);
     if (!p) return;
+    this.byCollider.delete(p.collider);
     this.world.removeRigidBody(p.body);
     this.players.delete(id);
   }
@@ -148,10 +162,18 @@ class TrackRace implements Race {
       );
       p.input.item = false; // fires once, even if no new input arrives before the next tick
     }
-    this.world.step();
+    this.world.step(this.queue);
+    this.queue.drainCollisionEvents((h1, h2, started) => {
+      if (!started) return;
+      const gate = this.gateOrder.get(h1) ?? this.gateOrder.get(h2);
+      const p = this.byCollider.get(h1) ?? this.byCollider.get(h2);
+      // only the next gate counts, so shortcuts and driving backwards don't
+      if (gate !== undefined && p && gate === p.next) this.passGate(p, gate);
+    });
 
     for (const p of this.players.values()) {
       if (p.body.translation().y < this.t.fallY) this.respawn(p);
+      else if (acceptInput && this.isStuck(p, dt)) this.respawn(p);
     }
   }
 
@@ -197,20 +219,50 @@ class TrackRace implements Race {
   }
 
   dispose(): void {
+    this.queue.free();
     this.world.free();
     this.players.clear();
+    this.byCollider.clear();
   }
 
-  /** Back to the grid for now; the respawn task uses the respawn marker of the last checkpoint instead. */
-  private respawn(p: PlayerSim): void {
-    const spawn = this.track.spawns.find((s) => s.slot === p.slot) as Spawn;
+  private passGate(p: Racer, gate: number): void {
+    p.last = gate;
+    p.next = (gate + 1) % this.track.checkpoints.length;
+  }
+
+  /**
+   * Stuck = holding gas for stuckSeconds while moving slower than stuckSpeed: wedged against a
+   * wall, caught in a gap, or pinned in a pile-up. Distance to the next gate would misfire on
+   * Happy Valley's hairpin, where the road heads away from the next gate for 54 m.
+   */
+  private isStuck(p: Racer, dt: number): boolean {
+    const v = p.body.linvel();
+    if (p.input.gas > 0 && Math.hypot(v.x, v.z) < this.t.stuckSpeed)
+      p.stuckFor += dt;
+    else p.stuckFor = 0;
+    return p.stuckFor >= this.t.stuckSeconds;
+  }
+
+  /**
+   * Back to the respawn marker of the last gate crossed (or the nearest earlier gate that has one),
+   * or to the grid slot before the first gate.
+   */
+  private respawn(p: Racer): void {
+    let at: { pos: Vec3; heading: number } | undefined;
+    for (let i = p.last; i >= 0 && !at; i--) {
+      const index = this.track.checkpoints[i].index;
+      at = this.track.respawns.find((r) => r.checkpoint === index);
+    }
+    at ??= this.track.spawns.find((s) => s.slot === p.slot);
+    if (!at) throw new Error(`no spawn for slot ${p.slot}`);
     p.body.setTranslation(
-      { x: spawn.pos[0], y: spawn.pos[1] + BALL_RADIUS + 0.1, z: spawn.pos[2] },
+      { x: at.pos[0], y: at.pos[1] + BALL_RADIUS + 0.1, z: at.pos[2] },
       true,
     );
     p.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     p.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-    p.heading = spawn.heading;
+    p.heading = at.heading;
+    p.stuckFor = 0;
     this.events.push({ type: "respawn", player: p.id });
   }
 }

@@ -534,6 +534,8 @@ Download and look through the **Kenney Marble Kit** and **Racing Kit** (both CC0
 ### M0: Run one asset through the whole pipeline
 Do this with one ball and one track piece, so the pipeline is proven before real work starts.
 
+**Done:** the planet balls and `models/trk_road_straight.glb` went through it. Both are built by scripts in `tools/models/`, so the Blender steps below are automated for them. The Babylon Sandbox site isn't reachable from the cloud sessions, so they were checked in headless Babylon renders (the same engine) instead.
+
 1. **Blender:**
    - 1 unit = 1 m. The ball is a 1 m diameter UV sphere, 5k triangles or fewer.
    - Apply the transforms (Ctrl+A > All Transforms).
@@ -576,6 +578,30 @@ Share the folder with Nuris and Rasim.
 
 ### M1: Track dressing kit
 Barriers, fall trees (2–3 variants), lamp posts, benches, the start/finish arch, ground tiles.
+
+**Done, and generated from code.** `tools/models/build_dressing_kit.py` builds `models/kit_dressing.glb`: 9 props, each its own node at the origin, all on **one** material (`mat_palette`) and one 256×256 palette texture of the art bible colors.
+
+![The dressing kit: finish arch, lamp posts, round and cone trees, white and red barriers, with a 1 m cube](../art/dressing-kit-3d.png)
+
+| Prop | Size | Triangles | Made from |
+|---|---|---|---|
+| `prop_finish_arch` | 16 m wide, 8.5 m tall | 340 | Kenney `overhead` in navy, plus our checkered banner and flag-yellow trim |
+| `prop_lamp_single`, `prop_lamp_double` | 5 m | 628, 844 | Ours, navy with warm lamps (until Kenney's `lightPost*` are in reach) |
+| `prop_tree_round_gold`, `prop_tree_round_maple` | 5.6 m, 4.8 m | 300 each | Ours: chunky leaning "lollipops" |
+| `prop_tree_maple`, `prop_tree_pine` | 6.5 m | 80 each | Kenney `tree-large`, recolored |
+| `prop_barrier_red`, `prop_barrier_white` | 2 m | 28 each | Kenney `barrierRed`; alternate them along the track |
+
+- **Kenney pieces** come from `assets-src/packs` when the kits are there, and are otherwise cut out of `maps/happy_valley.glb`, which already holds them. Either way they're recolored onto the palette.
+- **The same script** builds `models/trk_road_straight.glb`, a 10 m stretch of the 12 m road with chalk lines and red and white curbs, with its top at y = 0.
+- **To change the kit:** edit the script, re-run it (Blender's Scripting tab, the MCP add-on, or `blender -b -P`), then optimize. Keep the props as separate nodes:
+
+  ```bash
+  gltf-transform optimize assets-src/models/kit_dressing.glb apps/web/public/assets/models/kit_dressing.glb \
+    --compress meshopt --texture-compress webp --simplify false --join false --flatten false --instance false --palette false
+  ```
+
+- **Sky:** `tex/env_happy_valley.env` is a Poly Haven sky HDRI (CC0), prefiltered into a 256 px cube with Babylon's `CreateEnvTextureAsync`. `game.ts` loads it as `scene.environmentTexture` at `SKY_FILL` (0.6), with the hemispheric light turned down to 0.3.
+- **Next:** place the props along the route in `tools/track/build_happy_valley.py` (or instance them in code from the kit), and add the rest of the shortlist (fences, rails, `flagCheckers`) once the packs are in reach.
 
 **Use one shared palette texture:** a small image (e.g. 256×256) of color swatches. UV each prop onto the swatches it needs, and give **every prop the same material**. Hundreds of props then cost a handful of draw calls instead of hundreds. This is the most important performance trick for an asset-heavy scene.
 

@@ -6,7 +6,10 @@ import {
   PROTOCOL_VERSION,
   SERVER_PORT,
   readPadParams,
+  DEFAULT_LAPS,
   type JoinOptions,
+  type PlayerView,
+  type RaceStateView,
   type NetStatMsg,
   type PongMsg,
   type WelcomeMsg,
@@ -20,6 +23,15 @@ export type ConnectionStatus =
 
 export let status: ConnectionStatus = { state: "offline" };
 export let room: Room | undefined;
+
+const raceState = () => room?.state?.toJSON() as RaceStateView | undefined;
+
+/** This phone's player in the synced state, once joined */
+export const myPlayer = (): PlayerView | undefined =>
+  status.state === "joined" ? raceState()?.players[status.playerId] : undefined;
+
+/** Race length set by the host */
+export const laps = () => raceState()?.laps ?? DEFAULT_LAPS;
 
 /** Round trip and server clock, from pings */
 export const clock = new Clock();

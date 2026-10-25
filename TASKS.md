@@ -144,10 +144,13 @@ Nothing right now. Add new questions here.
 **Done when:** 4+ players (laptop **and** phone-only, real or bots) finish a 3-lap race from lobby to results in the correct order, and reconnecting works.
 
 **Ali**
-- [ ] Checkpoints from markers (sensor events), 3 laps, live ranking (laps, then checkpoint, then distance), finish order
-- [ ] Race phases in `game-core`: lobby, countdown (inputs ignored), racing, results; `start(countdownMs, laps)` takes the lap count
+- [x] Checkpoints from markers (sensor events), 3 laps, live ranking (laps, then checkpoint, then distance), finish order
+  - `standings()` gives place, lap, last checkpoint, `finishedAt` and `progress` (m along the race, measured on the route), with `lap` and `finish` events. Rasim: copy them into the player schema and route the events to pads
+- [x] Race phases in `game-core`: lobby, countdown (inputs ignored), racing, results; `start(countdownMs, laps)` takes the lap count
+  - `results` starts when everyone is in, or `finishGraceSeconds` (30 s) after the winner. Finished balls ignore input and roll to a stop
 - [ ] Ball-to-ball collisions that feel good; emit `bump` (with strength) and `overtake` (with section) events
-- [ ] `botInput()` for Rasim's bots
+- [x] `botInput()` for Rasim's bots
+  - Follows the route at full gas, braking only into sharp turns: a bot laps Happy Valley in 65 s with no respawns (a test)
 - [ ] Own-ball extrapolation in the player view (with Rasim)
 - [ ] Big screen: overview camera + **up to 4 follow-cam tiles** for phone-only players, with an automatic fallback to name tags below 50 fps
 - [x] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`

@@ -423,6 +423,15 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 ## M2: Full race
 
 ### Checkpoints, laps and ranking
+
+**Done** (`race.ts`, tested in `rules.test.ts` on a synthetic loop and on Happy Valley):
+- **Laps:** only the next gate counts. Crossing `cp_00` after the last gate completes a lap and emits `lap` (the lap just started, 2 … laps); the last one emits `finish` with the place. The first crossing of `cp_00` starts the race.
+- **Ranking:** finishers by `finishedAt`, then everyone else by `progress`, the meters along the route from the start line. Within a lap that's the distance past the last gate crossed, clamped to the next gate, so a shortcut or reversing never gains a place. Tracks without a route use straight lines between gates.
+- **Standings:** `{ id, place, lap, checkpoint, finishedAt, progress }`, where `lap` is the lap being raced (1 … laps) and `checkpoint` is the last gate crossed in order (0 = the finish line).
+- **End:** `results` when everyone is in, or `finishGraceSeconds` after the winner. Finished balls ignore input from then on.
+- **Bots:** `botInput(id)` aims at a point ahead on the route (`botLookahead…` in `tuning.ts`), full gas, braking only when that point is far off to the side at speed. It laps Happy Valley in 65 s with no respawns.
+
+How it works:
 - Step with an event queue:
 
   ```ts

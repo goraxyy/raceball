@@ -29,7 +29,8 @@ export function HostBoard({
   path: TrackPath;
   /** Every ball's [x, z] this frame */
   positions: () => Map<string, [number, number]>;
-  layout: "slot" | "side";
+  /** corner: small, bottom left of a laptop player's own view */
+  layout: "slot" | "side" | "corner";
   /** The host's buttons (rematch), clickable */
   controls?: ReactNode;
 }) {

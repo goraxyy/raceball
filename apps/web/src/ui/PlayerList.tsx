@@ -2,8 +2,14 @@ import { MAX_PLAYERS } from "@raceball/shared";
 import { Chip, PlanetBall, PlayerShape, playerStyle } from "./pieces";
 import type { LobbyPlayer } from "./types";
 
-/** The entry list: one race-number plate per player, plus the open slots */
-export function PlayerList({ players }: { players: LobbyPlayer[] }) {
+/** The entry list: one race-number plate per player, plus the open slots. onRemoveBot puts a ✕ on each bot */
+export function PlayerList({
+  players,
+  onRemoveBot,
+}: {
+  players: LobbyPlayer[];
+  onRemoveBot?: (id: string) => void;
+}) {
   const open = Math.max(0, MAX_PLAYERS - players.length);
   return (
     <ol className="player-list">
@@ -33,6 +39,17 @@ export function PlayerList({ players }: { players: LobbyPlayer[] }) {
                 <Chip on={p.calibrated}>Calibrated</Chip>
                 <Chip on={p.ready}>{p.ready ? "Ready" : "Not ready"}</Chip>
               </>
+            )}
+            {p.bot && onRemoveBot && (
+              <button
+                type="button"
+                className="entry-remove"
+                aria-label={`Remove ${p.name}`}
+                title="Remove bot"
+                onClick={() => onRemoveBot(p.id)}
+              >
+                ✕
+              </button>
             )}
           </span>
         </li>

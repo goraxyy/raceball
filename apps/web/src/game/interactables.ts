@@ -7,18 +7,21 @@ import {
   ParticleSystem,
   PBRMaterial,
   type Scene,
+  StandardMaterial,
+  Color3,
   Texture,
   type TransformNode,
   Vector3,
+  VertexData,
 } from "@babylonjs/core";
 import type { BoostPadMark } from "@raceball/game-core";
 import type { GameEvent } from "@raceball/shared";
 
 /**
  * What you drive into, drawn (Nuris's M3 pass; models from tools/models/build_interactables.py): the boost pads
- * over the track's boost markers, the Lion Paw bumpers and the Creamery Scoops on game-core's spots. The pads'
- * chevrons always flow forward and glimmer; a pad flashes when a ball hits it, a paw flashes and squashes when it
- * kicks one, and a collected scoop shrinks away until it comes back. Bursts and sounds are fx.ts's.
+ * over the track's boost markers, the Lion Paw bumpers, and a spinning gold star on each of game-core's scoop spots.
+ * The pads' chevrons always flow forward and glimmer; a pad flashes when a ball hits it, a paw flashes and squashes
+ * when it kicks one, and a collected star shrinks away until it comes back. Bursts and sounds are fx.ts's.
  */
 export const INTERACTABLES_FILE = "assets/models/kit_interactables.glb";
 const GLIMMER_FILE = "assets/fx/fx_pad_glimmer.json";
@@ -35,7 +38,12 @@ const CHEVRON_SPEED = 1.3; // tiles a second, the way the pad pushes
 const SCOOP_SPIN = 1.7; // rad/s
 const SCOOP_BOB = 0.12; // m
 const SCOOP_HIDE = 7; // 1/s, how fast a collected scoop shrinks away (and grows back)
-export const SCOOP_FLAVOURS = ["strawberry", "vanilla", "chocolate"] as const;
+/** The star drawn for a scoop: its points' radius, its dips' radius and its thickness, m */
+const STAR_OUTER = 0.6;
+const STAR_INNER = 0.26;
+const STAR_DEPTH = 0.22;
+/** Its middle floats this high over the scoop's spot, m */
+const STAR_UP = 0.5;
 const FLASH_DECAY = 5; // 1/s
 const GLOW_IDLE = 1; // emissive intensity of the lights at rest…
 const GLOW_PULSE = 0.35; // …breathing this much…
@@ -67,10 +75,30 @@ interface ScoopView {
   y: number;
 }
 
-/** Which scoop flavour a scoop id gets: they take turns along the track */
-export function flavourOf(id: string): (typeof SCOOP_FLAVOURS)[number] {
-  const n = Number(id.replace(/\D/g, "")) || 0;
-  return SCOOP_FLAVOURS[n % SCOOP_FLAVOURS.length];
+/**
+ * A puffy five-pointed star standing up in the XY plane: ten rim points around a raised middle on each face, so
+ * every facet catches the light differently (flat shaded)
+ */
+export function starVertices(): VertexData {
+  const positions = [0, 0, STAR_DEPTH / 2, 0, 0, -STAR_DEPTH / 2];
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    const r = i % 2 ? STAR_INNER : STAR_OUTER;
+    positions.push(Math.sin(a) * r, Math.cos(a) * r, 0);
+  }
+  const indices: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = 2 + i;
+    const b = 2 + ((i + 1) % 10);
+    indices.push(0, b, a, 1, a, b); // the front face's fan, then the back's
+  }
+  const data = new VertexData();
+  data.positions = positions;
+  data.indices = indices;
+  const normals: number[] = [];
+  VertexData.ComputeNormals(positions, indices, normals);
+  data.normals = normals;
+  return data;
 }
 
 export class InteractableViews {
@@ -81,6 +109,7 @@ export class InteractableViews {
   private pads: Lit[] = [];
   private paws: Lit[] = [];
   private readonly scoops = new Map<string, ScoopView>();
+  private star?: Mesh;
   private chevrons: Texture[] = [];
   private glimmers: ParticleSystem[] = [];
   private glow?: GlowLayer;
@@ -182,19 +211,16 @@ export class InteractableViews {
     for (const s of scoops) {
       let view = this.scoops.get(s.id);
       if (!view) {
-        const lit = this.place(
-          `prop_scoop_${flavourOf(s.id)}`,
-          s.id,
-          Vector3.FromArray(s.pos),
-          0,
-        );
-        if (!lit) continue;
+        const root = this.starMesh().createInstance(`star-${s.id}`);
+        root.isVisible = true;
+        root.isPickable = false;
+        root.position.copyFrom(Vector3.FromArray(s.pos));
         view = {
-          root: lit.root,
+          root,
           scale: s.active ? 1 : 0,
           active: s.active,
           phase: this.scoops.size * 0.9,
-          y: s.pos[1],
+          y: s.pos[1] + STAR_UP,
         };
         this.scoops.set(s.id, view);
       }
@@ -258,12 +284,35 @@ export class InteractableViews {
       v.light?.dispose();
     }
     for (const v of this.scoops.values()) v.root.dispose();
+    this.star?.material?.dispose();
+    this.star?.dispose();
+    this.star = undefined;
     this.pads = [];
     this.paws = [];
     this.scoops.clear();
     this.glow?.dispose();
     this.kit?.dispose();
     this.kit = undefined;
+  }
+
+  /** The star every scoop draws an instance of: shiny gold that glows a little on its own */
+  private starMesh(): Mesh {
+    if (this.star) return this.star;
+    const star = new Mesh("scoop-star", this.scene);
+    starVertices().applyToMesh(star);
+    star.convertToFlatShadedMesh();
+    const gold = new StandardMaterial("mat_star", this.scene);
+    gold.diffuseColor = new Color3(1, 0.78, 0.12);
+    gold.emissiveColor = new Color3(0.55, 0.38, 0.02);
+    gold.specularColor = new Color3(1, 0.95, 0.7);
+    gold.specularPower = 24;
+    gold.backFaceCulling = false;
+    star.material = gold;
+    star.isPickable = false;
+    star.isVisible = false; // the template: only its instances draw
+    star.addLODLevel(PROP_DRAW_DISTANCE, null);
+    this.glow?.addIncludedOnlyMesh(star);
+    return (this.star = star);
   }
 
   /**

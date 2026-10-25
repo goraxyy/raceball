@@ -12,4 +12,5 @@ export type LobbyPlayer = { id: string } & Pick<
   | "calibrated"
   | "ready"
   | "connected"
->;
+> &
+  Partial<Pick<PlayerView, "bot">>;

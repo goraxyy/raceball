@@ -252,7 +252,7 @@ export const racingHtml = (look: Look, laps: number) => `
       <button class="item-btn" type="button" data-item="" disabled>
         <span>No item</span>
       </button>
-      <div class="scoops" data-count="0" aria-label="0 scoops">
+      <div class="scoops" data-count="0" aria-label="0 stars">
         ${"<i></i>".repeat(SCOOP_MAX)}
       </div>
     </div>

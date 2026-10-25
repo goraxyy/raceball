@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { errorKindFor, type ErrorKind } from "@raceball/shared";
 import { GameView } from "../game/GameView";
 import {
@@ -61,7 +61,22 @@ export function PlayPage() {
   return <PlayerRoom session={session} />;
 }
 
-function PlayerRoom({ session }: { session: NetSession }) {
+/**
+ * A laptop player's screen: their chase view and HUD. The host playing on their own laptop passes the host lobby
+ * (lobby) and their race buttons (controls)
+ */
+export function PlayerRoom({
+  session,
+  lobby,
+  controls,
+  onRematch,
+}: {
+  session: NetSession;
+  lobby?: ReactNode;
+  controls?: ReactNode;
+  /** The host's Rematch on the results */
+  onRematch?: () => void;
+}) {
   const state = useRaceState(session);
   const pairing = usePairing(session);
   const results = useRaceResults(session);
@@ -76,11 +91,17 @@ function PlayerRoom({ session }: { session: NetSession }) {
   return (
     <>
       {/* Ali's renderer: this player's chase camera. It loads the map behind the lobby, so Ready can count */}
-      <GameView mode="viewer" session={session} onLoaded={onLoaded} />
+      <GameView
+        mode="viewer"
+        session={session}
+        onLoaded={onLoaded}
+        hostControls={controls}
+      />
       {!state.phase && (
         <LoadingScreen progress={0.6} label="Joining the race" />
       )}
-      {state.phase === "lobby" && (
+      {state.phase === "lobby" && lobby}
+      {state.phase === "lobby" && !lobby && (
         <section className="ui-screen viewer-join">
           <PairingQR url={pairing.padUrl} paired={pairing.paired} />
           {me?.ready && <p>Ready! Waiting for the host to start.</p>}
@@ -93,6 +114,7 @@ function PlayerRoom({ session }: { session: NetSession }) {
             laps={results.laps}
             lobbyAt={results.lobbyAt}
             now={results.now}
+            onRematch={onRematch}
           />
         </div>
       )}

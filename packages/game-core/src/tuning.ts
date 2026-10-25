@@ -52,15 +52,16 @@ export const tuning = {
   botBrakeSpeed: 8, // m/s; the bot only brakes above this
 
   // Section mechanics (boost pads and surfaces come from the track's markers)
-  boostPadSpeed: 8, // m/s added along a boost pad's facing, times the pad's power
-  boostMaxSpeedMul: 1.5, // top speed multiplier right after a boost
-  boostSeconds: 1.5, // how long the raised top speed lasts
+  // boosts are big on purpose: one pad or a Blue & White Boost is enough to pass someone
+  boostPadSpeed: 12, // m/s added along a boost pad's facing, times the pad's power
+  boostMaxSpeedMul: 1.7, // top speed multiplier right after a boost
+  boostSeconds: 2.5, // how long the raised top speed lasts
   snowDrag: 0.6, // extra slowing on snow, like a light brake (higher = slower)
 
   // Items (odds by place are ITEM_ODDS in items.ts)
   itemBoxSize: 0.8, // m, half the size of an item box's pickup volume
   itemBoxRespawn: 5, // s an item box stays hidden after a ball hits it
-  itemBoostSpeed: 8, // m/s the Blue & White Boost adds along the heading (top speed rises as for a pad)
+  itemBoostSpeed: 14, // m/s the Blue & White Boost adds along the heading (top speed rises as for a pad)
   roarRadius: 6, // m around the roarer that the Lion Roar reaches
   roarSpeed: 12, // m/s of push away from the roarer at point blank, fading to 0 at roarRadius
   roarLift: 2, // m/s of hop at point blank

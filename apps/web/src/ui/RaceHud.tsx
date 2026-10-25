@@ -17,7 +17,7 @@ export interface RaceHudProps {
   total?: number;
   /** Top of the speedometer, km/h */
   maxSpeed?: number;
-  /** Creamery Scoops held (game-core's scoopMax is 10); no meter without it */
+  /** Stars held (game-core's scoops; scoopMax is 10); no meter without it */
   scoops?: number;
   maxScoops?: number;
 }
@@ -82,7 +82,7 @@ export function RaceHud({
           <span
             className="hud-scoops"
             data-full={scoops >= maxScoops}
-            aria-label={`${scoops} of ${maxScoops} scoops`}
+            aria-label={`${scoops} of ${maxScoops} stars`}
           >
             {Array.from({ length: maxScoops }, (_, i) => (
               <i key={i} className={i < scoops ? "is-held" : undefined} />

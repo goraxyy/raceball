@@ -190,7 +190,7 @@ The whole map lives in **one Blender file** (`happy_valley.blend`, kept in the D
 | Empty name | Custom properties | Used by |
 |---|---|---|
 | `spawn_1` … `spawn_8` | `rb = "spawn"`, `slot = 1…8` | Server: starting grid |
-| `cp_00`, `cp_01`, … | `rb = "checkpoint"`, `index = 0…`. The Empty's scale = the gate size | Server: laps + ranking |
+| `cp_00`, `cp_01`, … | `rb = "checkpoint"`, `index = 0…`. The Empty's scale = the gate's width and depth; the game stretches it to 30 m tall from its base, so jumps can't clear it | Server: laps + ranking |
 | `respawn_03`, … | `rb = "respawn"`, `checkpoint = 3` | Server: where fallen balls return |
 | `item_*` | `rb = "item"` | Server: item box positions |
 | `boost_*` | `rb = "boost"`, `power = 1.0`. The Empty's scale = the pad size | Server: boost pads |

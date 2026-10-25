@@ -1,5 +1,9 @@
 import { updateOrientation } from "./orientation";
+import { fireItem } from "./input-loop";
+import { ShakeDetector } from "./shake";
 import { steering } from "./steering";
+
+const shake = new ShakeDetector();
 
 export type MotionPermission =
   "unknown" | "granted" | "denied" | "not-required";
@@ -38,5 +42,12 @@ export function startMotion() {
     gravity.events++;
     steering.update(g.x, g.y, e.timeStamp / 1000);
     updateOrientation(steering.gx, steering.gy);
+    const a = e.acceleration;
+    const linear =
+      a?.x == null || a.y == null || a.z == null
+        ? null
+        : { x: a.x, y: a.y, z: a.z };
+    if (shake.feed(linear, { x: g.x, y: g.y, z: g.z }, performance.now()))
+      fireItem();
   });
 }

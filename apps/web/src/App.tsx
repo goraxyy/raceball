@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { GameView } from "./game/GameView";
-import { HostScreen, PlayerScreen } from "./game/Online";
+import { HostPage } from "./lobby/HostPage";
+import { PlayPage } from "./lobby/PlayPage";
 import { ErrorScreen, TitleScreen } from "./ui";
 
 // Dev-only preview of the lobby UI with fake data (Nuris)
@@ -19,9 +20,9 @@ export default function App() {
   if (location.pathname === "/play" && params.get("local") === "1") {
     return <GameView mode="local" />;
   }
-  // M1 vertical slice; Rasim's M2 lobby flow (HostLobby, ready, start) replaces these screens
-  if (location.pathname === "/play") return <PlayerScreen />;
-  if (location.pathname === "/host") return <HostScreen />;
+  // The M2 lobby flow (replaces the M1 slice screens in game/Online.tsx)
+  if (location.pathname === "/host") return <HostPage />;
+  if (location.pathname === "/play") return <PlayPage />;
   if (location.pathname !== "/") return <ErrorScreen kind="lost" />;
   return (
     <TitleScreen

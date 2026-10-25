@@ -10,12 +10,15 @@ import {
   canStart,
   PLANETS,
   PROTOCOL_VERSION,
+  type GameEvent,
   type InputMsg,
   type JoinOptions,
   type NetStatMsg,
+  type Planet,
   type PongMsg,
   type RaceStateView,
   type RemoveBotMsg,
+  type SetProfileMsg,
   type Role,
   type StartMsg,
   type StatusMsg,
@@ -28,6 +31,8 @@ import { PlayerState, RaceState } from "./schema";
 
 const ROLES: readonly Role[] = ["host", "viewer", "pad"];
 const MAX_NAME = 16;
+/** A dropped pad or laptop (locked phone, Wi-Fi blip) keeps its slot this long, s */
+const RECONNECT_S = 20;
 /** How often each player's pad and laptop get a NetStatMsg, ms */
 const NETSTAT_MS = 1000;
 /** Close code for a pad whose laptop player left */
@@ -40,6 +45,18 @@ const SNAP_EVERY = 1;
 const MAX_CATCH_UP = 5;
 /** Race lengths the host may pick */
 const LAP_CHOICES = [1, 3];
+
+/** The players an event is about: their phones get the sound and visual cue */
+export function playersIn(evt: GameEvent): string[] {
+  switch (evt.type) {
+    case "bump":
+      return [evt.a, evt.b];
+    case "overtake":
+      return [evt.player, evt.passed];
+    default:
+      return [evt.player];
+  }
+}
 
 interface Seat {
   role: Role;
@@ -95,6 +112,9 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       if (last && msg.seq <= last.msg.seq) return; // latest wins
       this.padInputs.set(seat.playerId, { msg, at: Date.now() });
     });
+    this.onMessage("setProfile", (client, msg: SetProfileMsg) =>
+      this.setProfile(client, msg),
+    );
     this.onMessage("status", (client, msg: StatusMsg) =>
       this.setStatus(client, msg),
     );
@@ -171,6 +191,23 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     }
   }
 
+  /** Lost without saying goodbye: hold the slot so the same client can come back */
+  onDrop(client: Client) {
+    const playerId = this.seats.get(client.sessionId)?.playerId;
+    const player = playerId && this.state.players.get(playerId);
+    if (player) player.connected = false; // its input goes stale, so the ball coasts with no gas
+    void this.allowReconnection(client, RECONNECT_S).catch(() => {
+      // gave up: Colyseus calls onLeave, which frees the slot
+    });
+  }
+
+  onReconnect(client: Client) {
+    const playerId = this.seats.get(client.sessionId)?.playerId;
+    const player = playerId && this.state.players.get(playerId);
+    if (player) player.connected = true;
+  }
+
+  /** Left on purpose, or didn't come back in time */
   onLeave(client: Client) {
     const seat = this.seats.get(client.sessionId);
     this.seats.delete(client.sessionId);
@@ -185,9 +222,9 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     if (seat.role === "pad" && player && !player.phoneOnly) {
       // The laptop is still here: free the slot so the phone can pair again
       player.paired = false;
+      player.connected = true; // the laptop is still connected
       return;
     }
-    // Reconnecting into the same slot comes in M2; for now the player leaves with the client
     this.removePlayer(playerId);
   }
 
@@ -219,8 +256,10 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     if (!stepped) return;
     this.syncPhase();
     const events = this.race.drainEvents();
-    // Screens get every event for VFX; routing them to the right pads comes in M2
-    for (const evt of events) this.sendToScreens("evt", evt);
+    for (const evt of events) {
+      this.sendToScreens("evt", evt); // screens show every event (VFX, standings)
+      this.sendToPads(playersIn(evt), "evt", evt); // phones only hear about their own player
+    }
     if (this.tickCount % SNAP_EVERY === 0) {
       this.sendToScreens(
         "snap",
@@ -271,6 +310,24 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     if (typeof msg.ready === "boolean") player.ready = msg.ready;
   }
 
+  /** Name and planet for the sender's own player, in the lobby. A taken planet is refused */
+  private setProfile(client: Client, msg: SetProfileMsg) {
+    if (this.state.phase !== "lobby" || typeof msg !== "object" || !msg) return;
+    const playerId = this.seats.get(client.sessionId)?.playerId;
+    const player = playerId && this.state.players.get(playerId);
+    if (!player) return;
+    if (typeof msg.name === "string") {
+      const name = msg.name.trim().slice(0, MAX_NAME);
+      if (name) player.name = name;
+    }
+    if (
+      typeof msg.ball === "string" &&
+      this.freePlanet(msg.ball, playerId) === msg.ball
+    ) {
+      player.ball = msg.ball;
+    }
+  }
+
   /** A server-side bot that drives with game-core's botInput. Always ready */
   private addBot() {
     if (this.state.phase !== "lobby") return;
@@ -295,7 +352,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       this.race.dispose();
       this.race = race;
       this.state.players.forEach((p, id) => {
-        race.addPlayer(id, p.ball || PLANETS[p.color]);
+        race.addPlayer(id, p.ball);
         p.ready = p.bot;
         p.lap = p.checkpoint = p.place = p.finishedAt = 0;
       });
@@ -305,6 +362,19 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       this.state.phase = race.phase;
     } finally {
       this.rebuilding = false;
+    }
+  }
+
+  /** Send to the pads of these players */
+  private sendToPads(playerIds: string[], type: string, msg: unknown) {
+    for (const client of this.clients) {
+      const seat = this.seats.get(client.sessionId);
+      if (
+        seat?.role === "pad" &&
+        seat.playerId &&
+        playerIds.includes(seat.playerId)
+      )
+        client.send(type, msg);
     }
   }
 
@@ -334,13 +404,13 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     const slot = this.freeSlot();
     const player = new PlayerState();
     player.name = name.trim().slice(0, MAX_NAME) || `Player ${slot + 1}`;
-    player.ball = ball;
+    player.ball = this.freePlanet(ball);
     player.color = slot;
     player.shape = slot;
     player.phoneOnly = phoneOnly;
     player.paired = phoneOnly; // a phone-only pad is its own controller
     this.state.players.set(playerId, player);
-    this.race.addPlayer(playerId, player.ball || PLANETS[slot]);
+    this.race.addPlayer(playerId, player.ball);
     return playerId;
   }
 
@@ -393,6 +463,17 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       );
     }
     return playerId;
+  }
+
+  /** The planet asked for if it's valid and free, otherwise the first free one (one planet per player) */
+  private freePlanet(want: string, forPlayer?: string): Planet {
+    const taken = new Set<string>();
+    this.state.players.forEach((p, id) => {
+      if (id !== forPlayer) taken.add(p.ball);
+    });
+    const valid = (PLANETS as readonly string[]).includes(want);
+    if (valid && !taken.has(want)) return want as Planet;
+    return PLANETS.find((p) => !taken.has(p)) ?? PLANETS[0];
   }
 
   /** Lowest color/shape slot nobody is using */

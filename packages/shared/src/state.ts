@@ -44,6 +44,18 @@ export interface RaceStateView {
   itemBoxes: ItemBoxView[];
 }
 
+/** Planets other players already have, for greying them out in the pickers */
+export function takenPlanets(
+  state: Pick<RaceStateView, "players">,
+  exceptPlayer?: string,
+): Set<string> {
+  return new Set(
+    Object.entries(state.players)
+      .filter(([id]) => id !== exceptPlayer)
+      .map(([, p]) => p.ball),
+  );
+}
+
 /** Ready to start: the same rule for the host's Start button and the server. Bots are always ready */
 export function readyToRace(p: PlayerView): boolean {
   if (p.bot) return true;

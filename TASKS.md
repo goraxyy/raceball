@@ -34,7 +34,7 @@
    - Rasim commits `packages/shared/src/protocol.ts`.
    - Ali commits the `Race` interface (types only) in `game-core`.
 6. **Ali:** create and configure the Railway project and deploy the hello-world server ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway)). Import `apps/web` and `apps/pad` into Vercel with the settings from Rasim ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)).
-7. **Rasim:** get the pad sensor page working on an iPhone and an Android phone.
+7. **Rasim:** get the pad sensor page working on an iPhone (Android untested: no Android phone on the team).
 8. **Everyone:** make your first small PR (your row in "Test devices") to practise the [workflow](docs/WORKFLOW.md).
 9. **Work through your M0 checklist in parallel.** When every M0 box is ticked, hold the **M0 check-in**: run the "Done when" line together on real devices, then start M1.
 
@@ -92,7 +92,7 @@ Nothing right now. Add new questions here.
 - [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
 - [x] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
 - [x] Give Ali the Vercel settings for web + pad
-- [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone. iPhone 18 Pro passed. BLOCKED: no Android phone on the team yet
+- [x] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone (iPhone 18 Pro). **Android untested:** nobody on the team has one
 
 **Nuris**
 - [ ] Art bible in `docs/ASSETS.md`: style, palette, the 8 player colors + shapes, Penn State mood board (done except the mood board: style, palettes, player colors + shapes and the planet balls are in ASSETS.md)

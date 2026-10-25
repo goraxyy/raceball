@@ -123,6 +123,11 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 | UI | Click, join, ready, error | Short and quiet |
 | Music | Lobby loop, race loop, results sting | The big screen plays music; laptops play quieter |
 
+- **Generated sounds:** `tools/audio/gen_sfx.py` synthesizes the first set from scratch (rolling loop, 3 bumps, countdown beep + go, UI click). Run it again after changing a sound, then audition everything in `tools/audio/preview.html` (serve the repo root, e.g. `python -m http.server`, and open `/tools/audio/preview.html`).
+- **Loops ship as WAV, not MP3.** MP3 adds a little silence at both ends, which leaves an audible gap every time a loop repeats. Loops are short mono 22 kHz WAVs instead (a 4 s loop is about 170 KB), and they repeat cleanly in every browser.
+- **Rolling loop in code:** play `sfx_roll_loop.wav` with `loop = true`, and drive its playback rate (about 0.6 at a crawl to 1.6 at top speed) and volume from the ball's speed.
+- **Bumps:** pick one of `sfx_bump_01–03` at random, set the volume from the event's `strength`, and vary the playback rate by ±5%, so repeated bumps don't sound identical.
+
 ## Where assets come from (check every license)
 
 - **Kenney Marble Kit:** CC0, 150+ track pieces + marbles, includes glTF. A near-perfect base for a ball racer.
@@ -145,4 +150,4 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 
 | Asset | Author | License | Link | Used for |
 |---|---|---|---|---|
-| | | | | |
+| `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |

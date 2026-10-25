@@ -212,3 +212,44 @@ describe("clock sync", () => {
     expect(msg.s).toBeGreaterThanOrEqual(before);
   });
 });
+
+describe("input", () => {
+  const input = (seq: number, steer = 0) => ({
+    seq,
+    steer,
+    gas: 0,
+    brake: false,
+    item: false,
+  });
+
+  test("a paired pad's input is stored, latest seq wins", async () => {
+    const laptop = await join({ role: "viewer" });
+    const { playerId, pairToken } = await welcome(laptop);
+    const pad = await join({ role: "pad", pairToken });
+    pad.send("input", input(2, 0.5));
+    pad.send("input", input(1, -1)); // older, dropped
+    await new Promise((r) => setTimeout(r, 50));
+    expect(room.latestInput(playerId)?.msg.steer).toBe(0.5);
+  });
+
+  test("screens can't send input", async () => {
+    const laptop = await join({ role: "viewer" });
+    const { playerId } = await welcome(laptop);
+    laptop.send("input", input(1, 1));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(room.latestInput(playerId)).toBeUndefined();
+  });
+
+  test("pad and laptop get the input age once a second", async () => {
+    const laptop = await join({ role: "viewer" });
+    const { pairToken } = await welcome(laptop);
+    const pad = await join({ role: "pad", pairToken });
+    pad.send("input", input(1));
+    const [padStat, laptopStat] = await Promise.all([
+      pad.waitForMessage("netstat", 2500),
+      laptop.waitForMessage("netstat", 2500),
+    ]);
+    expect(padStat.inputAge).toBeGreaterThanOrEqual(0);
+    expect(laptopStat.inputAge).toBeLessThan(1500);
+  });
+});

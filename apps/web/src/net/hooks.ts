@@ -49,8 +49,10 @@ export interface NetStats {
   p50: number;
   p95: number;
   jitter: number;
-  /** Snapshots per second */
+  /** Snapshots per second, 0 until at least two have arrived */
   snapRate: number;
+  /** Our player's input age at the server, ms. Undefined on the big screen or before the phone sends */
+  inputAge?: number;
 }
 
 const readStats = (s: NetSession): NetStats => ({
@@ -58,7 +60,8 @@ const readStats = (s: NetSession): NetStats => ({
   p50: s.clock.percentile(50),
   p95: s.clock.percentile(95),
   jitter: s.clock.jitter,
-  snapRate: s.buffer.rate,
+  snapRate: s.buffer.received > 1 ? s.buffer.rate : 0,
+  inputAge: s.inputAge,
 });
 
 /** Network numbers for the net HUD, refreshed twice a second */

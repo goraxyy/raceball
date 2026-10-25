@@ -34,7 +34,7 @@
    - Rasim commits `packages/shared/src/protocol.ts`.
    - Ali commits the `Race` interface (types only) in `game-core`.
 6. **Ali:** create and configure the Railway project and deploy the hello-world server ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway)). Import `apps/web` and `apps/pad` into Vercel with the settings from Rasim ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)).
-7. **Rasim:** get the pad sensor page working on an iPhone and an Android phone.
+7. **Rasim:** get the pad sensor page working on an iPhone (Android untested: no Android phone on the team).
 8. **Everyone:** make your first small PR (your row in "Test devices") to practise the [workflow](docs/WORKFLOW.md).
 9. **Work through your M0 checklist in parallel.** When every M0 box is ticked, hold the **M0 check-in**: run the "Done when" line together on real devices, then start M1.
 
@@ -64,7 +64,7 @@ Nothing right now. Add new questions here.
 | Person | Phone | OS / browser | Laptop |
 |---|---|---|---|
 | Ali | | | |
-| Rasim | | | |
+| Rasim | iPhone 18 Pro | iOS, Safari | Windows 11 laptop |
 | Nuris | | | |
 
 ---
@@ -79,8 +79,8 @@ Nothing right now. Add new questions here.
 **Ali**
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
 - [ ] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
-- [ ] Create and configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy the hello-world Colyseus server; `/health` returns `ok` ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway))
-- [ ] Import `apps/web` and `apps/pad` into Vercel with Rasim's settings ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). As repo owner, only you can grant them GitHub access
+- [x] Create and configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy the hello-world Colyseus server; `/health` returns `ok` ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway))
+- [x] Import `apps/web` and `apps/pad` into Vercel with Rasim's settings ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). As repo owner, only you can grant them GitHub access
 - [ ] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
 - [ ] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
 - [ ] Dev-only Inspector toggle (`Shift+I`)
@@ -91,8 +91,8 @@ Nothing right now. Add new questions here.
 **Rasim**
 - [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
 - [x] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
-- [ ] Give Ali the Vercel settings for web + pad
-- [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
+- [x] Give Ali the Vercel settings for web + pad
+- [x] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone (iPhone 18 Pro). **Android untested:** nobody on the team has one
 
 **Nuris**
 - [x] Art bible in `docs/ASSETS.md`: style, palettes, the 8 player colors + shapes, the planet balls
@@ -124,7 +124,7 @@ Nothing right now. Add new questions here.
 - [ ] Pad 2-step calibration (+ Flip button); hold-to-gas on the right half, brake on the left; input sent at 60 Hz and on change
 - [ ] Rotation fix v1: Android lock; iPhone Portrait Lock onboarding + self-rotated UI; counter-rotation fallback
 - [x] Wake Lock; block zoom, scroll and selection
-- [ ] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
+- [x] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 
 **Nuris**
 - [x] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen` (in `apps/web/src/ui`, preview at `/ui`)

@@ -31,7 +31,7 @@ HackPSU judging is **at our table**. Judges walk up, we have a few minutes, and 
 
 ## The night before (or an hour before)
 
-- [ ] The Railway server is running (green in the dashboard), and `curl https://raceball-server.up.railway.app/health` returns `ok`
+- [ ] The Railway server is running (green in the dashboard), and `curl https://raceball-server-production.up.railway.app/health` returns `ok`
 - [ ] Final web + pad deployed. The protocol version matches everywhere
 - [ ] The router or hotspot works. Both laptops and all 4 phones have joined it once
 - [ ] Backup gameplay video recorded (60–90 s, showing phones and both laptops), saved on Laptop B

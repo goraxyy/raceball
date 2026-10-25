@@ -6,6 +6,8 @@ import {
   SERVER_PORT,
   padUrl,
   type JoinOptions,
+  type Laps,
+  type StatusMsg,
   type NetStatMsg,
   type PongMsg,
   type RaceStateView,
@@ -86,6 +88,31 @@ export class NetSession {
   /** Link for this laptop's pairing QR (viewers), or the big screen's phone-only QR (host) */
   padUrl(): string {
     return padUrl(padBaseUrl(), this.code, this.pairToken);
+  }
+
+  // Host controls (the server ignores them from anyone but the host)
+
+  /** Lobby → countdown, once canStart(state) is true */
+  start(laps: Laps) {
+    this.room.send("start", { laps });
+  }
+
+  addBot() {
+    this.room.send("addBot");
+  }
+
+  removeBot(id: string) {
+    this.room.send("removeBot", { id });
+  }
+
+  /** Back to the lobby with the same players */
+  rematch() {
+    this.room.send("rematch");
+  }
+
+  /** Laptop: assets preloaded, or the player tapped Ready */
+  setStatus(msg: StatusMsg) {
+    this.room.send("status", msg);
   }
 
   /** Called on every state patch and on welcome. Returns an unsubscribe function */

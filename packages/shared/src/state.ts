@@ -11,6 +11,8 @@ export interface PlayerView {
   /** Index into the 8 player shapes */
   shape: number;
   phoneOnly: boolean;
+  /** A server-side fill-up bot (always ready) */
+  bot: boolean;
   paired: boolean;
   calibrated: boolean;
   assetsLoaded: boolean;
@@ -40,4 +42,26 @@ export interface RaceStateView {
   /** By playerId */
   players: Record<string, PlayerView>;
   itemBoxes: ItemBoxView[];
+}
+
+/** Ready to start: the same rule for the host's Start button and the server. Bots are always ready */
+export function readyToRace(p: PlayerView): boolean {
+  if (p.bot) return true;
+  return (
+    p.connected &&
+    p.paired &&
+    p.calibrated &&
+    (p.phoneOnly || p.assetsLoaded) &&
+    p.ready
+  );
+}
+
+/** The host may start once there's at least one player and everyone is readyToRace() */
+export function canStart(
+  state: Pick<RaceStateView, "phase" | "players">,
+): boolean {
+  const players = Object.values(state.players);
+  return (
+    state.phase === "lobby" && players.length > 0 && players.every(readyToRace)
+  );
 }

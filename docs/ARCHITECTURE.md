@@ -67,7 +67,8 @@ A phone-only player picks their name and ball on the pad itself. The big screen 
 | `snap` | server → host + viewers | **60 Hz** (start at 30 Hz while debugging) | Ball transforms go in this custom message, **not** in the schema |
 | `evt` | server → pad + viewer + host | On event | bump / item / overtake / lap / finish / respawn, for pad sounds and visuals, screen VFX and standings animations |
 | `ping` / `pong` | both ways | 1 Hz | Measures round-trip time and the server clock offset |
-| `start { laps }`, `addBot`, `removeBot { id }`, `rematch` | host → server | On click | Only the host may send these. `laps` is 1 (demo) or 3 (default) |
+| `start { laps }`, `addBot`, `removeBot { id }`, `rematch` | host → server | On click | Only the host may send these. `laps` is 1 (demo) or 3 (default). `start` only works in the lobby once every player is `readyToRace()` |
+| `status { calibrated?, assetsLoaded?, ready? }` | pad / laptop → server | On change | For the sender's own player. Phone-only players have no assets to load |
 
 - **Stale input rule:** if a pad's latest input is older than **200 ms**, treat it as neutral (no gas). Then a locked phone can't send its ball off a cliff.
 - **Bandwidth:** 8 balls × ~40 bytes × 60 Hz ≈ 20 KB/s per screen. That's not a concern.
@@ -126,7 +127,7 @@ A rolling ball has momentum, which hides latency far better than a twitchy kart 
 ## Protocol v1 (draft, lives in `packages/shared/src/protocol.ts`)
 
 ```ts
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -211,13 +212,37 @@ export interface NetStatMsg {
   /** How old this player's latest input is at the server, ms. 200+ means it's treated as neutral */
   inputAge: number;
 }
+
+/** Race lengths the host can pick: 1 for the demo, 3 by default */
+export type Laps = 1 | 3;
+
+/** host → server: "start". Allowed in the lobby once every player is readyToRace() */
+export interface StartMsg {
+  laps: Laps;
+}
+
+/** host → server: "removeBot". ("addBot" and "rematch" have no payload) */
+export interface RemoveBotMsg {
+  id: string;
+}
+
+/**
+ * pad or laptop → server: "status", for its own player. Send only what changed.
+ * calibrated: the pad finished calibrating. assetsLoaded: the laptop finished preloading.
+ * ready: the player tapped Ready (pad or laptop).
+ */
+export interface StatusMsg {
+  calibrated?: boolean;
+  assetsLoaded?: boolean;
+  ready?: boolean;
+}
 ```
 
 Colyseus schema (synced automatically):
 
 ```
 RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[] }
-PlayerState{ name, ball, color, shape, phoneOnly, paired, calibrated, assetsLoaded, ready,
+PlayerState{ name, ball, color, shape, phoneOnly, bot, paired, calibrated, assetsLoaded, ready,
              lap, checkpoint, place, finishedAt, connected }
 ItemBox    { id, x, y, z, active }
 ```

@@ -12,7 +12,9 @@ import {
   type PlayerView,
   type RaceStateView,
   type NetStatMsg,
+  type Phase,
   type PongMsg,
+  type StatusMsg,
   type WelcomeMsg,
 } from "@raceball/shared";
 
@@ -41,11 +43,34 @@ export let inputAge: number | undefined;
 
 const PING_MS = 1000;
 
+/** Lobby flags waiting to go to the server (sent once we're welcomed into a player slot) */
+const pendingStatus: StatusMsg = {};
+
+function flushStatus() {
+  if (status.state !== "joined" || !room) return;
+  if (Object.keys(pendingStatus).length === 0) return;
+  room.send("status", { ...pendingStatus });
+  for (const key of Object.keys(pendingStatus))
+    delete pendingStatus[key as keyof StatusMsg];
+}
+
+/** Tell the server this phone calibrated or is ready. Safe to call before we've joined */
+export function sendStatus(msg: StatusMsg) {
+  Object.assign(pendingStatus, msg);
+  flushStatus();
+}
+
+/** The room's phase, once joined */
+export const phase = (): Phase | undefined => raceState()?.phase;
+
 const serverUrl = () =>
   import.meta.env.VITE_SERVER_URL ?? `ws://${location.hostname}:${SERVER_PORT}`;
 
 /** Join the room from the QR URL. Phone-only when the URL has no pair token. */
-export async function connect(onChange: (s: ConnectionStatus) => void) {
+export async function connect(
+  onChange: (s: ConnectionStatus) => void,
+  onPhase: (p: Phase) => void = () => {},
+) {
   const set = (s: ConnectionStatus) => onChange((status = s));
   const { room: code, pairToken } = readPadParams(location.search);
   if (!code) return set({ state: "offline" });
@@ -68,14 +93,20 @@ export async function connect(onChange: (s: ConnectionStatus) => void) {
     });
   }
 
-  room.onMessage("welcome", (msg: WelcomeMsg) =>
+  room.onMessage("welcome", (msg: WelcomeMsg) => {
     set({
       state: "joined",
       room: code,
       playerId: msg.playerId,
       phoneOnly: !pairToken,
-    }),
-  );
+    });
+    flushStatus();
+  });
+  let lastPhase: Phase | undefined;
+  room.onStateChange(() => {
+    const p = phase();
+    if (p && p !== lastPhase) onPhase((lastPhase = p));
+  });
   room.onLeave((closeCode) =>
     set({ state: "error", kind: "disconnected", room: code, code: closeCode }),
   );

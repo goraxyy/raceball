@@ -13,6 +13,8 @@ export const PlayerState = schema(
     /** Index into the 8 player shapes (colorblind-safe pairing with color) */
     shape: t.uint8().default(0),
     phoneOnly: t.boolean().default(false),
+    /** A server-side fill-up bot (always ready) */
+    bot: t.boolean().default(false),
     paired: t.boolean().default(false),
     calibrated: t.boolean().default(false),
     assetsLoaded: t.boolean().default(false),

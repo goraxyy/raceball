@@ -34,7 +34,7 @@ import {
   type WelcomeMsg,
 } from "@raceball/shared";
 import { claimRoomCode, releaseRoomCode } from "./room-code";
-import { inputForStep } from "./stale-input";
+import { inputForStep, nextInput, type PadInput } from "./stale-input";
 import { trackBytes } from "./track-file";
 import { ItemBox, PlayerState, Puddle, RaceState } from "./schema";
 
@@ -122,7 +122,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   /** playerId → pairToken */
   private tokenOf = new Map<string, string>();
   /** playerId → latest input from their pad, and when it arrived (ms) */
-  private padInputs = new Map<string, { msg: InputMsg; at: number }>();
+  private padInputs = new Map<string, PadInput>();
   /** The only simulation (game-core). Screens draw its snapshots */
   private race!: Race;
   /** Time not yet simulated, ms */
@@ -162,7 +162,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       if (seat?.role !== "pad" || !seat.playerId) return; // only a bound pad may drive
       const last = this.padInputs.get(seat.playerId);
       if (last && msg.seq <= last.msg.seq) return; // latest wins
-      this.padInputs.set(seat.playerId, { msg, at: Date.now() });
+      this.padInputs.set(seat.playerId, nextInput(last, msg, Date.now()));
     });
     this.onMessage("setProfile", (client, msg: SetProfileMsg) =>
       this.setProfile(client, msg),

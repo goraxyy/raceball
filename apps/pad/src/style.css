@@ -753,6 +753,38 @@ p {
   scale: 0.94;
 }
 
+/* Creamery Scoops held: one pip each (10 at most), strawberry when held; data-change pops it */
+.scoops {
+  display: grid;
+  grid-template-columns: repeat(10, auto);
+  gap: clamp(3px, 1cqh, 6px);
+  padding: 5px 8px;
+  border: var(--line) solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.scoops i {
+  width: clamp(10px, 4cqh, 18px);
+  aspect-ratio: 1;
+  border: 2px dashed rgb(23 21 31 / 0.35);
+  border-radius: 50%;
+}
+
+.scoops i.is-held {
+  border: 2px solid var(--ink);
+  background: #ee8fae;
+  box-shadow: inset -2px -2px 0 rgb(0 0 0 / 0.15);
+}
+
+.scoops[data-change="up"] {
+  animation: place-up 500ms ease-out;
+}
+.scoops[data-change="down"] {
+  animation: place-down 500ms ease-out;
+}
+
 .shake-hint {
   display: block;
   margin-top: 0.2em;
@@ -814,6 +846,10 @@ p {
 .racing[data-cue="boost"] .cue {
   --cue: var(--brake);
   animation: cue-flash 600ms ease-out;
+}
+.racing[data-cue="scoop"] .cue {
+  --cue: #ee8fae;
+  animation: cue-flash 300ms ease-out;
 }
 .racing[data-cue="lap"] .cue,
 .racing[data-cue="finallap"] .cue {

@@ -10,6 +10,11 @@ const FILES = {
   finish: ["sfx_finish.mp3"],
   fall: ["sfx_fall.mp3"],
   respawn: ["sfx_respawn.mp3"],
+  boost: ["sfx_boost_start.mp3"],
+  pad: ["sfx_pad_whoosh.mp3"],
+  scoop: ["sfx_scoop_pop.mp3"],
+  scoopDrop: ["sfx_scoop_drop.mp3"],
+  paw: ["sfx_paw_boing.mp3"],
 } as const;
 
 export type SoundId = keyof typeof FILES;
@@ -43,16 +48,17 @@ export function unlockAudio() {
 
 /**
  * Play a sound. Several files: one at random. spread varies the pitch a little (±),
- * so repeated bumps don't sound copied (from the sound rules in docs/ASSETS.md).
+ * so repeated bumps don't sound copied (from the sound rules in docs/ASSETS.md). rate shifts the pitch on purpose
+ * (a scoop's pop climbs with every one held).
  */
-export function play(id: SoundId, gain = 1, spread = 0, delayS = 0) {
+export function play(id: SoundId, gain = 1, spread = 0, delayS = 0, rate = 1) {
   if (!ctx) return;
   const files = FILES[id];
   const buffer = buffers.get(files[Math.floor(Math.random() * files.length)]);
   if (!buffer) return;
   const src = ctx.createBufferSource();
   src.buffer = buffer;
-  src.playbackRate.value = 1 + (Math.random() * 2 - 1) * spread;
+  src.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * spread);
   const vol = ctx.createGain();
   vol.gain.value = Math.max(0, Math.min(1, gain));
   src.connect(vol).connect(ctx.destination);

@@ -314,6 +314,59 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
     - `banner*` and `fan-*` for stadium dressing
     - `wave-a…c` for bumpy snow
 
+### Kenney shortlist (Particle Pack + audio packs, reviewed by Nuris)
+
+Reviewed from the CC0 packs on kenney.nl: **Particle Pack, Impact Sounds, Interface Sounds, Digital Audio, Sci-Fi Sounds and Music Jingles**. The downloads live in `assets-src/packs/` (Drive), not in git. Nothing here is in the game yet: each pick is optimized, renamed by our convention (`fx_`, `sfx_`, `mus_`) and credited when the VFX or sound task uses it. Durations and loudness were measured from the files.
+
+#### Particle textures (Particle Pack, `PNG (Transparent)`)
+
+All 80 are white on transparent at 512², so we tint them with the art bible palettes and shrink the ones we use to 128² in a single atlas (budget: one atlas ≤ 1024²). Only **chunky, clean-edged shapes** made the list, because the art bible wants cartoon effects. The wispy smoke (`smoke_01–06`), realistic flames (`flame_01–04`, `fire_*`) and lightning (`spark_*`) are out.
+
+| Effect | Textures | Tint |
+|---|---|---|
+| Rolling dust (v1) | `circle_05` (soft blob), `smoke_07` (lumpy cloud) | Lawn or asphalt dust, low alpha |
+| Bump sparks (v1) | `star_06`, `star_07` (four-point stars) | Flag yellow + white |
+| Respawn poof (v1) | `smoke_09` (puffy donut), `star_04` | Paper white, the player color on the stars |
+| Blue & White Boost flames + trail (v2) | `muzzle_02`, `muzzle_05`, `trace_06` | Brake blue core, white edge |
+| Lion Roar shockwave (v2) | `circle_02` (thin ring), `circle_03` (thick ring), `dirt_02` for ground debris | Paper white ring, limestone debris |
+| Creamery Spill splat (v2) | `dirt_01` (splatter), `trace_01` for sprinkles | Vanilla `#F7E6C4`, chocolate, livery colors for sprinkles |
+| Snowfall + snow puffs (v2) | `circle_05` (small), `star_05` (soft dot) | Snow `#F4F6F8` |
+| Speed lines (v2) | `trace_01`, `trace_06`, `scratch_01` | White, low alpha |
+| Item pickup burst | `magic_03`, `star_08` | Flag yellow |
+| Item box idle sparkle | `star_01` | White |
+| Finish sparkle | `star_09` | Flag yellow |
+
+**Gaps, which we make ourselves:** confetti (a plain 32² rectangle) and the **fall leaves** that fly off trees on bumps (one simple leaf shape). Nothing in the pack fits either.
+
+#### Sounds
+
+| Event | Pick | Notes |
+|---|---|---|
+| Lap | `music-jingles/jingles_PIZZI04` | 0.53 s pizzicato. One jingle family (pizzicato + steel) keeps it toy-like |
+| Final lap | `music-jingles/jingles_PIZZI10` | 0.78 s, a step up from the lap jingle |
+| Finish fanfare | `music-jingles/jingles_STEEL03` | 1.4 s steel drums, the loudest of the set |
+| Results sting | `music-jingles/jingles_STEEL07` | 1.5 s |
+| Item pickup | `digital-audio/powerUp11` | 0.54 s, bright and loud enough to cut through the race |
+| Item ready (pad) | `digital-audio/twoTone1` | 0.47 s two-note chime |
+| Boost | `digital-audio/phaserUp7`, then `sci-fi-sounds/thrusterFire_003` | phaserUp7 has the fastest attack (65 ms). Loop a short slice of the thruster while the boost lasts |
+| Lion Roar | `sci-fi-sounds/forceField_000` + `lowFrequency_explosion_001` | A low whoomp under the shockwave. **Gap:** an actual roar (record our own or find a CC0 one) |
+| Creamery Spill | `sci-fi-sounds/slime_000` | 0.5 s squelch |
+| Snow Day | `digital-audio/zapThreeToneDown` | 1.3 s falling tones, a chill drop |
+| Respawn | `digital-audio/phaseJump2` | 0.37 s, the loudest of the five |
+| Falling off the track | `digital-audio/phaserDown1` | 0.45 s falling whoop, before the respawn |
+| Big bump (layer) | `impact-sounds/impactSoft_heavy_000–004` | Under our `sfx_bump_*` when `strength` > 0.6, random pick |
+| Landing (library steps, jumps) | `impact-sounds/impactSoft_medium_000–004` | 0.12–0.18 s soft thuds, random pick |
+| Rolling on snow (layer) | `impact-sounds/footstep_snow_001`, `_002` | Crunches every few meters on top of `sfx_roll_loop` in the Arboretum |
+| Near an edge (pad tick) | `interface-sounds/tick_002` | 20 ms, repeat every 300 ms |
+| Player joined / left (lobby) | `interface-sounds/maximize_002` / `minimize_002` | A mirrored pair |
+| Ready, joined | `interface-sounds/confirmation_001` | 0.28 s, punchy |
+| Error (room not found, permission) | `interface-sounds/error_007` | Short and low |
+| Lap selector, toggles | `interface-sounds/toggle_002` | |
+| Hover / select | `interface-sounds/select_007` | 40 ms |
+| Back | `interface-sounds/back_002` | |
+
+**Gaps, which need another source:** **crowd cheer** and **crowd "oooh"** for Beaver Stadium, the **lobby and race music loops** (the packs only have jingles), and the **Lion Roar** itself. Look for CC0 first (freesound.org with the CC0 filter, OpenGameArt), and log every license in [Credits](#credits).
+
 ## Git and big files
 
 - GitHub warns about files over 50 MB and **blocks files over 100 MB**. Commit only **optimized runtime assets**.

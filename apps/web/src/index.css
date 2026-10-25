@@ -1,9 +1,15 @@
+/* Page base. The look itself comes from the shared theme via src/ui/ui.css (art bible, docs/ASSETS.md). */
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+  font-family: "Barlow", system-ui, "Segoe UI", Roboto, sans-serif;
+  background: #f3ead9;
+  color: #17151f;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  padding: 2rem;
 }

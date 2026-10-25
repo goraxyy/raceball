@@ -106,7 +106,8 @@ We fix it in three layers:
 2. **iPhone Safari: no lock API, and no fullscreen for pages on iPhone.** So:
    - **Onboarding asks players to turn on Portrait Orientation Lock** in Control Center (one swipe). The page then never rotates, and **we draw the controller rotated 90° ourselves**, toward the side they're holding.
    - **If they don't turn it on,** we counter-rotate the UI after every rotation, so the buttons stay under their thumbs. Steering keeps working either way, because it uses the device frame.
-3. **Touch zones belong to the physical phone,** not to screen coordinates. "Right half" means the right half of the phone as the player holds it.
+3. **While the phone is a wheel (calibrating and racing), the UI never goes back to portrait.** `lockLandscape(true)` makes `nextSide()` keep the landscape side however far the phone is turned (only turning it round to the other landscape side switches), and asks Android for the landscape lock again.
+4. **Touch zones belong to the physical phone,** not to screen coordinates. "Right half" means the right half of the phone as the player holds it.
 
 ```ts
 // Keep the UI fixed to the phone, whatever the browser did.

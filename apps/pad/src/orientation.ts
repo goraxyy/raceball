@@ -17,9 +17,16 @@ const SIGN_KEY = "raceball:sensorFlipped";
 /**
  * Next hold side from "up" in the device frame (+x = right edge, +y = top edge).
  * Only switches when the phone is clearly turned, so steering hard never flips the UI.
+ * `locked` (while the phone is a wheel): once in landscape it never goes back to portrait, however far it's turned.
  */
-export function nextSide(prev: HoldSide, upX: number, upY: number): HoldSide {
+export function nextSide(
+  prev: HoldSide,
+  upX: number,
+  upY: number,
+  locked = false,
+): HoldSide {
   if (Math.abs(upX) > CLEAR) return upX > 0 ? 90 : -90;
+  if (locked && prev !== null) return prev;
   if (upY > CLEAR && Math.abs(upX) < UPRIGHT) return null; // held upright, like on the start screen
   return prev;
 }
@@ -73,6 +80,8 @@ function saveFlipped(flipped: boolean) {
 /** Live state, also shown on the debug overlay */
 export const orientation = {
   side: null as HoldSide,
+  /** Steering (calibrating or racing): landscape stays landscape */
+  locked: false,
   /** Sensor sign corrected by Flip, or automatically when the browser shows we guessed wrong */
   flipped: loadFlipped(),
   rotation: 0,
@@ -93,7 +102,12 @@ function layout() {
 /** Feed filtered gravity (device frame). Cheap: only re-lays out when something changed */
 export function updateOrientation(gx: number, gy: number) {
   const sign = PLATFORM_SIGN * (orientation.flipped ? -1 : 1);
-  const side = nextSide(orientation.side, sign * gx, sign * gy);
+  const side = nextSide(
+    orientation.side,
+    sign * gx,
+    sign * gy,
+    orientation.locked,
+  );
   if (signLooksWrong(side, screenAngle())) {
     // The browser rotated the page itself, so it knows which way is up: trust it
     orientation.flipped = !orientation.flipped;
@@ -114,6 +128,23 @@ export function flip() {
   if (orientation.side !== null)
     orientation.side = orientation.side === 90 ? -90 : 90;
   layout();
+}
+
+/**
+ * While the phone is a wheel: the UI stays in landscape however far it's turned, and Android's landscape lock is
+ * asked for again (it drops when the browser leaves fullscreen). iPhone has no lock: the self-rotation covers it.
+ */
+export function lockLandscape(on: boolean) {
+  orientation.locked = on;
+  if (!on || !document.fullscreenElement) return;
+  // lock() is missing from the DOM typings
+  void (
+    screen.orientation as unknown as { lock?: (o: string) => Promise<void> }
+  )
+    .lock?.("landscape")
+    ?.catch(() => {
+      // not supported here
+    });
 }
 
 /** Start keeping `el` (#app) upright. Re-lays out whenever the browser rotates or resizes */

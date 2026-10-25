@@ -21,6 +21,10 @@ export interface BallPose {
   p: [number, number, number];
   q: [number, number, number, number];
   h: number;
+  /** Steer input, -1 … 1, for the wheel indicator. 0 when the feed doesn't know it */
+  s?: number;
+  /** Drifting: 1 right, -1 left, 0 not */
+  d?: number;
 }
 
 /** What a ball wears: its planet (`PLANETS` id) and its player color slot (index into `PLAYER_COLORS`). */

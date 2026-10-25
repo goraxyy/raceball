@@ -4,12 +4,19 @@ import { PLANETS } from "@raceball/shared";
 import "@babylonjs/loaders/glTF";
 import { Mixer } from "../audio/mixer";
 import { Captions } from "../ui/Captions";
+import { SteerWheel } from "../ui";
+import type { BallPose } from "./balls";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
+import { HostBoard } from "./HostBoard";
 import { installInspectorToggle } from "./inspector";
 import type { TileRect } from "./big-screen";
 import type { SnapshotSource } from "./net-feed";
+import { useRoute } from "./route";
 import { TileFrames } from "./TileFrames";
 import "./local.css";
+
+/** The wheel indicator key for this laptop's own ball, whose id may arrive after the first render */
+const OWN = "";
 
 /**
  * Owns the Babylon engine for one canvas. React UI (HUD, lobby) sits on top of it as DOM.
@@ -19,11 +26,14 @@ export function GameView({
   mode,
   session,
   onLoaded,
+  view = "split",
 }: {
   mode: GameMode;
   session?: SnapshotSource;
   /** Once the map is in and the race can be drawn (a laptop tells the server its assets loaded) */
   onLoaded?: () => void;
+  /** Host: a view per player with the race board in the middle, or the whole map from above */
+  view?: "split" | "global";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -37,6 +47,20 @@ export function GameView({
     (rects: Map<string, TileRect>) => gameRef.current?.setTileRects(rects),
     [],
   );
+  const viewRef = useRef(view);
+  useEffect(() => {
+    viewRef.current = view;
+    gameRef.current?.setGlobalView(view === "global");
+  }, [view]);
+  // wheel indicators by player id, turned every frame straight from the poses (no React render)
+  const wheels = useRef(new Map<string, HTMLElement>());
+  const wheel = useCallback((id: string, el: HTMLElement | null) => {
+    if (el) wheels.current.set(id, el);
+    else wheels.current.delete(id);
+  }, []);
+  const spots = useRef(new Map<string, [number, number]>());
+  const positions = useCallback(() => spots.current, []);
+  const path = useRoute(mode === "host");
 
   useEffect(() => {
     let active = true;
@@ -67,6 +91,18 @@ export function GameView({
         : undefined,
       session,
       mixer: mix,
+      onFrame: (poses: Map<string, BallPose>) => {
+        for (const [id, el] of wheels.current) {
+          const pose = poses.get(id === OWN ? (session?.playerId ?? "") : id);
+          el.style.setProperty("--steer", (pose?.s ?? 0).toFixed(3));
+          const drift = String(pose?.d ?? 0);
+          if (el.dataset.drift !== drift) el.dataset.drift = drift;
+        }
+        if (mode !== "host") return;
+        const next = new Map<string, [number, number]>();
+        for (const [id, pose] of poses) next.set(id, [pose.p[0], pose.p[2]]);
+        spots.current = next;
+      },
       onStatus: (next) => {
         if (!active) return;
         setStatus(next);
@@ -77,6 +113,7 @@ export function GameView({
       },
     });
     gameRef.current = game;
+    game.setGlobalView(viewRef.current === "global");
     const removeInspector = installInspectorToggle(scene);
     engine.runRenderLoop(() => {
       game.update(engine.getDeltaTime() / 1000);
@@ -120,7 +157,19 @@ export function GameView({
           ids={status.tiles}
           session={session}
           onRects={onTileRects}
+          wheel={wheel}
         />
+      )}
+      {mode === "host" && session && path && status?.state === "ready" && (
+        <HostBoard
+          session={session}
+          path={path}
+          positions={positions}
+          layout={status.tiles?.length ? "center" : "side"}
+        />
+      )}
+      {mode === "viewer" && status?.state === "ready" && (
+        <SteerWheel className="own-wheel" wheelRef={(el) => wheel(OWN, el)} />
       )}
       {mode !== "local" && status && status.state !== "ready" && (
         <p

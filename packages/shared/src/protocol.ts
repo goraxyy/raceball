@@ -1,6 +1,6 @@
 // Protocol v1: the contract between game-core, server, screens and pads.
 // To change it: bump PROTOCOL_VERSION and update docs/ARCHITECTURE.md (see docs/WORKFLOW.md).
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -52,6 +52,10 @@ export interface BallSnap {
   v: [number, number, number];
   /** Heading (rad), used by the chase camera */
   h: number;
+  /** The player's steer input, -1 … 1, for the wheel indicator on their screen. 0 when absent */
+  s?: number;
+  /** Drifting: 1 right, -1 left, 0 not. 0 when absent */
+  d?: number;
 }
 
 /** server → pad + viewer + host */

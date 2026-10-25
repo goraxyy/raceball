@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { useRaceState } from "../net";
-import { FollowTile } from "../ui";
+import { FollowTile, SteerWheel } from "../ui";
 import type { TileRect } from "./big-screen";
 import type { SnapshotSource } from "./net-feed";
 import { splitGrid } from "./split-layout";
@@ -9,15 +9,19 @@ import "./split.css";
 /**
  * The big screen's split screen: one frame (Nuris's FollowTile) per player, filling the screen in a grid. The inside
  * of each frame is measured and handed to the game, which draws that player's first-person view there on the canvas.
+ * Each frame has a small wheel showing how far that player's phone is turned.
  */
 export function TileFrames({
   ids,
   session,
   onRects,
+  wheel,
 }: {
   ids: string[];
   session: SnapshotSource;
   onRects: (rects: Map<string, TileRect>) => void;
+  /** Registers a player's wheel indicator, so the game can turn it every frame (null when it unmounts) */
+  wheel: (id: string, el: HTMLElement | null) => void;
 }) {
   const players = useRaceState(session).players ?? {}; // none before the room's first state
   const views = useRef(new Map<string, HTMLElement>());
@@ -76,6 +80,7 @@ export function TileFrames({
                   else views.current.delete(id);
                 }}
               />
+              <SteerWheel wheelRef={(el) => wheel(id, el)} />
             </FollowTile>
           </div>
         );

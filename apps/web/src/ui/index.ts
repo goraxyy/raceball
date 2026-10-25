@@ -25,6 +25,7 @@ export { Results, formatTime } from "./Results";
 export type { ResultRow, ResultsProps } from "./Results";
 export type { RaceHudProps } from "./RaceHud";
 export { SpeedLines } from "./SpeedLines";
+export { SteerWheel } from "./SteerWheel";
 export { TitleScreen } from "./TitleScreen";
 export type { TitleScreenProps } from "./TitleScreen";
 export { ViewerJoin } from "./ViewerJoin";

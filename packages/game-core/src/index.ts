@@ -11,13 +11,14 @@ export {
 } from "./race";
 export { ITEM_ODDS, oddsRow, rollItem } from "./items";
 export { KeyboardInput, NEUTRAL_INPUT, type KeyState } from "./input";
-export { makePath, pointAt, project, type TrackPath } from "./path";
+export { headingAt, makePath, pointAt, project, type TrackPath } from "./path";
 export { BALL_RADIUS } from "./ball";
 export {
   checkTrack,
   createFlatTrack,
   FLAT_GROUND_HALF_SIZE,
   loadTrack,
+  readRoute,
   type BoostPad,
   type CameraSpot,
   type Checkpoint,

@@ -259,7 +259,7 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 
 ### VFX v1 files
 
-Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` JSON, all drawing from one atlas, `fx_atlas.png` (512×256, eight 128² cells: blob, cloud, puff ring, sparkle, star, leaf, confetti, ring). The atlas cells are grayscale, so each system's `color1`/`color2`/`colorDead` paints them. No effect uses color gradients, so code can retint any of them.
+Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` JSON, all drawing from one atlas, `fx_atlas.png` (its first eight 128² cells: blob, cloud, puff ring, sparkle, star, leaf, confetti, ring; v2 below adds eight more). The atlas cells are grayscale, so each system's `color1`/`color2`/`colorDead` paints them. No effect uses color gradients, so code can retint any of them.
 
 | File | Event | How code drives it |
 |---|---|---|
@@ -271,7 +271,29 @@ Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` J
 - **Loading:** `ParticleSystem.Parse(json, scene, "/assets/fx/", true)`, then `start()` once. Bursts are saved with `manualEmitCount` 0, so they sit idle until an event sets the count. Load each file once per scene and reuse it, so a crash of eight balls doesn't create eight systems.
 - **Source:** `tools/fx/gen_fx_textures.py` draws the atlas and `tools/fx/build_fx.mjs` builds the four systems with Babylon's own API, so the JSON always matches the engine version. Run both after a change (`python3 tools/fx/gen_fx_textures.py && node tools/fx/build_fx.mjs`).
 - **Preview:** `/ui` > fx shows a ball circling a patch of track with buttons for a light or hard bump, a respawn, the player color, speed, snow dust and the camera. The preview loads the files the same way the game should.
-- **Budget:** 112 particles at most across the four systems for one ball, and one 40 KB texture.
+- **Budget:** 112 particles at most across the four systems for one ball.
+
+### VFX v2 files
+
+Nine more effects in the same folder and from the same atlas. The atlas is now **512×512, sixteen 128² cells**: the first eight are unchanged (so v1 still works), then flame, splat, snowflake, streak, and four confetti pieces **already painted** in the livery colors with ink edges (gas orange, brake blue, flag yellow, go green). Painted cells use a white tint.
+
+| File | Event | How code drives it |
+|---|---|---|
+| `fx_boost_flames.json` | Blue & White Boost (while it lasts) | `emitRate = 70` during the boost, 0 after. Directions point backward along +Z: give it a TransformNode that follows the ball's position and **heading** (not its roll) and set `isLocal = true`, or rotate `direction1`/`direction2` to the heading each frame |
+| `fx_boost_trail.json` | With the flames | The same, at `emitRate = 40`. Stretched billboards, so the streaks line up with their motion |
+| `fx_roar_ring.json` | Lion Roar | Move `emitter` to the ball, `manualEmitCount = 1`, then again 120 ms later: two flag-yellow rings, like a sound wave |
+| `fx_roar_debris.json` | Lion Roar (with the ring) | Same `emitter`, `manualEmitCount = 14`: a low ring of limestone dust along the ground |
+| `fx_spill_splat.json` | Creamery Spill dropped | `emitter` about 1.2 m behind the ball, `manualEmitCount = 12`: vanilla and strawberry splats (the puddle itself is a mesh) |
+| `fx_spill_sprinkles.json` | With the splat | Same `emitter`, `manualEmitCount = 20` |
+| `fx_snowfall.json` | Arboretum (continuous) | Keep `emitter` on the camera target. `start()` entering the section, `stop()` leaving it. It pre-warms, so the sky is already full. **GPU** where supported |
+| `fx_snow_puff.json` | Landing or a bump in the snow | `emitter` at the ball, `manualEmitCount = 6 + 8 × strength` |
+| `fx_confetti.json` | A player finishes | `emitter` on top of the finish arch, `manualEmitCount = 260`. A fast launch, then a slow paper flutter. **GPU** where supported |
+
+- **GPU particles:** load `fx_snowfall` and `fx_confetti` with `GPUParticleSystem.Parse(json, scene, "/assets/fx/", true)` when `GPUParticleSystem.IsSupported`, otherwise `ParticleSystem.Parse`. The same JSON works for both. `/ui` > fx does exactly this.
+- **Cell ranges:** a system picks a *range* of cells (`startSpriteCellID` to `endSpriteCellID`), so it can only mix neighbors in the atlas. `build_fx.mjs` refuses anything else.
+- **Speed lines** aren't particles. They're `SpeedLines` in `apps/web/src/ui`: comic-book streaks that rush in from the screen edges over the laptop chase view, from 55% of top speed, at full strength during a boost. `<SpeedLines intensity={speed / topSpeed} />`, or 1 while boosting. The middle of the screen stays clear, they cost nothing in the 3D scene, and they're off with reduced motion.
+- **Preview:** `/ui` > fx now also has Boost, Lion Roar, Creamery Spill, Finish confetti and Arboretum snow (snowfall, snow dust and snow puffs on bumps), with the speed lines over the follow camera.
+- **Budget:** a race peaks around 400 confetti + 1,500 snowflakes on the GPU, about 200 CPU particles per busy ball, and one 67 KB texture.
 
 ## Animation
 
@@ -309,6 +331,44 @@ Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` J
   - **Final lap:** ramp the race loop's `playbackRate` to **1.06** over about half a second. That lifts it about a semitone and a touch faster, the classic kart-racer cue.
   - **Lobby → race:** crossfade over about 1 s when the countdown starts, so the music never stops dead.
   - **Mix:** the big screen plays music at full level. Laptops play it **8 dB quieter** (gain ≈ 0.4), so their own ball's sounds stay on top.
+
+### Sound pass: the bank, the mix and captions
+
+Every sound the game plays is in one manifest, `apps/web/src/audio/sounds.ts` (`SOUNDS`), and plays through one mixer, `apps/web/src/audio/mixer.ts`. Don't load sound files by hand. Listen to all of it at `/ui` > sound: every cue, the game-event combos, and the big-screen / laptop switch.
+
+```ts
+const mix = new Mixer("big"); // or "laptop"
+await mix.load(); // after the first tap: browsers block audio until then
+mix.music("musicLobby"); // crossfades over 1 s; mix.music("musicRace") when the countdown starts
+mix.event("bumpHard", { strength }); // a game event: plays everything in EVENT_SOUNDS
+mix.loop("roll", true, { strength: speed01, rate: 0.6 + speed01 }); // call every frame while rolling
+mix.finalLap(); // race music up about a semitone
+```
+
+- **Events → sounds** (`EVENT_SOUNDS`): `bump`; `bumpHard` (bump + heavy layer + crowd oooh); `overtake` (crowd cheer); `lap`; `finalLap`; `finish` (fanfare + cheer); `respawn` (fall, then the respawn); `boost`; `roar` (the roar + its whoomp); `spill`; `snowday`. Sounds with several files pick one at random, and some vary the rate a little (`spread`), so repeats never sound copied.
+- **Two mixes.** Each sound has a level per screen (`gain.big`, `gain.laptop`), and goes through a bus: music 0.55, race cues 1, effects 0.85, crowd 0.7, UI 0.6.
+  - **Big screen:** everything, with music at full level and the crowd.
+  - **Laptop:** music 8 dB down, **no crowd**, and the player's own ball a little louder, so their sounds stay on top of the room.
+- **Ducking:** lap, final lap, finish, the results sting and the Lion Roar dip the music for about half a second, so they read over the race.
+- **Loudness:** one-shots are matched per group, so a category sits together: race cues −14 LUFS, items −15, the ball −16, UI −20. Peaky sounds go through a soft limiter first, so short hits aren't buried.
+- **Captions:** every cue that carries information shows a sticker on the big screen. `<Captions mixer={mix} />` shows them by itself whenever the mixer plays a captioned cue; they stay up 1.8 s, three at most. Keep captions to 16 characters (a test checks).
+
+  | Cue | Caption | Sticker |
+  |---|---|---|
+  | Countdown go | Go! | Go green |
+  | Lap | New lap | Brake blue |
+  | Final lap | Final lap! | Stop red |
+  | Finish | Finish! | Flag yellow |
+  | Boost | Boost! | Gas orange |
+  | Lion Roar | Lion Roar! | Flag yellow |
+  | Creamery Spill | Creamery Spill! | White |
+  | Snow Day | Snow Day! | Brake blue |
+
+- **Files:** `tools/audio/build_sfx.py` turns the Kenney shortlist below into 33 MP3s plus the `sfx_boost_loop.wav` thruster loop (trimmed, faded, mono, loudness-matched; it reads the packs from `assets-src/packs/`). `tools/audio/gen_sfx.py` now also synthesizes the three sounds the packs don't have:
+  - **`sfx_crowd_cheer`:** 48 voices whooping up on "yeah / hey / wahh", with claps and a stadium tail.
+  - **`sfx_crowd_oooh`:** 40 voices on "oooh", swelling up and falling away.
+  - **`sfx_lion_roar`:** a growl that opens up and closes, with a sub-octave for size and a snarl.
+- **Tests:** `apps/web/src/audio/sounds.test.ts` checks that every file in the bank exists, that loops are WAVs, that levels are in range with no crowd on laptops, and that every game event maps to real sounds.
 
 ## Where assets come from (check every license)
 
@@ -396,7 +456,7 @@ All 80 are white on transparent at 512², so we tint them with the art bible pal
 | Hover / select | `interface-sounds/select_007` | 40 ms |
 | Back | `interface-sounds/back_002` | |
 
-**Gaps, which need another source:** **crowd cheer** and **crowd "oooh"** for Beaver Stadium, the **lobby and race music loops** (the packs only have jingles), and the **Lion Roar** itself. Look for CC0 first (freesound.org with the CC0 filter, OpenGameArt), and log every license in [Credits](#credits).
+**Gaps, now filled with originals:** the **crowd cheer**, the **crowd "oooh"** and the **Lion Roar** are synthesized by `tools/audio/gen_sfx.py`, and the music loops are composed by `tools/audio/gen_music.py` (see [Audio](#audio)).
 
 ## Git and big files
 
@@ -411,8 +471,10 @@ All 80 are white on transparent at 512², so we tint them with the art bible pal
 | Mood board photos `docs/moodboard/01–09` | Dough4872, George Chriss, JohnDziak, Nathaniel C. Sheetz, adeans, Acroterion, photochem_PA (via Wikimedia Commons) | CC BY-SA 4.0 / 3.0, CC BY 2.5 / 2.0 (per image) | [docs/moodboard/README.md](moodboard/README.md#credits) | Team reference only, not shipped |
 | Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`packages/shared/theme/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad, web and big-screen UI, art bible sheets |
 | `mus_lobby_loop`, `mus_race_loop` | RaceBall team (composed by `tools/audio/gen_music.py`) | Original, MIT with the code | This repo | Lobby and race music |
-| `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |
-| `fx_atlas.png`, `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof`, `fx_respawn_stars` | RaceBall team (drawn by `tools/fx/gen_fx_textures.py`, built by `tools/fx/build_fx.mjs`) | Original, MIT with the code | This repo | Rolling dust, bump sparks, respawn poof |
+| `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click`, `sfx_crowd_cheer`, `sfx_crowd_oooh`, `sfx_lion_roar` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI, the crowd, the Lion Roar |
+| `sfx_lap`, `sfx_final_lap`, `sfx_finish`, `mus_results_sting` and the other `sfx_*` made by `tools/audio/build_sfx.py` (items, ball, UI; see the shortlist) | Kenney (Music Jingles, Digital Audio, Sci-Fi Sounds, Impact Sounds, Interface Sounds), processed by the RaceBall team | CC0 | https://kenney.nl/assets/category:Audio | Race cues, items, ball, lobby UI |
+| RaceBall logo, ball mark, favicons, `apple-touch-icon.png` | RaceBall team (drawn by `tools/brand/gen_brand.py`; the wordmark is Barlow Condensed, see the font row) | Original, MIT with the code | This repo | Logo, title screen, browser tabs, home-screen icons |
+| `fx_atlas.png`, `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof`, `fx_respawn_stars`, and the v2 `fx_boost_*`, `fx_roar_*`, `fx_spill_*`, `fx_snowfall`, `fx_snow_puff`, `fx_confetti` | RaceBall team (drawn by `tools/fx/gen_fx_textures.py`, built by `tools/fx/build_fx.mjs`) | Original, MIT with the code | This repo | All particle effects (VFX v1 + v2) |
 | Marble Kit 2.0: `tree-large` | Kenney | CC0 | https://kenney.nl/assets/marble-kit | Trees in `maps/happy_valley.glb` |
 | Racing Kit: `overhead`, `grandStand`, `barrierRed` | Kenney | CC0 | https://kenney.nl/assets/racing-kit | Finish arch, stadium stands and start barriers in `maps/happy_valley.glb` |
 | Planet balls `ball_earth`, `ball_mars`, `ball_jupiter`, `ball_saturn`, each with the orbit ring | RaceBall team (generated by `tools/models/build_planet_balls.py`) | Original, MIT with the code | This repo | `models/ball_*.glb` |

@@ -90,22 +90,16 @@
   justify-self: start;
 }
 
+/* the lockup from tools/brand/gen_brand.py (public/assets/ui/ui_logo.svg) */
 .logo {
-  font-family: var(--display);
-  font-size: clamp(48px, 9vmin, 120px);
-  font-style: italic;
-  font-weight: 900;
-  line-height: 0.85;
-  text-transform: uppercase;
-  text-shadow:
-    3px 3px 0 var(--paper),
-    6px 6px 0 var(--ink);
+  width: clamp(280px, 46vmin, 620px);
+  line-height: 0;
 }
 
-.logo span {
-  color: var(--gas);
-  -webkit-text-stroke: 2px var(--ink);
-  paint-order: stroke fill;
+.logo-img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .ball-roll {
@@ -616,6 +610,342 @@
   font-style: italic;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+/* rotates every few seconds; the key change replays the slide-in */
+.load-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: tip-in 300ms ease-out;
+}
+
+.load-tip .eyebrow {
+  rotate: -3deg;
+  background: var(--gas);
+  color: var(--ink);
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* ------------------------------------------------------------------ title screen */
+
+.title-screen {
+  display: grid;
+  grid-template-rows: 1fr auto auto auto;
+  justify-items: center;
+  gap: clamp(20px, 4vmin, 44px);
+  overflow: hidden;
+  text-align: center;
+}
+
+.title-hero {
+  display: grid;
+  justify-items: center;
+  align-content: end;
+  gap: clamp(10px, 2vmin, 20px);
+}
+
+.title-hero .eyebrow {
+  justify-self: center;
+  font-size: clamp(16px, 2.4vmin, 28px);
+}
+
+.title-logo {
+  width: min(88vw, 1000px);
+  line-height: 0;
+}
+
+.title-tag {
+  max-width: 40ch !important;
+  font-size: clamp(18px, 2.6vmin, 30px) !important;
+}
+
+/* eight planets race along a red-and-white kerb, overtaking each other */
+.title-parade {
+  position: relative;
+  width: 100vw;
+  height: 96px;
+  margin-inline: calc(-1 * clamp(20px, 4vw, 64px));
+}
+
+.title-parade::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 14px;
+  border-block: var(--line) solid var(--ink);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--stop) 0 40px,
+    #fff 40px 80px
+  );
+}
+
+.title-runner {
+  position: absolute;
+  bottom: 22px;
+  left: 0;
+  animation: title-run calc(7s + var(--i) * 0.45s) linear infinite;
+  animation-delay: calc(var(--i) * -1.3s);
+}
+
+@keyframes title-run {
+  from {
+    translate: -100px 0;
+  }
+  to {
+    translate: 100vw 0;
+  }
+}
+
+.title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(14px, 3vmin, 32px);
+}
+
+.title-actions a {
+  text-decoration: none;
+}
+
+.title-screen .title-actions .btn:not(.btn-ghost) {
+  font-size: clamp(28px, 4.4vmin, 52px);
+}
+
+.title-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-fact {
+  padding: 4px 12px 3px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: #fff;
+  font-size: clamp(13px, 1.6vmin, 18px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.title-practice {
+  margin-left: 8px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-runner {
+    animation: none;
+    left: calc(6vw + var(--i) * 11vw);
+  }
+
+  .load-tip {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ brag card */
+
+/* a collectible race card, phone-screen sized so it screenshots well */
+.brag-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  width: min(92vw, 360px);
+  padding: 30px 22px 18px;
+  overflow: hidden;
+  border: var(--line) solid var(--ink);
+  border-radius: 14px;
+  background:
+    radial-gradient(rgb(23 21 31 / 0.07) 1px, transparent 1.4px) 0 0 / 9px 9px,
+    #fff;
+  box-shadow: 8px 8px 0 var(--ink);
+  color: var(--ink);
+  font-family: var(--text);
+  font-weight: 600;
+}
+
+/* the player's livery stripe down the left edge, checkers along the top */
+.brag-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 14px;
+  background: repeating-conic-gradient(var(--ink) 0 25%, #fff 0 50%) 0 0 / 14px
+    14px;
+  border-bottom: var(--line) solid var(--ink);
+}
+
+.brag-card::after {
+  content: "";
+  position: absolute;
+  inset: 14px auto 0 0;
+  width: 12px;
+  background: var(--player);
+  border-right: var(--line) solid var(--ink);
+}
+
+.brag-card.is-winner {
+  background:
+    radial-gradient(rgb(23 21 31 / 0.08) 1px, transparent 1.4px) 0 0 / 9px 9px,
+    var(--flag);
+}
+
+.brag-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding-left: 8px;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.brag-event {
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+.brag-date {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.is-winner .brag-date {
+  color: var(--ink);
+}
+
+.brag-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 34px 0 8px; /* room for the orbit ring */
+}
+
+.brag-place {
+  display: grid;
+  font-family: var(--display);
+  font-size: 108px;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.8;
+  text-shadow:
+    3px 3px 0 var(--paper),
+    6px 6px 0 var(--ink);
+}
+
+.brag-num.is-dnf {
+  font-size: 0.6em;
+}
+
+.brag-num sup {
+  margin-left: 0.12em;
+  font-size: 0.34em;
+  vertical-align: 1.5em;
+}
+
+.brag-of {
+  margin-top: 10px;
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: none;
+  color: var(--muted);
+}
+
+.is-winner .brag-of {
+  color: var(--ink);
+}
+
+.brag-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding-left: 8px;
+  font-family: var(--display);
+  font-size: 40px;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.brag-name .shape {
+  --shape-size: 28px;
+}
+
+.brag-card .brag-title {
+  justify-self: start;
+  margin: -4px 0 0 8px;
+  padding: 3px 10px 2px;
+  background: var(--ink);
+  color: var(--flag);
+  font-family: var(--display);
+  font-size: 18px;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  rotate: -2deg;
+}
+
+.brag-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 0 8px;
+}
+
+.brag-stats div {
+  padding: 6px 10px 5px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper);
+}
+
+.brag-stats dt {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.brag-stats dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 30px;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.brag-foot {
+  width: 150px;
+  justify-self: end;
+  line-height: 0;
+}
+
+.brag-preview {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
 }
 
 /* ------------------------------------------------------------------ small laptops */
@@ -1692,6 +2022,49 @@
   }
 }
 
+/* ---- speed lines (laptop chase view): streaks rush in from the edges, the middle stays clear */
+
+.speed-lines {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  opacity: calc(0.35 + 0.55 * var(--k));
+}
+
+.speed-lines span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--len);
+  height: var(--w);
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #fff 35%, #fff);
+  transform-origin: 0 50%;
+  animation: speed-rush 0.45s linear infinite;
+}
+
+@keyframes speed-rush {
+  from {
+    transform: rotate(var(--a)) translateX(78vmax);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    transform: rotate(var(--a)) translateX(34vmax);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speed-lines {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------------ dev gallery (/ui) */
 
 /* ---- music listening view (/ui > music), record sleeves in the livery */
@@ -2044,4 +2417,228 @@
   .ball-roll {
     animation: none;
   }
+}
+
+/* ---- captions for key audio cues (big screen): stickers that slap on and peel away */
+
+.captions {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  z-index: 8;
+  translate: -50% 0;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.18em 0.55em 0.12em 0.4em;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: var(--tone);
+  box-shadow: var(--drop) var(--drop) 0 var(--ink);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: clamp(30px, 5.2vmin, 58px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  rotate: var(--tilt);
+  animation: caption-life var(--hold) linear both;
+}
+
+.caption.is-dark {
+  color: #fff;
+  -webkit-text-stroke: 1.5px var(--ink);
+  paint-order: stroke fill;
+}
+
+.caption-wave {
+  width: 0.62em;
+  height: 0.62em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+/* slap on with an overshoot, sit still, then peel up and away */
+@keyframes caption-life {
+  0% {
+    opacity: 0;
+    scale: 1.6;
+  }
+  7% {
+    opacity: 1;
+    scale: 0.94;
+  }
+  11% {
+    scale: 1;
+  }
+  82% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caption {
+    animation-name: caption-fade;
+  }
+}
+
+@keyframes caption-fade {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---- the sound board (/ui > sound), a rack of pads in the livery */
+
+.sound-preview {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: clamp(18px, 3vmin, 30px);
+  padding-block: clamp(24px, 5vmin, 56px);
+  padding-right: 120px; /* clear of the gallery nav */
+  overflow-y: auto;
+}
+
+.sound-preview > .btn {
+  margin-top: 8px;
+}
+
+.sound-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(100%, 1180px);
+}
+
+.sound-screens {
+  display: flex;
+  gap: 12px;
+}
+
+.sound-screens .toggle {
+  flex-direction: column;
+  align-items: start;
+  gap: 2px;
+}
+
+.sound-rack {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 22px;
+  width: min(100%, 1180px);
+}
+
+.sound-group {
+  position: relative;
+  padding: 34px 16px 16px;
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--drop) var(--drop) 0 var(--ink);
+}
+
+/* the group name as a tab of tape across the top edge */
+.sound-group h2 {
+  position: absolute;
+  top: -16px;
+  left: 14px;
+  margin: 0;
+  padding: 0.1em 0.5em 0.05em;
+  border: var(--line) solid var(--ink);
+  border-radius: 4px;
+  background: var(--tone);
+  color: var(--ink);
+  font-size: 22px !important;
+  rotate: -2deg;
+}
+
+.sound-group:first-child h2,
+.sound-group.is-combos h2 {
+  color: #fff;
+}
+
+.sound-pads {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.sound-pad {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-height: 68px;
+  padding: 8px 6px;
+  border: var(--line) solid var(--ink);
+  border-radius: 7px;
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    translate 60ms ease,
+    box-shadow 60ms ease,
+    background 120ms ease;
+}
+
+.sound-pad-label {
+  font-family: var(--display);
+  font-size: 21px;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.sound-pad small {
+  font: 800 11px var(--text);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sound-pad:active,
+.sound-pad.is-on {
+  translate: 3px 3px;
+  box-shadow: 0 0 0 var(--ink);
+  background: var(--tone);
+}
+
+.sound-group:first-child .sound-pad.is-on,
+.sound-group.is-combos .sound-pad.is-on {
+  color: #fff;
+}
+.sound-group:first-child .sound-pad.is-on small,
+.sound-group.is-combos .sound-pad.is-on small {
+  color: rgb(255 255 255 / 0.75);
+}
+
+.sound-pad.is-muted {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.55;
 }

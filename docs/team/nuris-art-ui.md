@@ -147,15 +147,27 @@ Done as original tracks: `tools/audio/gen_music.py` composes and renders `mus_lo
 ### VFX v2
 Boost flames + trail, Lion Roar shockwave ring, Creamery spill splat, snowfall + snow puffs, finish confetti, speed lines. Use **GPU particles** (`GPUParticleSystem`) for the big ones, like snowfall and confetti.
 
+Done: nine effects built by `tools/fx/build_fx.mjs` from the atlas in `tools/fx/gen_fx_textures.py` (now 16 cells: flame, splat, snowflake, streak and painted confetti added), plus the `SpeedLines` overlay. Snowfall and confetti run on the GPU where supported. How code fires each one: [ASSETS.md > VFX v2 files](../ASSETS.md#vfx-v2-files).
+
 ### Full sound pass
 - **Every event gets a sound:** boost, roar, spill, pickup, lap, final lap, finish, respawn, crowd cheer, crowd "oooh".
 - **Mix:** the big screen is louder and has the music. Laptops play quieter, and mostly their own ball.
 - **Captions:** every sound that carries information gets a short on-screen caption on the big screen ("Final lap!", "Lion Roar!"). Keep the list in ASSETS.md.
 
+Done: one sound bank (`apps/web/src/audio/sounds.ts`) and a mixer (`mixer.ts`) with buses, a big-screen and a laptop mix, music ducking, the lobby → race crossfade and the final-lap lift. The Kenney shortlist is processed by `tools/audio/build_sfx.py`, and the crowd cheer, the "oooh" and the Lion Roar are our own (`tools/audio/gen_sfx.py`). `<Captions>` puts the key cues on the big screen as stickers. Try it all at `/ui` > sound. How code plays it: [ASSETS.md > Sound pass](../ASSETS.md#sound-pass-the-bank-the-mix-and-captions).
+
 ### Branding
 - **Logo:** RaceBall wordmark + ball mark, original art in the palette colors.
 - **Title screen, loading screen (with a progress bar), brag card:** a results card per player with best lap, top speed and bumps.
 - **Favicons** for web and pad.
+
+Built:
+- **Logo:** a planet ball with its orbit ring crossing in front, rolling right, plus the wordmark in Barlow Condensed Black Italic, in the UI's sticker style. `tools/brand/gen_brand.py` draws it with the text turned into outlines, so the files look right anywhere: `apps/web/public/assets/ui/ui_logo.svg` (light backgrounds), `ui_logo_dark.svg` (dark backgrounds) and `ui_logo_mark.svg` (the ball alone, e.g. for Devpost). In React, use `<Logo />` from `pieces.tsx`.
+- **Favicons:** the mark on a paper tile for web and on a gas orange tile for the pad, so the two tabs are easy to tell apart. `tools/brand/render_icons.mjs` renders the 180 px `apple-touch-icon.png` for both apps (for iPhone "Add to Home Screen").
+- **Title screen:** `TitleScreen` (props `hostHref`, `joinHref`, optional `practiceHref`) is the web app's `/`: the logo, the eight planets racing along a kerb, and "Host a race" / "Join from a laptop".
+- **Loading screen:** `LoadingScreen` now shows the logo and a race tip that changes every 4 s.
+- **Brag card:** `BragCard` (props `row` (a `ResultRow`), `total`, `laps`, optional `topSpeed` in km/h and `date`) is one player's race as a phone-sized card: place, planet, time, best lap, top speed, bumps and their brag title. The winner's card is flag yellow. Show each laptop player their own card after the results. It's sized for a phone screenshot; a pad version can follow the same layout.
+- **Rerun after a change:** `pip install fonttools brotli`, then `python3 tools/brand/gen_brand.py && node tools/brand/render_icons.mjs`.
 
 ---
 

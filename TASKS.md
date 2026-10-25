@@ -132,8 +132,8 @@ Nothing right now. Add new questions here.
 - [x] Pairing: viewer gets a `pairToken`, its QR opens the pad with the token, and the pad is bound to that player
 - [x] `apps/web/src/net`: client, clock sync, snapshot buffer, interpolation, own-ball extrapolation, `useRaceState` / `usePairing` hooks
 - [x] Pad steering: device-frame gravity, One Euro filter, dead zone + curve, `steer` from -1 to 1
-- [ ] Pad 2-step calibration (+ Flip button); hold-to-gas on the right half, brake on the left; input sent at 60 Hz and on change
-- [ ] Rotation fix v1: Android lock; iPhone Portrait Lock onboarding + self-rotated UI; counter-rotation fallback
+- [x] Pad 2-step calibration (+ Flip button); hold-to-gas on the right half, brake on the left; input sent at 60 Hz and on change (tested on iPhone 18 Pro)
+- [x] Rotation fix v1: Android lock; iPhone Portrait Lock onboarding + self-rotated UI; counter-rotation fallback (works on iPhone 18 Pro. Known bug, parked: the pad sometimes switches to portrait. Android untested)
 - [x] Wake Lock; block zoom, scroll and selection
 - [x] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 
@@ -198,9 +198,9 @@ Nothing right now. Add new questions here.
 - [ ] Pad accessibility settings: auto-gas, sensitivity, dead zone
 
 **Nuris**
-- [ ] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones)
-- [ ] Full sound pass + mix (big screen vs laptops), crowd cheers; captions for key audio cues
-- [ ] Logo, title screen, loading screen with progress, brag card, favicons
+- [x] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones) (9 effects in `apps/web/public/assets/fx/`, `SpeedLines` in `apps/web/src/ui`; preview at `/ui` > fx; [ASSETS.md](docs/ASSETS.md#vfx-v2-files))
+- [x] Full sound pass + mix (big screen vs laptops), crowd cheers; captions for key audio cues
+- [x] Logo, title screen, loading screen with progress, brag card, favicons (`TitleScreen` on `/`, `BragCard`; previews at `/ui` > title, loading, brag; how they're made: [your guide](docs/team/nuris-art-ui.md#branding))
 
 ---
 

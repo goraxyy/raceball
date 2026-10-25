@@ -85,8 +85,8 @@ Nothing right now. Add new questions here.
 - [ ] Dev-only Inspector toggle (`Shift+I`)
 
 **Rasim**
-- [ ] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
-- [ ] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
+- [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
+- [x] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
 - [ ] Configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy a hello-world Colyseus server with a `/health` check; give Ali the Vercel settings for web + pad
 - [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
 

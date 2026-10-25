@@ -12,6 +12,8 @@
   "dependencies": {
     "@colyseus/schema": "^5.0.42",
     "@colyseus/tools": "^0.18.10",
+    "@raceball/game-core": "workspace:*",
+    "@raceball/shared": "workspace:*",
     "colyseus": "^0.18.10",
     "express": "^5.3.0"
   },

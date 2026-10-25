@@ -57,7 +57,8 @@ export class NetFeed implements BallFeed {
   }
 
   private refresh(): void {
-    const players = Object.entries(this.session.state.players);
+    // right after joining, the room's first state may not have arrived: no players yet
+    const players = Object.entries(this.session.state.players ?? {});
     // the server races a player without a chosen planet on PLANETS[slot], and slot = color
     this.looks = new Map(
       players.map(([id, p]) => [

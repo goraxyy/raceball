@@ -17,7 +17,7 @@ export function TileFrames({
   session: SnapshotSource;
   onRects: (rects: Map<string, TileRect>) => void;
 }) {
-  const { players } = useRaceState(session);
+  const players = useRaceState(session).players ?? {}; // none before the room's first state
   const views = useRef(new Map<string, HTMLElement>());
   const key = ids.join();
 

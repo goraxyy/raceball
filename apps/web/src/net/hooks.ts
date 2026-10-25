@@ -66,7 +66,8 @@ export function usePairing(session: NetSession): Pairing {
   return {
     playerId,
     pairToken,
-    paired: (playerId && state.players[playerId]?.paired) || false,
+    // players is missing until the room's first state arrives, which can be after the welcome
+    paired: (playerId && state.players?.[playerId]?.paired) || false,
     padUrl: pairToken ? session.padUrl() : undefined,
   };
 }

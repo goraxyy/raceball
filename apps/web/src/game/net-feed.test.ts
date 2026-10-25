@@ -81,6 +81,17 @@ describe("NetFeed", () => {
     expect(feed.phoneOnly).toEqual(["p2"]);
   });
 
+  it("copes with a room whose first state hasn't arrived yet", () => {
+    // right after joining, room.state.toJSON() can still be {} with no players
+    const room = new FakeRoom();
+    room.state = {} as RaceStateView;
+    const feed = new NetFeed(room);
+    expect(feed.look("p1")).toBeUndefined();
+    expect(feed.phoneOnly).toEqual([]);
+    room.patch({ p1: player({ ball: "earth", color: 0 }) }, "p1");
+    expect(feed.look("p1")).toEqual({ ball: "earth", color: 0 });
+  });
+
   it("stops listening when disposed", () => {
     const room = new FakeRoom();
     const feed = new NetFeed(room);

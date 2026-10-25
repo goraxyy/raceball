@@ -166,7 +166,7 @@ Nothing right now. Add new questions here.
 **Nuris**
 - [x] Big-screen overlay: `TrackMap` (SVG, color + shape markers), `Standings`, `Countdown`, `FollowTile` frames (in `apps/web/src/ui`, live preview at `/ui` > race)
 - [x] Player HUD: `RaceHud` (position, lap, item slot, speed, wrong-way warning) (in `apps/web/src/ui`, preview at `/ui` > hud)
-- [ ] VFX v1 as JSON: rolling dust, bump sparks, respawn poof
+- [x] VFX v1 as JSON: rolling dust, bump sparks, respawn poof (in `apps/web/public/assets/fx/`, preview at `/ui` > fx; how to fire them: [ASSETS.md](docs/ASSETS.md#vfx-v1-files))
 - [ ] `Results` screen + podium layout (with Ali)
 - [ ] Music: lobby loop + race loop
 

@@ -8,6 +8,7 @@ import {
   ViewerJoin,
   type LobbyPlayer,
 } from ".";
+import { FxPreview } from "./FxPreview";
 import { HudPreview } from "./HudPreview";
 import { RacePreview } from "./RacePreview";
 
@@ -70,6 +71,7 @@ const VIEWS = [
   "loading",
   "race",
   "hud",
+  "fx",
 ] as const;
 type View = (typeof VIEWS)[number];
 
@@ -166,6 +168,7 @@ export default function Gallery() {
       )}
       {view === "race" && <RacePreview />}
       {view === "hud" && <HudPreview />}
+      {view === "fx" && <FxPreview />}
       {view === "loading" && (
         <LoadingScreen progress={progress} label="Loading Happy Valley" />
       )}

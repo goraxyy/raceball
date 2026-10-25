@@ -365,10 +365,16 @@ The manual steps below are what the script automates.
 
 ### 4. Respawn
 
-If a ball's `y < -10`, or it hasn't moved toward the next checkpoint for 5 s while touching nothing, then:
-1. Teleport it to the respawn marker for its last checkpoint: `setTranslation`, `setLinvel(0)`, `setAngvel(0)`.
-2. Set its heading to the marker's forward direction.
-3. Emit `{ type: "respawn" }`.
+**Done** (`race.ts`). A ball respawns when its `y < -10` (`fallY`), or when it's **stuck**: the player holds gas while the ball moves slower than `stuckSpeed` (1 m/s) for `stuckSeconds` (5 s). That covers a ball wedged against a wall, caught in a gap, or pinned in a pile-up.
+
+The plan was "no progress toward the next checkpoint for 5 s". On Happy Valley's Lion Shrine hairpin, though, the road heads away from the next gate for 54 m, so that rule would respawn anyone slower than about 11 m/s there.
+
+When a ball respawns:
+1. It's teleported to the respawn marker of the **last gate it crossed**. If that gate has no marker, the nearest earlier gate's marker is used. Before the first gate, it goes back to its grid slot. Its speed and spin are zeroed.
+2. Its heading is set to the marker's forward direction.
+3. `{ type: "respawn" }` is emitted.
+
+**Gate progress:** each ball tracks the next gate from Rapier collision events (`world.step(eventQueue)`). Only the next gate counts, so shortcuts and driving backwards don't move a ball's respawn point. Laps and ranking (M2) build on the same `next`/`last` fields.
 
 ### 5. Agree the `game-core` API with Rasim
 

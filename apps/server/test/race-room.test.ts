@@ -253,3 +253,87 @@ describe("input", () => {
     expect(laptopStat.inputAge).toBeLessThan(1500);
   });
 });
+
+describe("simulation loop", () => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  type Snap = {
+    tick: number;
+    balls: { id: string; p: number[]; v: number[] }[];
+  };
+
+  /** Collect snapshots a screen receives */
+  const collect = (client: Awaited<ReturnType<typeof join>>) => {
+    const snaps: Snap[] = [];
+    client.onMessage("snap", (s: Snap) => snaps.push(s));
+    return snaps;
+  };
+
+  test("screens get snapshots at about 60 Hz; pads don't", async () => {
+    const host = await join({ role: "host" });
+    const laptop = await join({ role: "viewer" });
+    const { pairToken } = await welcome(laptop);
+    const pad = await join({ role: "pad", pairToken });
+    const [hostSnaps, laptopSnaps] = [collect(host), collect(laptop)];
+    let padSnaps = 0;
+    pad.onMessage("snap", () => padSnaps++);
+    await sleep(1000);
+    expect(hostSnaps.length).toBeGreaterThan(45);
+    expect(hostSnaps.length).toBeLessThan(75);
+    expect(laptopSnaps.length).toBeGreaterThan(45);
+    expect(padSnaps).toBe(0);
+    const ticks = hostSnaps.map((s) => s.tick);
+    expect(ticks).toEqual([...ticks].sort((a, b) => a - b));
+  });
+
+  test("the race runs (M1 free drive) and the phase is synced", () => {
+    expect(room.state.phase).toBe("racing");
+  });
+
+  test("a pad holding gas drives its ball; an idle ball stays put", async () => {
+    const host = await join({ role: "host" });
+    const driver = await join({ role: "viewer", name: "Driver" });
+    const { playerId: driverId, pairToken } = await welcome(driver);
+    const idle = await join({ role: "viewer", name: "Idle" });
+    const { playerId: idleId } = await welcome(idle);
+    const pad = await join({ role: "pad", pairToken });
+    const snaps = collect(host);
+    await sleep(300); // settle on the grid
+    const start = snaps.at(-1)!;
+
+    let seq = 0;
+    const gas = setInterval(
+      () =>
+        pad.send("input", {
+          seq: ++seq,
+          steer: 0,
+          gas: 1,
+          brake: false,
+          item: false,
+        }),
+      16,
+    );
+    await sleep(1500);
+    clearInterval(gas);
+    const end = snaps.at(-1)!;
+
+    const moved = (id: string) => {
+      const a = start.balls.find((b) => b.id === id)!.p;
+      const b = end.balls.find((b) => b.id === id)!.p;
+      return Math.hypot(b[0] - a[0], b[2] - a[2]);
+    };
+    expect(moved(driverId)).toBeGreaterThan(1);
+    expect(moved(idleId)).toBeLessThan(0.2);
+  });
+
+  test("a player who leaves disappears from snapshots", async () => {
+    const host = await join({ role: "host" });
+    const laptop = await join({ role: "viewer" });
+    const { playerId } = await welcome(laptop);
+    const snaps = collect(host);
+    await sleep(100);
+    expect(snaps.at(-1)!.balls.map((b) => b.id)).toContain(playerId);
+    await laptop.leave();
+    await sleep(100);
+    expect(snaps.at(-1)!.balls.map((b) => b.id)).not.toContain(playerId);
+  });
+});

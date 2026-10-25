@@ -159,7 +159,7 @@ pnpm --filter @raceball/game-core add @dimforge/rapier3d-compat @gltf-transform/
 pnpm --filter @raceball/server add @raceball/game-core@workspace:* @raceball/shared@workspace:*
 ```
 
-The remaining setup (tsconfig, scripts, lint, Railway, Vercel) is in [Rasim's guide](docs/team/rasim-platform.md#m0-setup).
+The remaining setup (tsconfig, scripts, lint, Vercel settings) is in [Rasim's guide](docs/team/rasim-platform.md#m0-setup). Railway hosting is in [Ali's guide](docs/team/ali-game.md#6-deploying-the-server-to-railway).
 
 ### Run locally
 
@@ -181,8 +181,8 @@ Put the server tunnel URL in `apps/pad/.env.local` and `apps/web/.env.local` as 
 
 | Who | Owns | Main folders | Guide |
 |---|---|---|---|
-| **Ali** | **Game:** physics and gameplay, track loading, race rules, 3D scene, cameras (incl. big-screen follow-cams), items, map greybox + gameplay markers, wiring art/VFX/audio to events | `packages/game-core`, `apps/web/src/game` | [ali-game.md](docs/team/ali-game.md) |
-| **Rasim** | **Platform + controller:** monorepo, server, hosting, rooms, pairing, phone-only join, netcode, the phone controller and the rotation fix | `apps/server`, `apps/pad`, `packages/shared`, `apps/web/src/net` | [rasim-platform.md](docs/team/rasim-platform.md) |
+| **Ali** | **Game:** physics and gameplay, track loading, race rules, 3D scene, cameras (incl. big-screen follow-cams), items, map greybox + gameplay markers, wiring art/VFX/audio to events, Railway hosting | `packages/game-core`, `apps/web/src/game`, `railway.json` | [ali-game.md](docs/team/ali-game.md) |
+| **Rasim** | **Platform + controller:** monorepo, server code, Vercel settings, rooms, pairing, phone-only join, netcode, the phone controller and the rotation fix | `apps/server`, `apps/pad`, `packages/shared`, `apps/web/src/net` | [rasim-platform.md](docs/team/rasim-platform.md) |
 | **Nuris** | **Art, audio + UI:** art bible, Penn State landmark models, materials, animation, particles, sound, lobby/HUD/big-screen UI, pad look, branding | `apps/web/public/assets`, `apps/web/src/ui`, `apps/pad/src/style.css` | [nuris-art-ui.md](docs/team/nuris-art-ui.md) |
 
 How we work together (branches, PRs, conventions, protocol changes) is in **[docs/WORKFLOW.md](docs/WORKFLOW.md)**.

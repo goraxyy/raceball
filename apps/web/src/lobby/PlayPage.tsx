@@ -90,19 +90,21 @@ export function PlayerRoom({
   const me = pairing.playerId ? state.players?.[pairing.playerId] : undefined;
   return (
     <>
-      {/* Ali's renderer: this player's chase camera. It loads the map behind the lobby, so Ready can count */}
+      {/* Ali's renderer: this player's chase camera. It loads the map behind the lobby, so Ready can count, and on a
+          player's own laptop it tours the landmarks there (the playing host's lobby covers the view instead) */}
       <GameView
         mode="viewer"
         session={session}
         onLoaded={onLoaded}
         hostControls={controls}
+        tour={!lobby}
       />
       {!state.phase && (
         <LoadingScreen progress={0.6} label="Joining the race" />
       )}
       {state.phase === "lobby" && lobby}
       {state.phase === "lobby" && !lobby && (
-        <section className="ui-screen viewer-join">
+        <section className="ui-screen viewer-join over-map">
           <PairingQR url={pairing.padUrl} paired={pairing.paired} />
           {me?.ready && <p>Ready! Waiting for the host to start.</p>}
         </section>

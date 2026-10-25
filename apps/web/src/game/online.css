@@ -86,3 +86,29 @@
   position: absolute;
   inset: 0;
 }
+
+.online-controls {
+  display: grid;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.online-phase {
+  font-weight: 700;
+}
+
+.online-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.online-buttons .btn {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.online-buttons .btn[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}

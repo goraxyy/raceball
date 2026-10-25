@@ -16,13 +16,20 @@ import "./local.css";
 export function GameView({
   mode,
   session,
+  onLoaded,
 }: {
   mode: GameMode;
   session?: SnapshotSource;
+  /** Once the map is in and the race can be drawn (a laptop tells the server its assets loaded) */
+  onLoaded?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [status, setStatus] = useState<GameStatus | null>(null);
+  const onLoadedRef = useRef(onLoaded);
+  useEffect(() => {
+    onLoadedRef.current = onLoaded;
+  });
   const onTileRects = useCallback(
     (rects: Map<string, TileRect>) => gameRef.current?.setTileRects(rects),
     [],
@@ -30,6 +37,7 @@ export function GameView({
 
   useEffect(() => {
     let active = true;
+    let loaded = false;
     const engine = new Engine(canvasRef.current, true, { stencil: true });
     const scene = new Scene(engine);
     scene.useRightHandedSystem = true; // match glTF + Rapier, no conversions
@@ -44,7 +52,12 @@ export function GameView({
         : undefined,
       session,
       onStatus: (next) => {
-        if (active) setStatus(next);
+        if (!active) return;
+        setStatus(next);
+        if (next.state === "ready" && !loaded) {
+          loaded = true;
+          onLoadedRef.current?.();
+        }
       },
     });
     gameRef.current = game;

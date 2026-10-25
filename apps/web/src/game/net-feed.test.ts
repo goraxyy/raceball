@@ -9,6 +9,7 @@ const player = (over: Partial<PlayerView>): PlayerView => ({
   color: 0,
   shape: 0,
   phoneOnly: false,
+  bot: false,
   paired: false,
   calibrated: false,
   assetsLoaded: false,

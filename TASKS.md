@@ -95,7 +95,8 @@ Nothing right now. Add new questions here.
 - [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
 
 **Nuris**
-- [ ] Art bible in `docs/ASSETS.md`: style, palette, the 8 player colors + shapes, Penn State mood board (done except the mood board: style, palettes, player colors + shapes and the planet balls are in ASSETS.md)
+- [x] Art bible in `docs/ASSETS.md`: style, palettes, the 8 player colors + shapes, the planet balls
+- [ ] Mood board in `docs/moodboard/`: 5–10 campus and style references, each credited
 - [ ] Review the Kenney Particle Pack and audio packs; add particle textures and sounds to the shortlist
 
 ---
@@ -127,7 +128,7 @@ Nothing right now. Add new questions here.
 
 **Nuris**
 - [ ] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen`
-- [ ] Pad screens in Figma; agree the markup contract with Rasim; write `apps/pad/src/style.css` (style.css done; every screen and its markup is in `apps/pad/screens.html` instead of Figma; waiting on Rasim to agree the markup)
+- [ ] Pad screens in `apps/pad/screens.html`; agree the markup contract with Rasim; write `apps/pad/src/style.css` (screens and style.css done; waiting on Rasim to agree the markup)
 - [x] First sound set: rolling loop, bump, countdown, UI click
 
 ---

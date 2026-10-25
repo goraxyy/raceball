@@ -39,34 +39,24 @@ You own **how RaceBall looks, sounds and feels**:
 | Node Material Editor (https://nme.babylonjs.com) | Special materials |
 | Babylon Playground + Inspector (https://playground.babylonjs.com) | Making particle effects |
 | Audacity | Trimming, fades, loudness, MP3 export |
-| Figma (free) | UI mockups for the lobby, HUD, pad and results |
+| `apps/pad/screens.html` (open `/screens.html` in dev) | Every pad screen and its markup, in the real style |
+| Figma (free), optional | Mockups for the lobby, HUD and big screen before you build them |
 
 ---
 
 ## M0: Setup
 
-### 1. Art bible (fill in the Art direction section of ASSETS.md)
-- **Mood board:** 5–10 images. Campus photos (Old Main, Lion Shrine, Creamery, Beaver Stadium, fall trees, snow), plus 3–4 games in the target style (chunky low-poly, soft PBR, saturated colors). Save them to `docs/moodboard/` as small JPGs, under 300 KB each.
-- **Main palette:** 5–6 colors, with hex codes. Use fall brick and orange for the environment, navy and white as accents, and snow white for the finale.
-- **Player colors (colorblind-safe, based on the Okabe-Ito palette, with white in place of black so it shows on the track):**
+### 1. Art bible (written: [ASSETS.md > Art bible](../ASSETS.md#art-bible))
+The art bible is in ASSETS.md: style pillars, the environment and livery palettes, a color key for each route section, the planet balls, player colors and shapes, shape language, materials, lighting, VFX and type. Swatch sheets are in `docs/art/`. Keep it up to date when the style changes, and review every model and screen against it.
 
-  | Slot | Color | Hex | Shape |
-  |---|---|---|---|
-  | 1 | Orange | `#E69F00` | Circle |
-  | 2 | Sky blue | `#56B4E9` | Square |
-  | 3 | Bluish green | `#009E73` | Triangle |
-  | 4 | Yellow | `#F0E442` | Star |
-  | 5 | Blue | `#0072B2` | Diamond |
-  | 6 | Vermillion | `#D55E00` | Cross |
-  | 7 | Reddish purple | `#CC79A7` | Pentagon |
-  | 8 | White | `#FFFFFF` | Hexagon |
-
-  These colors and shapes appear on the ball's ring or trim, the map markers, name tags, the HUD and the pad. Add them to `packages/shared/src/constants.ts` (through a PR that Rasim reviews), so everything uses the same values.
+- **Player colors and shapes** are `PLAYER_COLORS` and `PLAYER_SHAPES` in `packages/shared/src/constants.ts`. The server stores a slot number (0–7), and every screen looks up the values there. They appear on the planet's orbit ring, the map markers, name tags, the HUD and the pad.
+- **Planets** are `PLANETS` in the same file. No two players in a race share one.
+- **Mood board (still to do):** 5–10 images in `docs/moodboard/`, small JPGs under 300 KB each. Campus photos (Old Main, Lion Shrine, Creamery, Beaver Stadium, Pattee Library, fall trees, snow) from your own camera or with a free license, plus 3–4 style references: painted wooden toy sets, toy race tracks and race-day graphics. List each image with its license in the ASSETS.md credits.
 
 ### 2. Particle and audio packs
 Download and look through the Kenney **Particle Pack** and the Kenney audio packs (all CC0). Add the particle textures and sounds you'd use to the shortlist in ASSETS.md. Put the downloads in `assets-src/packs/` in Drive. (Ali reviews the Marble Kit and Racing Kit.)
 
-**Done when:** the art bible plus the player colors are in ASSETS.md, and the particle and audio shortlist is written.
+**Done when:** the art bible (done), the mood board and the particle and audio shortlist are in the repo.
 
 ---
 
@@ -86,17 +76,16 @@ Build React components that **only take props**. Rasim's hooks feed them data, s
 For QR codes, use the `qrcode` package: `QRCode.toDataURL(url, { margin: 1, width: 512 })` into an `<img>`. Make the big-screen QR **large**, because people scan it from across the room.
 
 ### Pad UI
-Design every screen in Figma first: start, name/ball picker (phone-only players), calibrate (2 steps + Flip), ready, racing, results, connection lost.
+Every pad screen is built and styled in [`apps/pad/screens.html`](../../apps/pad/screens.html), with the real `style.css`: start, name + planet picker (phone-only players), calibrate (2 steps + Flip), ready, racing, countdown, results and connection lost. Under each screen is its exact markup, which is the contract for Rasim's pad code. Add new screens there first.
 
 The racing screen must work **with the phone held sideways like a wheel**:
 - left half = brake
 - right half = gas
-- item button at the top center
-- a thin status strip (position, lap, item)
+- the middle column: the status plate (place, shape, lap), the steering gauge (`--steer`) and the item badge
 
 Keep it big, simple and high contrast. Players won't look at the phone while racing.
 
-Then agree the markup contract with Rasim (IDs and classes such as `#ui`, `.zone-left`, `.zone-right`, `.item-btn`, `.screen-calibrate`) and write `style.css`. Remember that `#ui` gets rotated by code, so lay it out in landscape.
+Agree any markup change with Rasim before you make it (classes such as `.zone-left`, `.zone-right`, `.is-down`, `.item-btn[data-item]`, `.steer`, `.status[data-change]`, `.racing[data-cue]`). Remember that `#ui` gets rotated by code, so sizes use container units (`cqh`, `cqw`), not `vw`/`vh`.
 
 ### First sound set
 Rolling loop, bump, countdown beeps, UI click.

@@ -295,6 +295,17 @@ Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` J
 - **Loops ship as WAV, not MP3.** MP3 adds a little silence at both ends, which leaves an audible gap every time a loop repeats. Loops are short mono 22 kHz WAVs instead (a 4 s loop is about 170 KB), and they repeat cleanly in every browser.
 - **Rolling loop in code:** play `sfx_roll_loop.wav` with `loop = true`, and drive its playback rate (about 0.6 at a crawl to 1.6 at top speed) and volume from the ball's speed.
 - **Bumps:** pick one of `sfx_bump_01–03` at random, set the volume from the event's `strength`, and vary the playback rate by ±5%, so repeated bumps don't sound identical.
+- **Music:** `tools/audio/gen_music.py` composes both loops from scratch, so they're original and match the pizzicato and steel-drum jingles. Listen at `/ui` > music.
+
+  | File | Feel | Length |
+  |---|---|---|
+  | `mus/mus_lobby_loop.wav` | Swung toy-box groove, 100 BPM, F major: marimba, plucked bass, glockenspiel, brushes, shaker | 8 bars, 19.2 s, −18 LUFS |
+  | `mus/mus_race_loop.wav` | Driving, 148 BPM, G major: steel-drum hook, plucked bass with a sub, offbeat marimba, kick/clap/hats, a fill into the loop | 8 bars, 13.0 s, −16 LUFS |
+
+  - **Play them looped** (`AudioBufferSourceNode` with `loop = true`). They're stereo 32 kHz WAVs (2.5 MB and 1.7 MB) for the same reason as the other loops, and each one is rendered three times with the middle copy kept, so note and reverb tails wrap around and there's no seam.
+  - **Final lap:** ramp the race loop's `playbackRate` to **1.06** over about half a second. That lifts it about a semitone and a touch faster, the classic kart-racer cue.
+  - **Lobby → race:** crossfade over about 1 s when the countdown starts, so the music never stops dead.
+  - **Mix:** the big screen plays music at full level. Laptops play it **8 dB quieter** (gain ≈ 0.4), so their own ball's sounds stay on top.
 
 ## Where assets come from (check every license)
 
@@ -395,6 +406,7 @@ All 80 are white on transparent at 512², so we tint them with the art bible pal
 |---|---|---|---|---|
 | Mood board photos `docs/moodboard/01–09` | Dough4872, George Chriss, JohnDziak, Nathaniel C. Sheetz, adeans, Acroterion, photochem_PA (via Wikimedia Commons) | CC BY-SA 4.0 / 3.0, CC BY 2.5 / 2.0 (per image) | [docs/moodboard/README.md](moodboard/README.md#credits) | Team reference only, not shipped |
 | Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`packages/shared/theme/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad, web and big-screen UI, art bible sheets |
+| `mus_lobby_loop`, `mus_race_loop` | RaceBall team (composed by `tools/audio/gen_music.py`) | Original, MIT with the code | This repo | Lobby and race music |
 | `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |
 | `fx_atlas.png`, `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof`, `fx_respawn_stars` | RaceBall team (drawn by `tools/fx/gen_fx_textures.py`, built by `tools/fx/build_fx.mjs`) | Original, MIT with the code | This repo | Rolling dust, bump sparks, respawn poof |
 | Marble Kit 2.0: `tree-large` | Kenney | CC0 | https://kenney.nl/assets/marble-kit | Trees in `maps/happy_valley.glb` |

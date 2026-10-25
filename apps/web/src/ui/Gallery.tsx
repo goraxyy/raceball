@@ -10,6 +10,7 @@ import {
 } from ".";
 import { FxPreview } from "./FxPreview";
 import { HudPreview } from "./HudPreview";
+import { MusicPreview } from "./MusicPreview";
 import { RacePreview } from "./RacePreview";
 import { ResultsPreview } from "./ResultsPreview";
 
@@ -74,6 +75,7 @@ const VIEWS = [
   "hud",
   "fx",
   "results",
+  "music",
 ] as const;
 type View = (typeof VIEWS)[number];
 
@@ -172,6 +174,7 @@ export default function Gallery() {
       {view === "hud" && <HudPreview />}
       {view === "fx" && <FxPreview />}
       {view === "results" && <ResultsPreview />}
+      {view === "music" && <MusicPreview />}
       {view === "loading" && (
         <LoadingScreen progress={progress} label="Loading Happy Valley" />
       )}

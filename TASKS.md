@@ -167,7 +167,7 @@ Nothing right now. Add new questions here.
 - [x] Player HUD: `RaceHud` (position, lap, item slot, speed, wrong-way warning) (in `apps/web/src/ui`, preview at `/ui` > hud)
 - [x] VFX v1 as JSON: rolling dust, bump sparks, respawn poof (in `apps/web/public/assets/fx/`, preview at `/ui` > fx; how to fire them: [ASSETS.md](docs/ASSETS.md#vfx-v1-files))
 - [x] `Results` screen + podium layout (with Ali) (in `apps/web/src/ui`, preview at `/ui` > results; Ali's 3D podium can replace the drawn one via `children`)
-- [ ] Music: lobby loop + race loop
+- [x] Music: lobby loop + race loop (original, composed by `tools/audio/gen_music.py`; listen at `/ui` > music; playback notes in [ASSETS.md](docs/ASSETS.md#audio))
 
 ---
 

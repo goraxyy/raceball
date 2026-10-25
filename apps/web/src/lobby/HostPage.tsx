@@ -126,11 +126,16 @@ function HostRoom({ session }: { session: NetSession }) {
     );
   return (
     <>
-      {/* Split screen: a first-person view per player, for the whole race (never a global view). Mounted from the
-          countdown on, so the views don't draw hidden behind the lobby. The rematch button sits on the race board,
-          off every view */}
-      {racing && (
-        <GameView mode="host" session={session} hostControls={controls} />
+      {/* Split screen: a first-person view per player, for the whole race (never a global view). Mounted with the
+          lobby, paused behind it: it loads the map and compiles its shaders there, without drawing, so the race
+          doesn't start with the big screen still loading. The rematch button sits on the race board, off every view */}
+      {!!state.phase && (
+        <GameView
+          mode="host"
+          session={session}
+          hostControls={controls}
+          paused={!racing}
+        />
       )}
       {!state.phase && <LoadingScreen progress={0.6} label="Opening a room" />}
       {state.phase === "lobby" && lobby}

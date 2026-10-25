@@ -58,6 +58,7 @@ export class ItemViews {
     }
   >();
   private puddles = new Map<string, Mesh>();
+  private readonly warmSplat: Mesh;
   private time = 0;
   private disposed = false;
 
@@ -74,6 +75,12 @@ export class ItemViews {
     this.puddleMat.roughness = 0.18;
     this.puddleMat.clearCoat.isEnabled = true;
     this.puddleMat.clearCoat.intensity = 0.8;
+    // a hidden splat from the start, so the loading screen's warm-up compiles the spill's shader, not the first spill
+    const warm = splatMesh("spill-warm-up", 1, scene, "warm-up");
+    warm.material = this.puddleMat;
+    warm.receiveShadows = true;
+    warm.isVisible = false;
+    this.warmSplat = warm;
   }
 
   /** Loads the kit's item box; boxes already out swap over to it */
@@ -150,6 +157,7 @@ export class ItemViews {
     this.disposed = true;
     for (const view of this.boxes.values()) view.node.dispose();
     for (const mesh of this.puddles.values()) mesh.dispose();
+    this.warmSplat.dispose();
     this.boxes.clear();
     this.puddles.clear();
     this.boxMat.dispose();

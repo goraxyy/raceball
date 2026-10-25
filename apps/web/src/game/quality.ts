@@ -9,19 +9,21 @@ export interface QualityLevel {
   scale: number;
   /** The glow on the boost pads and paw lights (laptops only; the big screen never has it) */
   glow: boolean;
-  /** The balls' shadows: soft (filtered), hard, or none */
-  shadows: "soft" | "hard" | "off";
+  /**
+   * The balls' shadows, drawn or not. Off only stops drawing them: every rung keeps the same shaders, since switching
+   * the shadows' filtering or the shadows themselves out of the materials recompiles them all, a freeze mid-race
+   */
+  shadows: boolean;
 }
 
 export const QUALITY_LADDER: readonly QualityLevel[] = [
-  { scale: 1.5, glow: true, shadows: "soft" },
-  { scale: 1.25, glow: true, shadows: "soft" },
-  { scale: 1, glow: true, shadows: "soft" },
-  { scale: 1, glow: false, shadows: "soft" },
-  { scale: 1, glow: false, shadows: "hard" },
-  { scale: 0.85, glow: false, shadows: "hard" },
-  { scale: 0.7, glow: false, shadows: "hard" },
-  { scale: 0.6, glow: false, shadows: "off" },
+  { scale: 1.5, glow: true, shadows: true },
+  { scale: 1.25, glow: true, shadows: true },
+  { scale: 1, glow: true, shadows: true },
+  { scale: 1, glow: false, shadows: true },
+  { scale: 0.85, glow: false, shadows: true },
+  { scale: 0.7, glow: false, shadows: true },
+  { scale: 0.6, glow: false, shadows: false },
 ];
 
 /** The ladder for a screen: rungs sharper than its devicePixelRatio would cost pixels nobody can see */

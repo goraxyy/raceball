@@ -194,11 +194,11 @@ Nothing right now. Add new questions here.
 - [ ] **Landmark art pass** for the landmarks a ball touches, in this order: Old Main, Lion Shrine, Creamery + cone, Pattee Library (budgets in [your guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Nuris reviews each against the art bible
 
 **Rasim**
-- [ ] Snapshot compression (quantized arrays); confirm 60 Hz on Railway
-- [ ] Rematch flow; session stats (wins, best lap)
-- [ ] Error screens: room not found or full, version mismatch, permission denied, unsupported browser (screens built by Nuris and live on the pad; left for Rasim: show `<ErrorScreen>` in `/host` and `/play` from the join errors, and a WebGL 2 check for `unsupported`. [Details](docs/team/rasim-platform.md#m3-hardening))
-- [ ] Self-host Babylon's Meshopt/KTX2 decoders
-- [ ] Pad accessibility settings: auto-gas, sensitivity, dead zone
+- [ ] Snapshot compression (quantized arrays); confirm 60 Hz on Railway (compression done: `packSnap` in `packages/shared/src/snap.ts`, 8 balls 983 → 330 bytes, ~19 KB/s per screen at 60 Hz; still to confirm 60 Hz on Railway after this deploys, e.g. with `pnpm --filter @raceball/server bots`)
+- [x] Rematch flow; session stats (wins, best lap) (`wins` and `bestLap` per player in the synced state, kept across rematches; the room now also syncs lap, checkpoint, place and finish time from game-core's standings)
+- [x] Error screens: room not found or full, version mismatch, permission denied, unsupported browser (screens built by Nuris and live on the pad; left for Rasim: show `<ErrorScreen>` in `/host` and `/play` from the join errors, and a WebGL 2 check for `unsupported`. [Details](docs/team/rasim-platform.md#m3-hardening))
+- [x] Self-host Babylon's Meshopt/KTX2 decoders (Meshopt from `apps/web/public/decoders/`, refreshed with `pnpm --filter @raceball/web decoders`; no KTX2 textures are used yet, so there's no KTX2 decoder to host)
+- [x] Pad accessibility settings: auto-gas, sensitivity, dead zone (Settings on the pad's Ready screen, saved on the phone; built from Nuris's pieces, no screens.html markup for it yet)
 
 **Nuris**
 - [x] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones) (9 effects in `apps/web/public/assets/fx/`, `SpeedLines` in `apps/web/src/ui`; preview at `/ui` > fx; [ASSETS.md](docs/ASSETS.md#vfx-v2-files))

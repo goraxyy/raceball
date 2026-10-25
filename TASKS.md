@@ -79,8 +79,8 @@ Nothing right now. Add new questions here.
 **Ali**
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
 - [ ] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
-- [ ] Create and configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy the hello-world Colyseus server; `/health` returns `ok` ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway))
-- [ ] Import `apps/web` and `apps/pad` into Vercel with Rasim's settings ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). As repo owner, only you can grant them GitHub access
+- [x] Create and configure the Railway service (Dockerfile, US East, 1 replica, no sleeping, watch paths, domain) and deploy the hello-world Colyseus server; `/health` returns `ok` ([steps](docs/team/ali-game.md#6-deploying-the-server-to-railway))
+- [x] Import `apps/web` and `apps/pad` into Vercel with Rasim's settings ([steps](docs/team/rasim-platform.md#4-deploying-web-and-pad-to-vercel)). As repo owner, only you can grant them GitHub access
 - [ ] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
 - [ ] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
 - [ ] Dev-only Inspector toggle (`Shift+I`)
@@ -91,7 +91,7 @@ Nothing right now. Add new questions here.
 **Rasim**
 - [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
 - [x] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
-- [ ] Give Ali the Vercel settings for web + pad
+- [x] Give Ali the Vercel settings for web + pad
 - [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
 
 **Nuris**

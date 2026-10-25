@@ -1,5 +1,6 @@
 import "./style.css";
 import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
+import { lockDownGestures } from "./lockdown";
 import { startFromTap } from "./start";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -38,6 +39,7 @@ function showPermissionHelp() {
   app.querySelector("button")!.addEventListener("click", showStart);
 }
 
+lockDownGestures();
 showStart();
 if (debugEnabled) {
   mountDebugOverlay();

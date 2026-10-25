@@ -147,6 +147,8 @@ Done as original tracks: `tools/audio/gen_music.py` composes and renders `mus_lo
 ### VFX v2
 Boost flames + trail, Lion Roar shockwave ring, Creamery spill splat, snowfall + snow puffs, finish confetti, speed lines. Use **GPU particles** (`GPUParticleSystem`) for the big ones, like snowfall and confetti.
 
+Done: nine effects built by `tools/fx/build_fx.mjs` from the atlas in `tools/fx/gen_fx_textures.py` (now 16 cells: flame, splat, snowflake, streak and painted confetti added), plus the `SpeedLines` overlay. Snowfall and confetti run on the GPU where supported. How code fires each one: [ASSETS.md > VFX v2 files](../ASSETS.md#vfx-v2-files).
+
 ### Full sound pass
 - **Every event gets a sound:** boost, roar, spill, pickup, lap, final lap, finish, respawn, crowd cheer, crowd "oooh".
 - **Mix:** the big screen is louder and has the music. Laptops play quieter, and mostly their own ball.

@@ -39,7 +39,6 @@ class FakeRoom implements SnapshotSource {
   };
   balls = new Map<string, BallPose>();
   listeners = new Set<() => void>();
-
   sample() {
     return { balls: this.balls, ownId: this.playerId };
   }
@@ -69,6 +68,26 @@ class FakeRoom implements SnapshotSource {
 }
 
 describe("NetFeed", () => {
+  it("keeps the phase, laps and places from the latest patch", () => {
+    const room = new FakeRoom();
+    const feed = new NetFeed(room);
+    room.state = {
+      ...room.state,
+      phase: "countdown",
+      laps: 1,
+      countdownEndsAt: 5000,
+    };
+    room.patch({ a: player({ place: 2 }), b: player({ place: 1 }) });
+    expect([feed.phase, feed.laps, feed.countdownEndsAt]).toEqual([
+      "countdown",
+      1,
+      5000,
+    ]);
+    expect([feed.place("a"), feed.place("b"), feed.place("nobody")]).toEqual([
+      2, 1, 0,
+    ]);
+  });
+
   it("passes the session's poses through and follows your own ball once welcomed", () => {
     const room = new FakeRoom();
     const feed = new NetFeed(room);

@@ -17,9 +17,12 @@ import {
 } from "@babylonjs/core";
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
 import { COUNTDOWN_MS, type GameEvent } from "@raceball/shared";
+import type { Mixer } from "../audio/mixer";
 import { BallViews, type BallFeed } from "./balls";
 import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera, eventShake, swoopProgress } from "./cameras";
+import { GameFx, type FxEvent } from "./fx";
+import { loadLandmarks } from "./landmarks";
 import { ItemViews } from "./items";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
@@ -57,6 +60,8 @@ interface GameOptions {
   overview?: boolean;
   /** Viewer and host: the room whose snapshots the balls follow */
   session?: SnapshotSource;
+  /** Plays the event sounds and music (fx.ts); without it the effects are silent */
+  mixer?: Mixer;
   onStatus?: (status: GameStatus) => void;
 }
 
@@ -109,12 +114,26 @@ export function createGame(
   overview.upperRadiusLimit = 1000;
   overview.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
   const big = mode === "host" ? new BigScreen(scene, overview) : undefined;
+  // the effects for every game event (Nuris's fx.ts); its files load alongside the map
+  const fx = new GameFx(scene, {
+    screen: mode === "host" ? "big" : "laptop",
+    ownId: () => feed?.ownId ?? null,
+    laps: () => net?.laps ?? 3, // local mode races 3 laps
+    name: (id) => net?.name(id) ?? "You",
+    color: (id) => feed?.look?.(id)?.color ?? 0,
+    place: (id) => (net ? net.place(id) : 1),
+  });
+  fx.mixer = options.mixer;
+  void fx.load().catch((error: unknown) => {
+    if (!disposed) console.warn("Effects failed to load", error);
+  });
 
   let local: LocalSession | undefined;
   let net: NetFeed | undefined;
   let feed: BallFeed | undefined;
   let disposed = false;
   let container: AssetContainer | undefined;
+  let landmarks: AssetContainer | undefined;
   let publishAfter = 0;
   let countdown = 0; // s into the countdown, for the grid swoop
   const abort = new AbortController();
@@ -124,6 +143,7 @@ export function createGame(
   /** Every game event this screen hears, from the local race or the server. Nuris's fx.ts table goes here too */
   const onEvent = (event: GameEvent) => {
     chase.shake(eventShake(event, feed?.ownId));
+    fx.play(event); // particles, sound and caption, on the next frame when the poses are current
   };
   const applyCamera = () => {
     scene.activeCamera = status.overview ? overview : chase.camera;
@@ -222,6 +242,12 @@ export function createGame(
   /** Adds the map to the scene, freezes it (it never moves) and frames the overview camera on it */
   function showMap(assets: AssetContainer): void {
     assets.addAllToScene();
+    // Nuris's stadium and Mount Nittany go over the greybox once they're in; the race doesn't wait for them
+    void loadLandmarks(scene, assets, () => disposed)
+      .then((layer) => (landmarks = layer))
+      .catch((error: unknown) => {
+        if (!disposed) console.warn("Landmarks failed to load", error);
+      });
     const meshes = assets.meshes.filter((mesh) => mesh.getTotalVertices() > 0);
     for (const mesh of meshes) {
       mesh.receiveShadows = true;
@@ -280,12 +306,45 @@ export function createGame(
     )
       return;
     local = feed = sessionResult.value;
+    addFxButtons(local);
     local.onEvent = onEvent;
     container = visualResult.value;
     if (container) showMap(container);
     status.state = "ready";
     status.message = "Ready";
     publish();
+  }
+
+  /** Local mode: fire each effect on your own ball from the panel, to judge it without a full race */
+  function addFxButtons(session: LocalSession): void {
+    const me = session.ownId;
+    const folder = session.gui.addFolder("Effects (fx.ts)");
+    folder.close();
+    // where an item fires, as the server reports it: on the ball, or the puddle 1.2 m behind it for a spill
+    const at = (back = 0): [number, number, number] => {
+      const [x, y, z] = session.stats.position;
+      const h = session.stats.heading;
+      return [x - Math.sin(h) * back, y, z - Math.cos(h) * back];
+    };
+    const buttons: [string, () => FxEvent][] = [
+      ["Bump", () => ({ type: "bump", a: me, b: "", strength: 0.35 })],
+      ["Crash", () => ({ type: "bump", a: me, b: "", strength: 1 })],
+      ["Item pickup", () => ({ type: "item", player: me, item: "boost" })],
+      ["Boost", () => ({ type: "fire", player: me, item: "boost", pos: at() })],
+      [
+        "Lion Roar",
+        () => ({ type: "fire", player: me, item: "roar", pos: at() }),
+      ],
+      [
+        "Creamery Spill",
+        () => ({ type: "fire", player: me, item: "spill", pos: at(1.2) }),
+      ],
+      ["Lap 2", () => ({ type: "lap", player: me, lap: 2 })],
+      ["Final lap", () => ({ type: "lap", player: me, lap: 3 })],
+      ["Win", () => ({ type: "finish", player: me, place: 1 })],
+    ];
+    for (const [label, evt] of buttons)
+      folder.add({ go: () => fx.play(evt()) }, "go").name(label);
   }
 
   return {
@@ -306,6 +365,20 @@ export function createGame(
           ? swoopProgress(countdown, COUNTDOWN_MS / 1000)
           : undefined;
       if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt, swoop);
+      if (phase) fx.setPhase(phase);
+      if (phase === "countdown") {
+        // the beeps land on the countdown numbers: race time locally, server time online
+        const serverNow = net?.serverNow();
+        if (local) fx.countdown(COUNTDOWN_MS - local.stats.elapsed * 1000);
+        else if (net && serverNow !== undefined)
+          fx.countdown(net.countdownEndsAt - serverNow);
+      }
+      if (local) fx.snow = local.stats.section === "arboretum";
+      fx.update(
+        dt,
+        poses,
+        status.overview || !own ? overview.target : Vector3.FromArray(own.p),
+      );
       if (local) items.sync(local.itemBoxes(), local.puddles());
       else if (options.session) {
         const { itemBoxes = [], puddles = [] } = options.session.state;
@@ -355,7 +428,10 @@ export function createGame(
       local = net = feed = undefined;
       container?.dispose();
       container = undefined;
+      landmarks?.dispose();
+      landmarks = undefined;
       big?.dispose();
+      fx.dispose();
       balls.dispose();
       items.dispose();
       overview.dispose();

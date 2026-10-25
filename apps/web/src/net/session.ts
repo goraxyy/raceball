@@ -151,6 +151,11 @@ export class NetSession {
     return () => this.eventListeners.delete(listener);
   }
 
+  /** Server time now, ms (clock sync) */
+  serverNow() {
+    return this.clock.serverNow();
+  }
+
   async leave() {
     clearInterval(this.pinger);
     await this.room.leave();

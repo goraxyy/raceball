@@ -250,6 +250,7 @@ export const EVENT_SOUNDS: Record<string, SoundId[]> = {
   finalLap: ["finalLap"],
   finish: ["finish", "crowdCheer"],
   respawn: ["fall", "respawn"],
+  pickup: ["itemPickup"],
   boost: ["boostStart"],
   roar: ["lionRoar", "roarWhoomp"],
   spill: ["spill"],

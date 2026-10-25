@@ -17,6 +17,8 @@ export interface SnapshotSource {
   subscribe(listener: () => void): () => void;
   /** Game events as the server sends them. Returns an unsubscribe function */
   onEvent?(listener: (event: GameEvent) => void): () => void;
+  /** Server time now, ms: the countdown beeps land on the same beat as the countdown numbers */
+  serverNow?(): number;
 }
 
 /**
@@ -31,6 +33,10 @@ export class NetFeed implements BallFeed {
   private readonly unsubscribe: () => void;
   private readonly unsubscribeEvents?: () => void;
   private racePhase: Phase = "lobby";
+  private places = new Map<string, number>();
+  /** The race's lap count and countdown end (server ms), as of the last state patch */
+  laps = 3;
+  countdownEndsAt = 0;
   private looks = new Map<string, BallLook>();
   private names = new Map<string, string>();
   private phoneOnlyIds: string[] = [];
@@ -67,6 +73,15 @@ export class NetFeed implements BallFeed {
     return this.names.get(id);
   }
 
+  place(id: string): number {
+    return this.places.get(id) ?? 0;
+  }
+
+  /** Server time now, ms, if the session keeps a clock */
+  serverNow(): number | undefined {
+    return this.session.serverNow?.();
+  }
+
   /** Every player in join order: the big screen splits into a view for each */
   get all(): readonly string[] {
     return this.allIds;
@@ -84,8 +99,10 @@ export class NetFeed implements BallFeed {
 
   private refresh(): void {
     // right after joining, the room's first state may not have arrived: no phase or players yet
-    const state = this.session.state;
+    const state: Partial<RaceStateView> = this.session.state;
     this.racePhase = state.phase ?? "lobby";
+    this.laps = state.laps || 3;
+    this.countdownEndsAt = state.countdownEndsAt ?? 0;
     const players = Object.entries(state.players ?? {});
     // the server races a player without a chosen planet on PLANETS[slot], and slot = color
     this.looks = new Map(
@@ -95,6 +112,7 @@ export class NetFeed implements BallFeed {
       ]),
     );
     this.names = new Map(players.map(([id, p]) => [id, p.name]));
+    this.places = new Map(players.map(([id, p]) => [id, p.place]));
     this.allIds = players.map(([id]) => id);
     this.phoneOnlyIds = players
       .filter(([, p]) => p.phoneOnly)

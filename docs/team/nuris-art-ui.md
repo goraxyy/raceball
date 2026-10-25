@@ -181,14 +181,22 @@ These four used to be Ali's. Ali's guide has the [model pipeline](ali-game.md#m0
 #### Event-to-effect table (`fx.ts`)
 One table in `apps/web/src/game/fx.ts`: for every `GameEvent` (`bump`, `item`, `overtake`, `lap`, `finish`, `respawn`, in `packages/shared/src/protocol.ts`), which particle files from `fx/` play, where (on the ball, or the big screen only), which sound from your sound bank, and which caption. Export a small `playFx(event, ...)` that does it with `ParticleSystem.Parse` and your mixer. Ali calls it from the event stream in `game.ts` and adds the camera shake. Agree the function signature with him first.
 
+Done: `FX_TABLE` in `fx.ts` is the table, and `GameFx` runs it. It's already wired: `NetSession.onEvent` passes the server's `evt` messages on, `NetFeed` and local mode call `onEvent`, and `game.ts` hands each event to Ali's camera shake and to `fx.play(event)`. `GameView` owns the mixer (sound starts on the first tap; `?mute` silences it) and shows `<Captions>` on the big screen. What it does, and the camera-shake hook for Ali: [ASSETS.md > Event-to-effect table](../ASSETS.md#event-to-effect-table-fxts).
+
 #### Planet balls 5–8
 Mercury, Venus, Uranus, Neptune, with the same rules as the first four (art bible, one material, 1024² at most, the `ring` mesh). `tools/models/build_planet_balls.py` builds them: give each a base color and details in `PLANETS`, run it in Blender, optimize with `gltf-transform` as in Ali's guide, then add the planet to `PLANET_MODELS` in `apps/web/src/game/balls.ts`.
+
+Done: all four are in `PLANETS` in the script (Mercury's craters have a pale rim, Venus's cloud bands are wavy, and every detail sits above the orbit ring, where the camera sees it) and in `PLANET_MODELS`. A test checks that every planet has a model file. No Blender install needed: `pip install bpy` gives a headless Blender that runs the script (`python tools/models/build_planet_balls.py`). Review them at `/ui` > models.
 
 #### Animated props
 Item boxes (spin + bob), flags, the arch, crowd cards (2-frame sprite cards). Animate in Blender, export with Animation on, and give every animation a clear name (`anim_itembox_spin`), because the game plays them by name. Put them on the dressing kit's palette texture where you can (`tools/models/build_dressing_kit.py`).
 
+Done: `tools/models/build_animated_props.py` builds them all on the kit's palette into `models/kit_animated.glb`: the item box, a checkered and a blue-and-white flag, the finish arch with a swinging banner and flags on top, and three crowd cards. It imports the dressing kit script for its palette and helpers (that script's build now runs in `build()`, unchanged). The prop list and every animation name for Ali are in [ASSETS.md > Animated props](../ASSETS.md#animated-props-modelskit_animatedglb).
+
 #### Beaver Stadium and Mount Nittany
 Model over the greybox boxes in `assets-src/happy_valley.blend`, in the `visual` collection, and don't touch `collision` or `markers` (Ali's guide: [how to model over the greybox](ali-game.md#m3-how-to-model-over-the-greybox)). The stadium tunnel walls are collision, so the bowl must leave the tunnel clear. Budgets: 40k triangles for the stadium (instance one stand segment around the bowl), a card or texture for Mount Nittany. The map visuals are rebuilt by `tools/track/build_happy_valley.py`, so agree with Ali how your models get placed (imported by the script, or a separate `maps/` file) before you start.
+
+Done as a separate `maps/` file, so Ali's map script stays as it is: `tools/models/build_landmarks.py` builds both in map coordinates into `maps/happy_valley_landmarks.glb`, and `apps/web/src/game/landmarks.ts` loads it over the map and hides the greybox pieces it replaces. What's in it, the clearances and what Ali can drop from the greybox: [ASSETS.md > Landmarks](../ASSETS.md#landmarks-beaver-stadium-and-mount-nittany).
 
 ---
 

@@ -49,9 +49,9 @@ export class Mixer {
     }
   }
 
-  /** Decode every file once (or just the ids given). Call after a tap, so the context can start. */
+  /** Decode every file once (or just the ids given). Decoding works before the first tap; sound starts after one. */
   async load(ids: SoundId[] = Object.keys(SOUNDS) as SoundId[]) {
-    await this.ctx.resume();
+    void this.ctx.resume(); // only starts after a user gesture; GameView retries on the first tap
     const files = [...new Set(ids.flatMap((id) => SOUNDS[id].files))].filter(
       (f) => !this.buffers.has(f),
     );

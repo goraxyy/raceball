@@ -13,6 +13,7 @@ import {
 import { BragPreview } from "./BragPreview";
 import { FxPreview } from "./FxPreview";
 import { HudPreview } from "./HudPreview";
+import { ModelPreview } from "./ModelPreview";
 import { MusicPreview } from "./MusicPreview";
 import { RacePreview } from "./RacePreview";
 import { ResultsPreview } from "./ResultsPreview";
@@ -79,6 +80,7 @@ const VIEWS = [
   "race",
   "hud",
   "fx",
+  "models",
   "results",
   "brag",
   "music",
@@ -199,6 +201,7 @@ export default function Gallery() {
       {view === "race" && <RacePreview />}
       {view === "hud" && <HudPreview />}
       {view === "fx" && <FxPreview />}
+      {view === "models" && <ModelPreview />}
       {view === "results" && <ResultsPreview />}
       {view === "brag" && <BragPreview />}
       {view === "music" && <MusicPreview />}

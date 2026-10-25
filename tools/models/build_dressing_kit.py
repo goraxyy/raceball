@@ -330,47 +330,55 @@ def road_straight(length=10.0, width=12.0):
 
 # ------------------------------------------------------------------ build
 
-bpy.ops.wm.read_factory_settings(use_empty=True)
-greybox = [] if all((PACKS / v[0]).exists() for v in KENNEY.values()) else import_glb(GREYBOX)
-pieces = {key: kenney_piece(key, greybox) for key in KENNEY}
-for o in greybox:
-    bpy.data.objects.remove(o)
-for mesh in list(bpy.data.meshes):
-    if mesh.users == 0:
-        bpy.data.meshes.remove(mesh)
+def build():
+    """Builds the kit and the road piece, and writes the .blend and the raw GLBs."""
 
-scene = bpy.context.scene
-scene.name = "Dressing kit"
-mat = palette_material()
-kit = bpy.data.collections.new("kit_dressing")
-road = bpy.data.collections.new("trk_road_straight")
-for col in (kit, road):
-    scene.collection.children.link(col)
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    greybox = [] if all((PACKS / v[0]).exists() for v in KENNEY.values()) else import_glb(GREYBOX)
+    pieces = {key: kenney_piece(key, greybox) for key in KENNEY}
+    for o in greybox:
+        bpy.data.objects.remove(o)
+    for mesh in list(bpy.data.meshes):
+        if mesh.users == 0:
+            bpy.data.meshes.remove(mesh)
 
-PROPS = {
-    "prop_barrier_red": barrier(pieces["barrier"], "stop"),
-    "prop_barrier_white": barrier(pieces["barrier"], "paper"),
-    "prop_tree_pine": kenney_tree(pieces["tree"], "pine", "pine_dark"),
-    "prop_tree_maple": kenney_tree(pieces["tree"], "maple", "maple_dark"),
-    "prop_tree_round_gold": lollipop_tree("gold", "gold_dark", height=5.6, lean=0.07),
-    "prop_tree_round_maple": lollipop_tree("maple", "maple_dark", height=4.8, lean=-0.1),
-    "prop_lamp_single": lamp_post(False),
-    "prop_lamp_double": lamp_post(True),
-    "prop_finish_arch": finish_arch(pieces["arch"]),
-}
-stats = {}
-for i, (name, bm) in enumerate(PROPS.items()):
-    stats[name] = len(bm.faces)
-    ob = new_object(name, bm, mat)
-    kit.objects.link(ob)
-road_ob = new_object("trk_road_straight", road_straight(), mat)
-road.objects.link(road_ob)
+    scene = bpy.context.scene
+    scene.name = "Dressing kit"
+    mat = palette_material()
+    kit = bpy.data.collections.new("kit_dressing")
+    road = bpy.data.collections.new("trk_road_straight")
+    for col in (kit, road):
+        scene.collection.children.link(col)
 
-OUT.mkdir(parents=True, exist_ok=True)
-for col, file in ((kit, "kit_dressing.glb"), (road, "trk_road_straight.glb")):
-    bpy.ops.export_scene.gltf(filepath=str(OUT / file), export_format="GLB", collection=col.name, export_yup=True,
-                              export_extras=True, export_animations=False, export_cameras=False, export_lights=False,
-                              export_apply=True)
-bpy.ops.wm.save_as_mainfile(filepath=str(OUT / "dressing_kit.blend"), compress=True)
-tri = lambda ob: sum(len(p.vertices) - 2 for p in ob.data.polygons)
-print({"triangles": {o.name: tri(o) for o in kit.objects} | {"trk_road_straight": tri(road_ob)}, "out": str(OUT)})
+    PROPS = {
+        "prop_barrier_red": barrier(pieces["barrier"], "stop"),
+        "prop_barrier_white": barrier(pieces["barrier"], "paper"),
+        "prop_tree_pine": kenney_tree(pieces["tree"], "pine", "pine_dark"),
+        "prop_tree_maple": kenney_tree(pieces["tree"], "maple", "maple_dark"),
+        "prop_tree_round_gold": lollipop_tree("gold", "gold_dark", height=5.6, lean=0.07),
+        "prop_tree_round_maple": lollipop_tree("maple", "maple_dark", height=4.8, lean=-0.1),
+        "prop_lamp_single": lamp_post(False),
+        "prop_lamp_double": lamp_post(True),
+        "prop_finish_arch": finish_arch(pieces["arch"]),
+    }
+    stats = {}
+    for i, (name, bm) in enumerate(PROPS.items()):
+        stats[name] = len(bm.faces)
+        ob = new_object(name, bm, mat)
+        kit.objects.link(ob)
+    road_ob = new_object("trk_road_straight", road_straight(), mat)
+    road.objects.link(road_ob)
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    for col, file in ((kit, "kit_dressing.glb"), (road, "trk_road_straight.glb")):
+        bpy.ops.export_scene.gltf(filepath=str(OUT / file), export_format="GLB", collection=col.name, export_yup=True,
+                                  export_extras=True, export_animations=False, export_cameras=False, export_lights=False,
+                                  export_apply=True)
+    bpy.ops.wm.save_as_mainfile(filepath=str(OUT / "dressing_kit.blend"), compress=True)
+    tri = lambda ob: sum(len(p.vertices) - 2 for p in ob.data.polygons)
+    print({"triangles": {o.name: tri(o) for o in kit.objects} | {"trk_road_straight": tri(road_ob)}, "out": str(OUT)})
+
+
+# tools/models/build_animated_props.py imports this file for its palette and helpers, without building the kit
+if __name__ != "dressing_kit_lib":
+    build()

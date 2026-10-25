@@ -76,7 +76,8 @@ export class LocalSession implements BallFeed {
   private tick = 0;
   private prev: SnapMsg;
   private curr: SnapMsg;
-  private gui: GUI;
+  /** The tuning panel; game.ts adds the effects test buttons to it */
+  readonly gui: GUI;
   readonly stats: LocalStats = {
     speed: 0,
     phase: "lobby",

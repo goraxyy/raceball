@@ -70,6 +70,8 @@ export type GameEvent =
  */
 export interface WelcomeMsg {
   playerId: string;
+  /** Viewer only: goes in the pairing QR (see padUrl) */
+  pairToken?: string;
 }
 
 /** Close/reject codes the server uses, so clients can show the right error screen */
@@ -79,4 +81,5 @@ export const JoinError = {
   HostTaken: 4003,
   RoomFull: 4004,
   BadPairToken: 4005,
+  AlreadyPaired: 4006,
 } as const;

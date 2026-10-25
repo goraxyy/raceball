@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Engine, Scene } from "@babylonjs/core";
 import { PLANETS } from "@raceball/shared";
 import "@babylonjs/loaders/glTF";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
 import { installInspectorToggle } from "./inspector";
+import type { TileRect } from "./big-screen";
 import type { SnapshotSource } from "./net-feed";
+import { TileFrames } from "./TileFrames";
 import "./local.css";
 
 /**
@@ -21,6 +23,10 @@ export function GameView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [status, setStatus] = useState<GameStatus | null>(null);
+  const onTileRects = useCallback(
+    (rects: Map<string, TileRect>) => gameRef.current?.setTileRects(rects),
+    [],
+  );
 
   useEffect(() => {
     let active = true;
@@ -76,6 +82,13 @@ export function GameView({
           outline: "none",
         }}
       />
+      {mode === "host" && session && !!status?.tiles?.length && (
+        <TileFrames
+          ids={status.tiles}
+          session={session}
+          onRects={onTileRects}
+        />
+      )}
       {mode !== "local" && status && status.state !== "ready" && (
         <p
           className="game-status"

@@ -24,6 +24,7 @@ const player = (over: Partial<PlayerView>): PlayerView => ({
 /** Stands in for NetSession: state patches arrive through `patch` */
 class FakeRoom implements SnapshotSource {
   playerId?: string;
+  version = 0;
   state: RaceStateView = {
     phase: "racing",
     laps: 3,
@@ -47,6 +48,7 @@ class FakeRoom implements SnapshotSource {
   patch(players: Record<string, PlayerView>, playerId = this.playerId) {
     this.state = { ...this.state, players };
     this.playerId = playerId;
+    this.version++;
     for (const listener of this.listeners) listener();
   }
 }

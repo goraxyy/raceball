@@ -17,6 +17,7 @@ import {
 } from "@babylonjs/core";
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
 import { BallViews, type BallFeed } from "./balls";
+import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera } from "./cameras";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
@@ -30,6 +31,8 @@ export interface Game {
   update(dt: number): void;
   reset(): void;
   toggleOverview(): void;
+  /** Host: where the page drew each follow-cam tile's frame */
+  setTileRects(rects: Map<string, TileRect>): void;
   dispose(): void;
 }
 
@@ -39,6 +42,10 @@ export interface GameStatus {
   message: string;
   overview: boolean;
   stats?: LocalStats;
+  /** Host: players with a follow-cam tile, in order (the page draws a frame for each) */
+  tiles?: string[];
+  /** Host: the fps fell short, so the tiles became name tags */
+  nameTags?: boolean;
 }
 
 interface GameOptions {
@@ -98,6 +105,7 @@ export function createGame(
   overview.lowerRadiusLimit = 20;
   overview.upperRadiusLimit = 1000;
   overview.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
+  const big = mode === "host" ? new BigScreen(scene, overview) : undefined;
 
   let local: LocalSession | undefined;
   let net: NetFeed | undefined;
@@ -120,6 +128,7 @@ export function createGame(
     publish();
   };
   const onKeyDown = (event: KeyboardEvent) => {
+    if (mode === "host") return; // the big screen has no ball of its own to follow
     if (
       event.code !== "KeyV" ||
       event.repeat ||
@@ -222,6 +231,7 @@ export function createGame(
     );
     overview.setTarget(min.add(max).scale(0.5));
     overview.radius = Math.max(max.x - min.x, max.z - min.z) * 1.1;
+    big?.fitMap(overview.radius);
   }
 
   async function loadLocal(): Promise<void> {
@@ -277,6 +287,14 @@ export function createGame(
       balls.sync(poses, (id) => feed?.look?.(id));
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
+      if (big && net) {
+        const fps = scene.getEngine().getFps();
+        if (big.update(poses, net, dt, fps)) {
+          status.tiles = big.tileIds;
+          status.nameTags = big.nameTags;
+          publish();
+        }
+      }
       if (!local) return; // only local mode has stats for the HUD
       publishAfter -= dt;
       if (publishAfter <= 0) {
@@ -288,6 +306,9 @@ export function createGame(
       void local?.reset();
     },
     toggleOverview,
+    setTileRects(rects) {
+      big?.setRects(rects);
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -298,6 +319,7 @@ export function createGame(
       local = net = feed = undefined;
       container?.dispose();
       container = undefined;
+      big?.dispose();
       balls.dispose();
       overview.dispose();
       chase.camera.dispose();

@@ -5,6 +5,7 @@ export interface FollowTileProps {
   name: string;
   color: number;
   shape: number;
+  /** 0 hides the place (before the race has standings) */
   place: number;
   /** Ali's camera view goes behind the frame; children (if any) render inside it */
   children?: ReactNode;
@@ -27,10 +28,12 @@ export function FollowTile({
     <figure className="follow-tile" style={playerStyle(color)}>
       <div className="follow-view">{children}</div>
       <figcaption className="follow-plate">
-        <span className="follow-place">
-          {place}
-          <small>{suffix(place)}</small>
-        </span>
+        {place > 0 && (
+          <span className="follow-place">
+            {place}
+            <small>{suffix(place)}</small>
+          </span>
+        )}
         <PlayerShape slot={shape} />
         <span className="follow-name">{name}</span>
       </figcaption>

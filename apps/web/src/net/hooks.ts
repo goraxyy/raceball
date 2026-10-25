@@ -10,13 +10,20 @@ import type { NetSession } from "./session";
 
 const STATS_MS = 500;
 
+/** What useRaceState reads: a NetSession, or a stand-in shaped like one */
+export interface RaceStateSource {
+  readonly version: number;
+  readonly state: RaceStateView;
+  subscribe(listener: () => void): () => unknown;
+}
+
 /**
  * getSnapshot for useSyncExternalStore: toJSON() builds a new object each call, so keep one per session version.
  * Keyed on the version, not filled in by a listener, so a patch or welcome that lands between render and subscribe
  * still shows: React compares snapshots right after it subscribes.
  */
 export function stateSnapshot(
-  session: Pick<NetSession, "version" | "state">,
+  session: Pick<RaceStateSource, "version" | "state">,
 ): () => RaceStateView {
   let version = session.version;
   let state = session.state;
@@ -30,7 +37,7 @@ export function stateSnapshot(
 }
 
 /** Lobby and race state, re-rendered on every server patch */
-export function useRaceState(session: NetSession): RaceStateView {
+export function useRaceState(session: RaceStateSource): RaceStateView {
   const snapshot = useMemo(() => stateSnapshot(session), [session]);
   const subscribe = useCallback(
     (onChange: () => void) => session.subscribe(onChange),

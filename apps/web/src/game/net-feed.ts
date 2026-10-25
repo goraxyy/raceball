@@ -6,6 +6,8 @@ import type { BallFeed, BallLook } from "./balls";
 export interface SnapshotSource {
   readonly playerId?: string;
   readonly state: RaceStateView;
+  /** +1 whenever `state` changes */
+  readonly version: number;
   sample(): { balls: Map<string, BallPose>; ownId?: string };
   subscribe(listener: () => void): () => void;
 }
@@ -19,6 +21,7 @@ export class NetFeed implements BallFeed {
   private readonly session: SnapshotSource;
   private readonly unsubscribe: () => void;
   private looks = new Map<string, BallLook>();
+  private names = new Map<string, string>();
   private phoneOnlyIds: string[] = [];
 
   constructor(session: SnapshotSource) {
@@ -40,6 +43,10 @@ export class NetFeed implements BallFeed {
     return this.looks.get(id);
   }
 
+  name(id: string): string | undefined {
+    return this.names.get(id);
+  }
+
   /** Players without a laptop, in join order: the big screen gives them follow-cam tiles */
   get phoneOnly(): readonly string[] {
     return this.phoneOnlyIds;
@@ -58,6 +65,7 @@ export class NetFeed implements BallFeed {
         { ball: p.ball || PLANETS[p.color % PLANETS.length], color: p.color },
       ]),
     );
+    this.names = new Map(players.map(([id, p]) => [id, p.name]));
     this.phoneOnlyIds = players
       .filter(([, p]) => p.phoneOnly)
       .map(([id]) => id);

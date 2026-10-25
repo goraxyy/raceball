@@ -80,6 +80,8 @@ Nothing right now. Add new questions here.
 - [x] Invite Rasim and Nuris as collaborators (Settings > Collaborators)
 - [x] Protect `main` with a ruleset ([steps](docs/WORKFLOW.md#protecting-main))
 - [ ] After the bootstrap PR is merged: create the Railway project from the repo and invite Rasim; import `apps/web` and `apps/pad` into Vercel ([steps](docs/team/rasim-platform.md#3-deploying-the-server-to-railway)). As repo owner, only you can grant them GitHub access
+  - Vercel done: `raceball-web` (root `apps/web`) and `raceball-pad` (builds `@raceball/pad` from the repo root, skipped until `apps/pad/package.json` exists) are linked to the repo, with Vercel Authentication off for phone testing. `VITE_SERVER_URL` still to set once the server has a domain
+  - BLOCKED: the Railway trial has expired. Pick a plan in the Railway dashboard, then create the project and invite Rasim
 - [x] `game-core`: Rapier world, ground plane, one ball, `step(dt, inputs)`, a keyboard input adapter
 - [x] `apps/web/src/game`: Babylon canvas mounted in React (right-handed scene); local mode `/play?local=1`; chase camera v0
 - [x] Dev-only Inspector toggle (`Shift+I`)

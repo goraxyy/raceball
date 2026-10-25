@@ -1,3 +1,5 @@
+import { steering } from "./steering";
+
 export type MotionPermission =
   "unknown" | "granted" | "denied" | "not-required";
 
@@ -33,5 +35,6 @@ export function startMotion() {
     gravity.z = g.z;
     gravity.at = performance.now();
     gravity.events++;
+    steering.update(g.x, g.y, e.timeStamp / 1000);
   });
 }

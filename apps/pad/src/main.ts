@@ -1,5 +1,5 @@
 import "./style.css";
-import { debugEnabled, mountDebugOverlay } from "./debug";
+import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
 import { startFromTap } from "./start";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -39,4 +39,7 @@ function showPermissionHelp() {
 }
 
 showStart();
-if (debugEnabled) mountDebugOverlay();
+if (debugEnabled) {
+  mountDebugOverlay();
+  void loadEruda();
+}

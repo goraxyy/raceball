@@ -1,4 +1,5 @@
 import { gravity, permission } from "./motion";
+import { steering } from "./steering";
 
 export const debugEnabled =
   new URLSearchParams(location.search).get("debug") === "1";
@@ -37,7 +38,8 @@ export function mountDebugOverlay() {
       `motion    ${Math.round(rate)} Hz, last ${age}`,
       `permission ${permission}`,
       `screen    ${screenAngle()}°`,
-      `steer     —`,
+      `angle     ${fmt((steering.angle * 180) / Math.PI)}°`,
+      `steer     ${steering.calib ? fmt(steering.read()) : "— (not calibrated)"}`,
       `rtt       —`,
       `hold side —`,
       `calib     —`,
@@ -45,4 +47,10 @@ export function mountDebugOverlay() {
     requestAnimationFrame(render);
   };
   requestAnimationFrame(render);
+}
+
+/** In-page console for phones without a cable. Lazy-loaded so normal players never download it. */
+export async function loadEruda() {
+  const { default: eruda } = await import("eruda");
+  eruda.init();
 }

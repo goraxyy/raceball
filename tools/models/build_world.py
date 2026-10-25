@@ -12,6 +12,9 @@ assets-src/models/happy_valley_world.glb and world.blend:
     never floats (the route maths come from tools/track/build_happy_valley.py)
   - hills with fall trees in the outer band, away from the road, the landmarks and Mount Nittany. Visual only:
     nobody gets that far before the grass respawns them
+  - buildings over Ali's greybox blocks that have no landmark yet (the HUB, three College Ave storefronts) and
+    snow drifts over the Arboretum's snowbank blocks, each a little bigger than the block it hides; and clumps
+    of trees on the open lawns between the road and the hills
   - the road's surface over the greybox road, on the greybox's own chords: asphalt with chalk edge lines and the
     center dashes, a tint and a shine per section (the Arboretum's is icy), kerbs in each section's color and a
     checkered start line. It sits ROAD_LIFT above the colliders' top; the web pulls it forward (world.ts) so it
@@ -61,6 +64,12 @@ SLAB = 0.85  # how deep the road and rails reach below their top
 LANDMARKS = [((201.25, 75.9), 105), ((-26.45, 18.4), 42), ((-26.45, 247.25), 42), ((34.5, 284.05), 34),
              ((116.15, 231.15), 34), ((0, 0), 30)]
 NITTANY = (100, -150, 232, -66)  # [min x, min z, max x, max z]
+# Ali's greybox blocks without a landmark yet (build_happy_valley.py: landmark()), dressed over: center x, z, then
+# width (x), height, depth (z), map meters. Snowbanks are 15 x 3 x 10, from y -1
+HUB = (35.65, 156.4, 24, 10, 17)
+STOREFRONTS = [(-25.3, -32.2, 10, 10, 11, "brick"), (-26.45, -49.45, 10, 8, 11, "vanilla"),
+               (-41.4, -46.0, 10, 13, 11, "maple")]
+SNOWBANKS = [(80.5, -11.5), (51.75, -23.0), (28.75, -11.5)]
 ROAD_LIFT = 0.025  # the surface over the greybox road's top, m
 ASPHALT = 5.4  # half the asphalt's width: the kerbs fill the last 0.6 m to the rails
 TILE = 12.0  # m of road per asphalt tile: the greybox's center dashes are 12 m apart, on multiples of 12
@@ -514,6 +523,111 @@ def hills(rng):
     return bm, trees
 
 
+def facade_box(bm, colors, x, y, z, along_x, size, depth, color):
+    """A box set into a wall: along_x means the wall runs along map x (it faces ±z). size: (width, height)"""
+    w, h = size
+    dims = (w, depth, h) if along_x else (depth, w, h)
+    for f in kit.bevelled_box(bm, G(x, y, z), dims, bevel=0):  # too small to show a bevel: keep them cheap
+        colors[f] = color
+
+
+def windows(bm, colors, block, y0, y1, glass="sky", frame="white", size=(1.4, 1.7), step=3.0, rows=3.2):
+    """Rows of framed windows on all four walls of a block (cx, cz, w, h, d), from y0 up to y1"""
+    cx, cz, w, _, d = block
+    for wall in range(4):
+        along_x = wall >= 2
+        length = w if along_x else d
+        n = max(1, int(length // step))
+        y = y0 + size[1] / 2
+        while y + size[1] / 2 < y1:
+            for i in range(n):
+                t = (i + 0.5) / n * length - length / 2
+                out = (d / 2 if along_x else w / 2) + 0.15
+                sign = 1 if wall % 2 == 0 else -1
+                x, z = (cx + t, cz + sign * out) if along_x else (cx + sign * out, cz + t)
+                facade_box(bm, colors, x, y, z, along_x, (size[0] + 0.2, size[1] + 0.2), 0.1, frame)
+                gx, gz = (x, z + sign * 0.05) if along_x else (x + sign * 0.05, z)
+                facade_box(bm, colors, gx, y, gz, along_x, size, 0.08, glass)
+            y += rows
+
+
+def block(bm, colors, cx, cz, w, h, d, wall, roof="limestone"):
+    """A building body a little bigger than the greybox block it hides, with a parapet on top"""
+    for f in kit.bevelled_box(bm, G(cx, (GROUND_Y + h) / 2 + 0.06, cz), (w + 0.3, d + 0.3, h - GROUND_Y + 0.12),
+                              bevel=0.06, segments=1):
+        colors[f] = wall
+    for f in kit.bevelled_box(bm, G(cx, h + 0.25, cz), (w + 0.6, d + 0.6, 0.35), bevel=0.05, segments=1):
+        colors[f] = roof
+
+
+def buildings():
+    """The HUB (limestone and a glass band under a navy roof) and the College Ave storefronts (brick, cream and
+    maple, with striped awnings over shop windows). One mesh, on the kit's palette."""
+    bm = bmesh.new()
+    colors = {}
+    cx, cz, w, h, d = HUB
+    block(bm, colors, cx, cz, w, h, d, "limestone", "navy")
+    windows(bm, colors, HUB, 0.6, 3.4, glass="ink", frame="navy", size=(2.0, 2.4), step=3.4)  # the lobby
+    windows(bm, colors, HUB, 4.2, h, glass="sky", frame="white", size=(2.4, 2.2), step=3.0, rows=2.9)
+    for i, (sx, sz, sw, sh, sd, wall) in enumerate(STOREFRONTS):
+        block(bm, colors, sx, sz, sw, sh, sd, wall, "white" if wall != "vanilla" else "brick")
+        windows(bm, colors, (sx, sz, sw, sh, sd), 0.4, 2.9, glass="ink", frame="white", size=(2.6, 2.2), step=3.6)
+        windows(bm, colors, (sx, sz, sw, sh, sd), 4.0, sh - 0.4, size=(1.2, 1.6), step=2.6)
+        stripe = ("navy", "gold", "stop")[i]
+        for wall_i in range(4):  # awnings: stripes 0.5 m wide, sticking out over the shop windows
+            along_x = wall_i >= 2
+            length = sw if along_x else sd
+            sign = 1 if wall_i % 2 == 0 else -1
+            out = (sd / 2 if along_x else sw / 2) + 0.75
+            for k in range(int(length / 0.5) - 2):
+                t = (k + 1.5) * 0.5 - length / 2
+                x, z = (sx + t, sz + sign * out) if along_x else (sx + sign * out, sz + t)
+                facade_box(bm, colors, x, 3.15, z, along_x, (0.5, 0.14), 1.3, stripe if k % 2 == 0 else "white")
+    return bm, colors
+
+
+def snow_drifts():
+    """Rounded drifts over the Arboretum's snowbank blocks: six squashed puffs each, big enough to bury the block"""
+    bm = bmesh.new()
+    colors = {}
+    rng = random.Random(5)
+    for cx, cz in SNOWBANKS:
+        for ox in (-5, 0, 5):
+            for oz in (-2.5, 2.5):
+                r = 5.2 + rng.uniform(0, 0.4)
+                for f in kit.blob(bm, G(cx + ox + rng.uniform(-0.4, 0.4), 0, cz + oz), r, squash=0.55, subdivisions=2):
+                    colors[f] = "ice" if f.normal.z < -0.2 else "snow"
+    return bm, colors
+
+
+def infield_trees(rng):
+    """Clumps of trees on the open lawns: between 16 m from the road and the hills' band, off the landmarks, the
+    buildings, Mount Nittany and the voids. (x, y, z) of each."""
+    pts = route_points()
+    keep_off = [((x, z), 16) for x, z, *_ in [HUB, *STOREFRONTS]] + [((x, z), 12) for x, z in SNOWBANKS]
+    spots = []
+    for x in np.arange(X0 + 10, X1 - 10, 7.0):
+        for z in np.arange(Z0 + 10, Z1 - 10, 7.0):
+            x1, z1 = x + rng.uniform(-3, 3), z + rng.uniform(-3, 3)
+            clump = math.sin(x1 / 23 + 0.7) * math.cos(z1 / 19 - 1.3) + 0.5 * math.sin((x1 + z1) / 11)
+            if clump < 0.7:
+                continue
+            d = np.min(np.hypot(pts[:, 0] - x1, pts[:, 1] - z1))
+            if not 16 < d < 58:
+                continue
+            if any(math.hypot(x1 - cx, z1 - cz) < r for (cx, cz), r in LANDMARKS + keep_off):
+                continue
+            nx0, nz0, nx1, nz1 = NITTANY
+            if nx0 - 10 < x1 < nx1 + 10 and nz0 - 10 < z1 < nz1 + 10:
+                continue
+            c, r = int((x1 - X0) // CELL), int((z1 - Z0) // CELL)
+            if any(not SOLID[rr][cc] for rr in range(max(0, r - 2), min(ROWS, r + 3))
+                   for cc in range(max(0, c - 2), min(COLS, c + 3))):
+                continue
+            spots.append((x1, GROUND_Y, z1))
+    return spots
+
+
 def pine(dark):
     """A chunky cone tree: a bark trunk and three stacked cones, the undersides darker."""
     bm = bmesh.new()
@@ -557,7 +671,16 @@ def build():
             _, tint, roughness = ROAD_LOOK[kind]
             me.materials.append(tinted(f"mat_road_{kind}", asphalt, tint, roughness))
         col.objects.link(bpy.data.objects.new(name, me))
+    for name, (bm, colors) in (("buildings", buildings()), ("snow_drifts", snow_drifts())):
+        kit.paint(bm, lambda f: colors.get(f, "white"))
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        ob = kit.new_object(name, bm, palette)
+        if name == "snow_drifts":
+            for poly in ob.data.polygons:
+                poly.use_smooth = True
+        col.objects.link(ob)
     hill_bm, spots = hills(rng)
+    spots += infield_trees(rng)
     me = bpy.data.meshes.new("hills")
     hill_bm.to_mesh(me)
     hill_bm.free()

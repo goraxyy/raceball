@@ -1235,6 +1235,463 @@
   }
 }
 
+/* ------------------------------------------------------------------ results + podium */
+/*
+ * The prize ceremony. Left: toy podium blocks (gold = flag yellow, silver = paper, bronze = maple)
+ * that rise 3rd, 2nd, 1st, with each planet dropping onto its block. Right: the classification,
+ * printed like a race program.
+ */
+
+.results-screen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: stretch;
+  height: 100dvh;
+  padding-top: clamp(40px, 6vmin, 68px);
+  overflow: hidden;
+}
+
+.results-podium {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
+  min-height: 0;
+}
+
+.results-head {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.results-winner {
+  font-size: clamp(44px, 7vmin, 92px) !important;
+}
+
+.results-winner span {
+  color: var(--player);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 4px 4px 0 var(--ink);
+}
+
+.podium {
+  --base: clamp(150px, 30vh, 280px);
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.podium-spot {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.podium-spot .ball {
+  animation: podium-drop 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: calc(var(--rise) + 0.35s);
+}
+
+.podium-name {
+  max-width: 100%;
+  padding: 3px 12px 1px;
+  border: var(--line) solid var(--ink);
+  border-radius: 4px;
+  background: var(--player);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-family: var(--display);
+  font-size: clamp(18px, 2.6vmin, 30px);
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  rotate: -2deg;
+  animation: podium-pop 0.35s ease-out both;
+  animation-delay: calc(var(--rise) + 0.6s);
+}
+
+/* the stage line the blocks stand on */
+.podium::after {
+  content: "";
+  position: absolute;
+  left: -12px;
+  right: -18px;
+  bottom: -3px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ink);
+}
+
+/* a painted wooden block: front face, a lighter top face, a hard shadow */
+.podium-block {
+  --top: 16px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 100%;
+  height: var(--h);
+  margin-top: var(--top);
+  border: var(--line) solid var(--ink);
+  border-radius: 4px 4px 0 0;
+  background: var(--block);
+  box-shadow: 6px 0 0 var(--ink);
+  transform-origin: bottom;
+  animation: podium-rise 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  animation-delay: var(--rise);
+}
+
+.podium-block::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  bottom: 100%;
+  height: var(--top);
+  border: var(--line) solid var(--ink);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--block) 55%, #fff);
+  clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.is-p1 .podium-block {
+  --h: var(--base);
+  --block: var(--flag);
+}
+.is-p2 .podium-block {
+  --h: calc(var(--base) * 0.72);
+  --block: var(--paper);
+}
+.is-p3 .podium-block {
+  --h: calc(var(--base) * 0.54);
+  --block: #e8a26b;
+}
+
+/* the winner's block carries a checkered band */
+.is-p1 .podium-block::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14%;
+  height: 18px;
+  border-block: var(--line) solid var(--ink);
+  background: repeating-conic-gradient(var(--ink) 0 25%, var(--paper) 0 50%) 0
+    0 / 18px 18px;
+}
+
+.podium-place {
+  font-family: var(--display);
+  font-size: clamp(52px, 9vmin, 112px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.85;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 4px 4px 0 var(--ink);
+}
+
+.podium-place small {
+  font-size: 0.4em;
+  vertical-align: top;
+  margin-left: 0.04em;
+}
+
+.podium-time {
+  font-family: var(--display);
+  font-size: clamp(16px, 2.2vmin, 24px);
+  font-style: italic;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.is-p3 .podium-time {
+  display: none;
+}
+
+/* ---- the classification sheet */
+
+.results-sheet {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 0;
+  border: var(--line) solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 8px 8px 0 var(--ink);
+  overflow: hidden;
+}
+
+.results-sheet-head {
+  padding: 16px 20px 26px;
+  border-bottom: var(--line) solid var(--ink);
+  background:
+    repeating-conic-gradient(var(--ink) 0 25%, var(--paper) 0 50%) 0 100% / 12px
+      12px repeat-x,
+    var(--paper);
+  background-size:
+    12px 12px,
+    auto;
+  background-repeat: repeat-x, no-repeat;
+  background-position:
+    0 100%,
+    0 0;
+}
+
+.classification {
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.classification-head,
+.classification-row {
+  display: grid;
+  grid-template-columns: 46px 36px minmax(0, 1fr) 96px 128px 92px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 0 12px;
+}
+
+.classification-head {
+  padding-block: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.classification-head > :nth-child(n + 4) {
+  text-align: right;
+}
+
+.classification-row {
+  min-height: 62px;
+  border-top: 2px dashed var(--paper-2);
+  animation: row-in 0.4s ease-out both;
+  animation-delay: calc(0.9s + var(--i) * 0.09s);
+}
+
+.cl-place {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 900;
+}
+
+.classification-row:nth-child(2) .cl-place {
+  background: var(--flag);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 var(--line) var(--ink);
+}
+
+.cl-plate {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: var(--player);
+}
+
+.cl-plate .shape {
+  --shape-size: 18px;
+  background: var(--ink);
+}
+
+.cl-name {
+  display: grid;
+  min-width: 0;
+  line-height: 1;
+  font-family: var(--display);
+  font-size: clamp(22px, 2.8vmin, 30px);
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-title {
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--text);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.cl-time,
+.cl-best,
+.cl-bumps {
+  position: relative;
+  text-align: right;
+  font-family: var(--display);
+  font-size: clamp(20px, 2.4vmin, 26px);
+  font-style: italic;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* award stickers slapped on the winning cell */
+.award {
+  position: absolute;
+  right: -6px;
+  top: -19px;
+  padding: 1px 7px 0;
+  border: 2px solid var(--ink);
+  background: var(--flag);
+  font-family: var(--text);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  rotate: 4deg;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.is-bumper .award {
+  background: var(--stop);
+  color: #fff;
+  rotate: -4deg;
+}
+
+.is-dnf {
+  color: var(--muted);
+}
+
+.is-dnf .cl-place {
+  background: var(--paper-3);
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  padding: 14px 20px 18px;
+  border-top: var(--line) solid var(--ink);
+  background: var(--paper);
+}
+
+.lobby-in {
+  margin-right: auto;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+/* ---- confetti: one burst, then gone */
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -24px;
+  width: 9px;
+  height: 14px;
+  border: 1.5px solid var(--ink);
+  opacity: 0;
+  animation: confetti-fall 2.8s cubic-bezier(0.3, 0.5, 0.6, 1) forwards;
+}
+
+.confetti-piece.is-wide {
+  width: 16px;
+  height: 8px;
+}
+
+@keyframes podium-rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes podium-drop {
+  from {
+    translate: 0 -60vh;
+  }
+}
+
+@keyframes podium-pop {
+  from {
+    scale: 0;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    translate: 24px 0;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), 108vh) rotate(var(--spin));
+  }
+}
+
+@media (max-width: 1000px) {
+  .results-screen {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
+  .podium-block,
+  .podium-spot .ball,
+  .podium-name,
+  .classification-row {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------------ dev gallery (/ui) */
 
 /* stand-ins for Ali's 3D views in the race preview */
@@ -1299,6 +1756,13 @@
   border: 2px solid var(--ink);
   border-radius: 50%;
   vertical-align: -2px;
+}
+
+.results-replay {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 6;
 }
 
 .race-restart {

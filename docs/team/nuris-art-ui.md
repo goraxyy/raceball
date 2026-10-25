@@ -131,7 +131,9 @@ Built in `apps/web/src/ui/RaceHud.tsx`: the place plate and lap top left (the la
 Built: `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof` and `fx_respawn_stars` share one drawn atlas, `fx_atlas.png`. Instead of hand-copying from the Playground, `tools/fx/build_fx.mjs` builds them with the same Babylon API and writes the JSON, and `tools/fx/gen_fx_textures.py` draws the atlas. `/ui` > fx previews them. The event table for Ali is in [ASSETS.md > VFX v1](../ASSETS.md#vfx-v1-files).
 
 ### Results screen + podium
-`Results` props: `podium[]` (top 3), `rows[]` (everyone: time, best lap, bumps). The podium can be a 3D scene that Ali stages, with your UI on top. Coordinate the layout with him.
+`Results` props: `rows[]` (everyone in finishing order: id, place, name, color, shape, ball, time, bestLap, bumps, optional title), `laps`, optional `onRematch`, `lobbyAt` + `now` (server time, for "Back to the lobby in 12") and `children`. The top three rows stand on the podium, so there's no separate `podium[]`. Times are ms; `null` shows "DNF".
+
+Built in `apps/web/src/ui/Results.tsx`: a drawn toy podium on the left (gold, silver and bronze blocks rise 3rd, 2nd, 1st, and each planet drops onto its block), the "Final classification" sheet on the right (gaps to the winner, "Fastest lap" and "Bumper car" stickers, brag titles), a one-time confetti burst, and Rematch. **Ali's 3D podium:** pass it as `children` and it replaces the drawn podium; the header and the sheet stay. `/ui` > results previews it, and Replay reruns the ceremony.
 
 ### Music
 A lobby loop and a race loop. Use CC0 or royalty-free music only, and list every track in the credits.

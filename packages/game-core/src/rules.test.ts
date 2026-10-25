@@ -10,7 +10,7 @@ import {
   type Race,
   type Tuning,
 } from "./index";
-import { createRace } from "./race";
+import { createFlatRace, createRace } from "./race";
 
 const R = 30; // the loop's radius: a circle through the origin, centered on (30, 0)
 const ROUTE_POINTS = 48;
@@ -275,6 +275,63 @@ describe("laps, finishing and the results phase", () => {
       finishedAt: null,
       progress: 0,
     });
+  });
+});
+
+describe("bump and overtake events", () => {
+  it("emits one bump per hit, with a strength from the impact, when a ball rams another", async () => {
+    // flat ground: slot 3 starts 3 m straight behind slot 1
+    race = await createFlatRace({ laps: 1 });
+    for (const id of ["front", "side", "back"]) race.addPlayer(id, "earth");
+    race.start(0, 1);
+    const gas = { back: { ...NEUTRAL_INPUT, gas: 1 } };
+    const first = run(race, 1, { hold: gas }).events;
+    expect(first.filter((e) => e.type === "bump")).toEqual([
+      expect.objectContaining({ a: "front", b: "back" }),
+    ]); // pushing after the hit stays under bumpForceMin
+    const [hit] = first.filter((e) => e.type === "bump") as Extract<
+      GameEvent,
+      { type: "bump" }
+    >[];
+    expect(hit.strength).toBeGreaterThan(0.2);
+    expect(hit.strength).toBeLessThan(0.6);
+
+    // with the gas still held, the back ball catches up and hits again: never within bumpCooldown
+    const later = run(race, 3, { hold: gas }).events.filter(
+      (e) => e.type === "bump",
+    );
+    const times = [
+      first.find((e) => e.type === "bump")!.at,
+      ...later.map((e) => e.at + 1),
+    ];
+    for (let i = 1; i < times.length; i++)
+      expect(times[i] - times[i - 1]).toBeGreaterThanOrEqual(
+        tuning.bumpCooldown,
+      );
+  });
+
+  it("never reports a ball landing on or rolling along the track as a bump", async () => {
+    race = await createFlatRace({ laps: 1 });
+    race.addPlayer("me", "earth");
+    race.start(0, 1);
+    const { events } = run(race, 4, {
+      hold: { me: { ...NEUTRAL_INPUT, gas: 1 } },
+    });
+    expect(events.filter((e) => e.type === "bump")).toEqual([]);
+  });
+
+  it("emits overtake, with the section, once a racer is clearly ahead of the one in front", async () => {
+    const r = await loopRace(["parked", "bot"], 1); // side by side on the front row
+    const { events } = run(r, 5, { bots: ["bot"] });
+    const overtakes = events.filter((e) => e.type === "overtake");
+    expect(overtakes).toEqual([
+      expect.objectContaining({
+        type: "overtake",
+        player: "bot",
+        passed: "parked",
+        section: "s0",
+      }),
+    ]);
   });
 });
 

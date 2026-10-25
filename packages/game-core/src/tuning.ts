@@ -20,6 +20,12 @@ export const tuning = {
 
   // Race rules
   finishGraceSeconds: 30, // after the winner finishes, the race ends this long after (or when everyone is in)
+  overtakeGap: 1, // m clearly ahead before a pass counts, so side-by-side balls don't flicker
+
+  // Bumps between balls (measured: a 12 m/s rear-end hit is about 370 N; pushing contact stays under 20 N)
+  bumpForceMin: 50, // N of contact force before a touch counts as a bump
+  bumpBigHit: 600, // N for a bump of strength 1
+  bumpCooldown: 0.25, // s before the same two balls can bump again
 
   // Bots (botInput): aim at a point ahead on the route, full gas, brake only into sharp turns
   botLookahead: 5, // m ahead on the route at a standstill

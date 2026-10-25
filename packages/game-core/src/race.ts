@@ -95,6 +95,10 @@ class TrackRace implements Race {
   private raceMs = 0; // race time, counting from the end of the countdown
   private winnerAt: number | null = null;
   private finishers = 0;
+  private simMs = 0; // simulated time in every phase but the lobby, for bump cooldowns
+  private lastBump = new Map<string, number>(); // "a|b" → simMs of their last bump
+  /** Unfinished racers, leader first: changes only when someone is clearly ahead, for overtake events */
+  private order: string[] = [];
   /** Distance of each gate from the finish line, along the route (straight gate to gate without one) */
   private readonly gateS: number[];
   /** Once round the track, in the same meters as gateS */
@@ -144,7 +148,7 @@ class TrackRace implements Race {
     const taken = new Set([...this.players.values()].map((p) => p.slot));
     const spawn = this.track.spawns.find((s) => !taken.has(s.slot));
     if (!spawn) throw new Error("race is full");
-    const body = addBall(this.world, ...spawn.pos);
+    const body = addBall(this.world, ...spawn.pos, this.t.bumpForceMin);
     const racer: Racer = {
       id,
       ball,
@@ -172,6 +176,7 @@ class TrackRace implements Race {
   removePlayer(id: string): void {
     const p = this.players.get(id);
     if (!p) return;
+    this.order = this.order.filter((o) => o !== id);
     this.byCollider.delete(p.collider);
     this.world.removeRigidBody(p.body);
     this.players.delete(id);
@@ -202,6 +207,7 @@ class TrackRace implements Race {
     const racing = this.phase === "racing";
     const drives = (p: Racer) => racing && p.finishedAt === null;
     if (racing) this.raceMs += dt * 1000;
+    this.simMs += dt * 1000;
     for (const p of this.players.values()) {
       applyControls(
         p,
@@ -221,6 +227,11 @@ class TrackRace implements Race {
       if (gate !== undefined && p && gate === p.next && drives(p))
         this.passGate(p, gate);
     });
+    this.queue.drainContactForceEvents((e) => {
+      const a = this.byCollider.get(e.collider1());
+      const b = this.byCollider.get(e.collider2());
+      if (a && b) this.bump(a, b, e.totalForceMagnitude()); // balls against the track don't count
+    });
 
     const route = this.track.path;
     for (const p of this.players.values()) {
@@ -229,6 +240,8 @@ class TrackRace implements Race {
       if (pos.y < this.t.fallY) this.respawn(p);
       else if (drives(p) && this.isStuck(p, dt)) this.respawn(p);
     }
+
+    this.updateOrder(racing);
 
     // the race ends when everyone is in, or finishGraceSeconds after the winner
     if (racing && this.players.size > 0) {
@@ -378,6 +391,61 @@ class TrackRace implements Race {
       if (into > segment + (length - segment) / 2) into -= length; // behind the last gate
     }
     return lap * length + from + Math.max(0, Math.min(segment, into));
+  }
+
+  /** One bump event per hit: the same two balls can bump again after bumpCooldown */
+  private bump(a: Racer, b: Racer, force: number): void {
+    const key = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
+    const last = this.lastBump.get(key);
+    if (last !== undefined && this.simMs - last < this.t.bumpCooldown * 1000)
+      return;
+    this.lastBump.set(key, this.simMs);
+    const strength = Math.min(1, force / this.t.bumpBigHit);
+    this.events.push({ type: "bump", a: a.id, b: b.id, strength });
+  }
+
+  /**
+   * Keeps the unfinished racers in race order and emits `overtake` when one gets overtakeGap
+   * ahead of the racer in front. Outside the racing phase it just sorts, without events.
+   */
+  private updateOrder(racing: boolean): void {
+    const progress = new Map<string, number>();
+    for (const p of this.players.values())
+      if (p.finishedAt === null) progress.set(p.id, this.progress(p));
+    const at = (id: string) => progress.get(id)!;
+    if (!racing) {
+      this.order = [...progress.keys()].sort((a, b) => at(b) - at(a));
+      return;
+    }
+    this.order = this.order.filter((id) => progress.has(id));
+    for (const id of progress.keys()) {
+      if (this.order.includes(id)) continue;
+      const i = this.order.findIndex((o) => at(o) < at(id)); // newcomers slot in quietly
+      this.order.splice(i < 0 ? this.order.length : i, 0, id);
+    }
+    const gap = Math.max(0, this.t.overtakeGap); // a negative gap would swap two racers back and forth forever
+    for (let swapped = true; swapped;) {
+      swapped = false;
+      for (let i = 0; i + 1 < this.order.length; i++) {
+        const [ahead, behind] = [this.order[i], this.order[i + 1]];
+        if (at(behind) <= at(ahead) + gap) continue;
+        this.order[i] = behind;
+        this.order[i + 1] = ahead;
+        swapped = true;
+        this.events.push({
+          type: "overtake",
+          player: behind,
+          passed: ahead,
+          section: this.sectionOf(this.players.get(behind)!),
+        });
+      }
+    }
+  }
+
+  /** The section of the last gate a racer crossed (the start's before the first) */
+  private sectionOf(p: Racer): string {
+    const gates = this.track.checkpoints;
+    return gates.length ? gates[Math.max(0, p.last)].section : "";
   }
 
   /** A position on the track path, measured from the finish line instead */

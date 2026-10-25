@@ -7,6 +7,7 @@ import {
   PLAYER_COLORS,
   PLAYER_SHAPES,
   type ErrorKind,
+  type ItemId,
   type Planet,
   type PlayerShape,
   type PlayerView,
@@ -164,6 +165,20 @@ export const readyHtml = (look: Look) => `
     </div>
   </section>`;
 
+/** Each item's name: the full one for the pickup banner, a short one for the item button */
+export const ITEM_NAMES: Record<ItemId, { full: string; short: string }> = {
+  boost: { full: "Blue & White Boost!", short: "Boost" },
+  roar: { full: "Lion Roar!", short: "Roar" },
+  spill: { full: "Creamery Spill!", short: "Spill" },
+  snowday: { full: "Snow Day!", short: "Snow day" },
+};
+
+/** The item button's label: the held item and how to fire it, or "No item" */
+export const itemButtonHtml = (item: ItemId | "") =>
+  item
+    ? `<span>${ITEM_NAMES[item].short}<span class="shake-hint">shake!</span></span>`
+    : "<span>No item</span>";
+
 /** A race time as race programs print it: 1:04.3, or DNF */
 export function raceTime(ms: number): string {
   if (!(ms > 0)) return "DNF";
@@ -250,7 +265,7 @@ export const racingHtml = (look: Look, laps: number) => `
         <span class="steer-dot"></span>
       </div>
       <button class="item-btn" type="button" data-item="" disabled>
-        <span>No item</span>
+        ${itemButtonHtml("")}
       </button>
       <div class="scoops" data-count="0" aria-label="0 stars">
         ${"<i></i>".repeat(SCOOP_MAX)}

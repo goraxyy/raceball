@@ -1,4 +1,4 @@
-"""Builds the planet balls in Blender: Earth, Mars, Jupiter and Saturn (M1).
+"""Builds the planet balls in Blender: Earth, Mars, Jupiter and Saturn (M1), Mercury, Venus, Uranus and Neptune (M3).
 
 Run it in Blender (Scripting tab, or the MCP execute tool with RACEBALL_ROOT set),
 or headless: blender -b -P tools/models/build_planet_balls.py
@@ -45,8 +45,14 @@ def direction(lat, lon):
 # band: everything between two latitudes
 # cap: everything above a latitude
 # streak: a band between two longitudes, with round ends
+# wave: a band whose edges ripple with longitude, for soft cloud bands
 def blob(lat, lon, a, b, turn=0):
     return ("blob", lat, lon, a, b, turn)
+
+
+def crater(lat, lon, r, pit, rim):
+    """A painted crater: a pale rim showing on its upper-left side, then the dark pit over it."""
+    return [(rim, blob(lat + r * 0.18, lon - r * 0.18, r * 1.12, r * 1.12)), (pit, blob(lat, lon, r, r))]
 
 
 PLANETS = {
@@ -66,6 +72,23 @@ PLANETS = {
     "saturn": ("#E6C88A", [
         ("#CFA75F", ("band", 5.7, 18.7)), ("#F3E2B8", ("band", -17.5, -9.2)),
     ]),
+    # M3: the same colors as the lobby's CSS planets (packages/shared/theme/theme.css)
+    "mercury": ("#A9A4A0", [
+        # three big craters, plus two small ones round the back, so it reads as Mercury from any side
+        *crater(18, 40, 21, "#7E7874", "#C4BFBA"), *crater(-26, 150, 15, "#7E7874", "#C4BFBA"),
+        *crater(36, 255, 11, "#8F8984", "#C4BFBA"), *crater(-12, 300, 6, "#8F8984", "#C4BFBA"),
+        *crater(-48, 60, 7, "#8F8984", "#C4BFBA"),
+    ]),
+    # details sit above the orbit ring: from the chase camera and in the lobby you mostly see the top half
+    "venus": ("#E9C77B", [
+        ("#D9A24E", ("wave", 4, 17, 4, 3, 0)), ("#F3DDA6", ("wave", 30, 37, 3, 4, 40)),
+    ]),
+    "uranus": ("#8FD3D6", [
+        ("#6DBCC2", ("band", 14, 24)), ("#A9E0E2", ("cap", 64)),
+    ]),
+    "neptune": ("#3557B8", [
+        ("#7FA2EA", ("streak", 14, 3.4, 40, 200)), ("#233C88", blob(38, 120, 13, 8, -8)),
+    ]),
 }
 
 
@@ -83,6 +106,10 @@ def paint(base, details):
             mask = (lat_deg >= p[0]) & (lat_deg <= p[1])
         elif kind == "cap":
             mask = lat_deg >= p[0]
+        elif kind == "wave":
+            lo, hi, amp, waves, phase = p
+            ripple = amp * np.sin(np.radians(lon_deg * waves + phase))
+            mask = (lat_deg >= lo + ripple) & (lat_deg <= hi + ripple * 0.7)
         elif kind == "streak":
             mid, half, lon0, lon1 = p
             east = np.clip(lon_deg, lon0, lon1)  # nearest point on the streak's center line

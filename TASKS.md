@@ -205,7 +205,7 @@ Nothing right now. Add new questions here.
 - [x] Full sound pass + mix (big screen vs laptops), crowd cheers; captions for key audio cues
 - [x] Logo, title screen, loading screen with progress, brag card, favicons (`TitleScreen` on `/`, `BragCard`; previews at `/ui` > title, loading, brag; how they're made: [your guide](docs/team/nuris-art-ui.md#branding))
 - [x] Event-to-effect table (`apps/web/src/game/fx.ts`): the particles and sound for every game event, from your VFX files and sound bank. Ali adds the camera shake in his camera polish ([your guide](docs/team/nuris-art-ui.md#event-to-effect-table-fxts)) (wired into `game.ts`; try each effect from the local-mode panel > Effects; [ASSETS.md](docs/ASSETS.md#event-to-effect-table-fxts))
-- [ ] Planet balls 5–8: Mercury, Venus, Uranus, Neptune ([your guide](docs/team/nuris-art-ui.md#planet-balls-58))
+- [x] Planet balls 5–8: Mercury, Venus, Uranus, Neptune ([your guide](docs/team/nuris-art-ui.md#planet-balls-58)) (in `PLANET_MODELS`; review at `/ui` > models)
 - [ ] Animated props: item boxes, flags, arch, crowd cards ([your guide](docs/team/nuris-art-ui.md#animated-props))
 - [ ] Landmarks: Beaver Stadium bowl + scoreboard prop, Mount Nittany backdrop (budgets in [Ali's guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Ali checks that anything a ball touches still matches the collision
 

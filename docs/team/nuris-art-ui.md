@@ -186,6 +186,8 @@ Done: `FX_TABLE` in `fx.ts` is the table, and `GameFx` runs it. It's already wir
 #### Planet balls 5–8
 Mercury, Venus, Uranus, Neptune, with the same rules as the first four (art bible, one material, 1024² at most, the `ring` mesh). `tools/models/build_planet_balls.py` builds them: give each a base color and details in `PLANETS`, run it in Blender, optimize with `gltf-transform` as in Ali's guide, then add the planet to `PLANET_MODELS` in `apps/web/src/game/balls.ts`.
 
+Done: all four are in `PLANETS` in the script (Mercury's craters have a pale rim, Venus's cloud bands are wavy, and every detail sits above the orbit ring, where the camera sees it) and in `PLANET_MODELS`. A test checks that every planet has a model file. No Blender install needed: `pip install bpy` gives a headless Blender that runs the script (`python tools/models/build_planet_balls.py`). Review them at `/ui` > models.
+
 #### Animated props
 Item boxes (spin + bob), flags, the arch, crowd cards (2-frame sprite cards). Animate in Blender, export with Animation on, and give every animation a clear name (`anim_itembox_spin`), because the game plays them by name. Put them on the dressing kit's palette texture where you can (`tools/models/build_dressing_kit.py`).
 

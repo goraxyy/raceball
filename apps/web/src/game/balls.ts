@@ -39,12 +39,16 @@ export interface BallFeed {
   drainEvents?(): GameEvent[];
 }
 
-/** Planets with a model in `assets/models/ball_<planet>.glb`. Mercury, Venus, Uranus and Neptune come in M3. */
+/** Planets with a model in `assets/models/ball_<planet>.glb`: all eight */
 export const PLANET_MODELS: readonly string[] = [
   "earth",
   "mars",
   "jupiter",
   "saturn",
+  "mercury",
+  "venus",
+  "uranus",
+  "neptune",
 ];
 
 export type LoadBallModel = (

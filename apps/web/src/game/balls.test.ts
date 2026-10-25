@@ -8,10 +8,12 @@ import {
   Scene,
   Vector3,
 } from "@babylonjs/core";
-import { PLAYER_COLORS } from "@raceball/shared";
+import { existsSync } from "node:fs";
+import { PLANETS, PLAYER_COLORS } from "@raceball/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BallViews,
+  PLANET_MODELS,
   type BallLook,
   type BallPose,
   type LoadBallModel,
@@ -124,9 +126,23 @@ describe("ball views", () => {
     expect(a.albedoColor.equals(b.albedoColor)).toBe(false);
   });
 
+  it("has a model file for every planet", () => {
+    expect([...PLANET_MODELS].sort()).toEqual([...PLANETS].sort());
+    for (const planet of PLANET_MODELS)
+      expect(
+        existsSync(
+          new URL(
+            `../../public/assets/models/ball_${planet}.glb`,
+            import.meta.url,
+          ),
+        ),
+        planet,
+      ).toBe(true);
+  });
+
   it("keeps the placeholder for planets without a model, and still adds the ring", async () => {
     const views = new BallViews(scene, undefined, fakeModel);
-    show(views, { ball: "neptune", color: 4 });
+    show(views, { ball: "pluto", color: 4 }); // every planet has a model now, so an unknown one
     await settle();
 
     expect(scene.getMeshByName("placeholder-a")).not.toBeNull();

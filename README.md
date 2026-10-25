@@ -32,7 +32,7 @@ Built at **HackPSU Fall 2026** for the General Track, *The Mystery Stack*: phone
 
 1. **Big screen** (the host laptop, or a monitor or projector) opens `/host`, which creates a room and shows the room code plus a "join with just your phone" QR code.
 2. **Players with a laptop** open `/play` on it, enter the code, pick a name and ball, then scan the **pairing QR** on their laptop with their phone.
-3. **Players with only a phone** scan the big screen's QR code. They play by watching the big screen, which gives them a name tag and a follow-cam tile.
+3. **Players with only a phone** scan the big screen's QR code. They play by watching the big screen, which splits into a first-person view for every player.
 4. Each phone becomes a steering wheel. Calibrate (hold level, then turn right) and tap **Ready**.
 5. Countdown, then 3 laps around **Happy Valley**:
    - Laptop players see their own chase camera.

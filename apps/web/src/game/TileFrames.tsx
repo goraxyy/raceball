@@ -3,10 +3,12 @@ import { useRaceState } from "../net";
 import { FollowTile } from "../ui";
 import type { TileRect } from "./big-screen";
 import type { SnapshotSource } from "./net-feed";
+import { splitGrid } from "./split-layout";
+import "./split.css";
 
 /**
- * The big screen's follow-cam frames (Nuris's FollowTile) along the top. The inside of each frame is measured and
- * handed to the game, which draws that player's chase camera there on the canvas underneath.
+ * The big screen's split screen: one frame (Nuris's FollowTile) per player, filling the screen in a grid. The inside
+ * of each frame is measured and handed to the game, which draws that player's first-person view there on the canvas.
  */
 export function TileFrames({
   ids,
@@ -41,14 +43,27 @@ export function TileFrames({
     };
   }, [key, onRects]);
 
+  const grid = splitGrid(ids.length);
   return (
-    <div className="race-overlay">
-      <div className="follow-tiles">
-        {ids.map((id) => {
-          const player = players[id];
-          return (
+    <div
+      className="split-screen"
+      style={{
+        gridTemplateColumns: `repeat(${grid.cols}, 1fr)`,
+        gridTemplateRows: `repeat(${grid.rows}, 1fr)`,
+      }}
+    >
+      {ids.map((id, i) => {
+        const player = players[id];
+        const last = i === ids.length - 1;
+        return (
+          <div
+            key={id}
+            style={{
+              display: "grid",
+              gridColumn: last ? `span ${grid.lastSpan}` : undefined,
+            }}
+          >
             <FollowTile
-              key={id}
               name={player?.name ?? ""}
               color={player?.color ?? 0}
               shape={player?.shape ?? 0}
@@ -62,9 +77,9 @@ export function TileFrames({
                 }}
               />
             </FollowTile>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

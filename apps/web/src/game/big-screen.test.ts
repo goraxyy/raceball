@@ -104,36 +104,51 @@ describe("BigScreen", () => {
     vi.unstubAllGlobals();
   });
 
-  const players = (phoneOnly: string[]): BigScreenPlayers => ({
-    phoneOnly,
+  const players = (all: string[]): BigScreenPlayers => ({
+    all,
+    phoneOnly: [],
     name: (id) => `Name ${id}`,
     look: () => ({ ball: "earth", color: 1 }),
   });
 
-  it("gives up to 4 phone-only players a tile, drawn where the page framed it", () => {
+  it("splits the screen: every player gets a first-person view, drawn where the page framed it", () => {
     const big = new BigScreen(scene, overview);
-    const poses = new Map(
-      ["a", "b", "c", "d", "e", "f"].map((id, i) => [id, at(i * 3, 0)]),
-    );
-    const phones = players(["gone", "b", "c", "d", "e", "f"]); // "gone" has no ball yet
-    expect(big.update(poses, phones, 1 / 60, 60)).toBe(true);
-    expect(big.tileIds).toEqual(["b", "c", "d", "e"]);
-    expect(big.tileIds).toHaveLength(MAX_TILES);
+    const ids = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+    const poses = new Map(ids.map((id, i) => [id, at(i * 3, 0)]));
+    const all = players(["gone", ...ids]); // "gone" has no ball yet
+    expect(big.update(poses, all, 1 / 60, 60)).toBe(true);
+    expect(big.tileIds).toEqual(ids.slice(0, MAX_TILES)); // 8 at most
     expect(scene.activeCameras).toHaveLength(0); // no frames on the page yet
 
     big.setRects(
       new Map([["b", { left: 18, top: 18, width: 320, height: 200 }]]),
     );
-    expect(scene.activeCameras?.map((c) => c.name)).toEqual([
-      "overview",
-      "tile-b",
-    ]);
-    const viewport = scene.activeCameras![1].viewport;
+    // only the views draw: the overview stays off while the screen is split
+    expect(scene.activeCameras?.map((c) => c.name)).toEqual(["tile-b"]);
+    const viewport = scene.activeCameras![0].viewport;
     expect(viewport.x).toBeCloseTo(18 / 1280);
     expect(viewport.y).toBeCloseTo(1 - 218 / 720); // from the bottom
     expect(viewport.width).toBeCloseTo(320 / 1280);
 
-    expect(big.update(poses, phones, 1 / 60, 60)).toBe(false);
+    expect(big.update(poses, all, 1 / 60, 60)).toBe(false);
+    big.dispose();
+  });
+
+  it("puts each view's eye on top of its ball, looking along the heading", () => {
+    const big = new BigScreen(scene, overview);
+    const poses = new Map([["a", { ...at(10, 20), h: Math.PI / 2 }]]); // heading +x
+    big.update(poses, players(["a"]), 1 / 60, 60);
+    big.setRects(
+      new Map([["a", { left: 0, top: 0, width: 1280, height: 720 }]]),
+    );
+    const camera = scene.activeCameras![0];
+    expect(camera.position.x).toBeGreaterThan(10); // a little ahead of the ball, along the heading
+    expect(camera.position.x).toBeLessThan(11);
+    expect(camera.position.z).toBeCloseTo(20);
+    expect(camera.position.y).toBeGreaterThan(1); // over the top of the 1 m ball
+    const forward = camera.getForwardRay().direction;
+    expect(forward.x).toBeGreaterThan(0.9); // looks along +x
+    expect(forward.y).toBeLessThan(0); // and a little down at the road
     big.dispose();
   });
 
@@ -151,7 +166,7 @@ describe("BigScreen", () => {
     big.dispose();
   });
 
-  it("swaps the tiles for name tags when the fps can't keep up", () => {
+  it("swaps the split screen for the overview with name tags when the fps can't keep up", () => {
     const big = new BigScreen(scene, overview);
     const poses = new Map([
       ["a", at(0, 0)],

@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { GameView } from "./game/GameView";
 import { HostPage } from "./lobby/HostPage";
 import { PlayPage } from "./lobby/PlayPage";
+import { canDraw3D } from "./lobby/webgl";
 import { ErrorScreen, TitleScreen } from "./ui";
 
 // Dev-only preview of the lobby UI with fake data (Nuris)
@@ -17,6 +18,13 @@ export default function App() {
     );
   }
   const params = new URLSearchParams(location.search);
+  // Every page below draws the 3D race: say so plainly on a browser that can't
+  if (
+    (location.pathname === "/play" || location.pathname === "/host") &&
+    !canDraw3D()
+  ) {
+    return <ErrorScreen kind="unsupported" />;
+  }
   if (location.pathname === "/play" && params.get("local") === "1") {
     return <GameView mode="local" />;
   }

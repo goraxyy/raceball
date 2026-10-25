@@ -20,9 +20,12 @@ export interface PlayerView {
   lap: number;
   checkpoint: number;
   place: number;
-  /** Server time in ms, 0 until finished */
+  /** Race time in ms when they finished, 0 until then */
   finishedAt: number;
   connected: boolean;
+  /** Session stats: races won, and the fastest lap in ms (0 until one is completed) */
+  wins: number;
+  bestLap: number;
 }
 
 export interface ItemBoxView {

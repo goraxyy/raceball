@@ -1,6 +1,7 @@
 import { OneEuroFilter } from "./one-euro";
+import { settings } from "./settings";
 
-/** Phone rotation for full lock */
+/** Default phone rotation for full lock (players can change it in the settings) */
 export const MAX_STEER = (45 * Math.PI) / 180;
 /** Fraction of full lock ignored around center */
 export const DEAD_ZONE = 0.05;
@@ -33,6 +34,11 @@ export class Steering {
   gy = 0;
   steer = 0;
   calib: Calibration | null = null;
+  /** Full-lock angle and dead zone: the player's accessibility settings (settings.ts) */
+  tuning: { sensitivityDeg: number; deadZone: number } = {
+    sensitivityDeg: (MAX_STEER * 180) / Math.PI,
+    deadZone: DEAD_ZONE,
+  };
 
   /** Feed raw gravity; t in seconds */
   update(x: number, y: number, t: number) {
@@ -49,8 +55,12 @@ export class Steering {
     if (!this.calib) return 0;
     if (Math.hypot(this.gx, this.gy) < MIN_PLANE_GRAVITY) return this.steer;
     const delta = wrap(this.angle - this.calib.neutral) * this.calib.sign;
-    return (this.steer = curve(deadzone(delta / MAX_STEER)));
+    const maxSteer = (this.tuning.sensitivityDeg * Math.PI) / 180;
+    return (this.steer = curve(
+      deadzone(delta / maxSteer, this.tuning.deadZone),
+    ));
   }
 }
 
 export const steering = new Steering();
+steering.tuning = settings; // the live settings object: changes apply at once

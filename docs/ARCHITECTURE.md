@@ -128,7 +128,7 @@ A rolling ball has momentum, which hides latency far better than a twitchy kart 
 ## Protocol v1 (draft, lives in `packages/shared/src/protocol.ts`)
 
 ```ts
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export type Role = "host" | "viewer" | "pad";
 export type Phase = "lobby" | "countdown" | "racing" | "results";
@@ -153,7 +153,11 @@ export interface InputMsg {
   item: boolean;  // true in exactly one message when a shake/tap fires the item
 }
 
-/** server → host + viewers: 60 Hz */
+/**
+ * A snapshot of every ball, server → host + viewers at 60 Hz. On the wire it's packed into integer arrays
+ * (PackedSnapMsg in packages/shared/src/snap.ts: positions and velocities in cm, quaternions × 32767,
+ * heading in mrad). packSnap() / unpackSnap() convert.
+ */
 export interface SnapMsg {
   tick: number;
   t: number;          // server time in ms
@@ -254,11 +258,11 @@ Colyseus schema (synced automatically):
 ```
 RaceState  { phase, laps, countdownEndsAt, trackId, players: Map<playerId, PlayerState>, itemBoxes: ItemBox[] }
 PlayerState{ name, ball, color, shape, phoneOnly, bot, paired, calibrated, assetsLoaded, ready,
-             lap, checkpoint, place, finishedAt, connected }
+             lap, checkpoint, place, finishedAt, connected, wins, bestLap }
 ItemBox    { id, x, y, z, active }
 ```
 
-Later, if snapshots need to shrink, quantize them: positions in centimeters as `Int16`/`Int32`, and quaternions in smallest-three form.
+Snapshots are quantized on the wire (`packSnap` in `packages/shared/src/snap.ts`): positions and velocities in centimeters, quaternions × 32767, heading in milliradians, all as integer arrays.
 
 ## Race state machine
 

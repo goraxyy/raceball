@@ -8,6 +8,7 @@ import {
   MAX_PLAYERS,
   RESULTS_MS,
   canStart,
+  packSnap,
   PLANETS,
   PROTOCOL_VERSION,
   type GameEvent,
@@ -46,6 +47,25 @@ const MAX_CATCH_UP = 5;
 /** Race lengths the host may pick */
 const LAP_CHOICES = [1, 3];
 
+/**
+ * Session stats after a lap or finish event: the lap that just ended may be a new best,
+ * and a 1st-place finish is a win. lapStartedAt is when that lap began (server ms).
+ */
+export function lapStats(
+  stats: { wins: number; bestLap: number },
+  evt: Extract<GameEvent, { type: "lap" | "finish" }>,
+  lapStartedAt: number | undefined,
+  now: number,
+): { wins: number; bestLap: number } {
+  let { wins, bestLap } = stats;
+  if (lapStartedAt !== undefined) {
+    const lap = now - lapStartedAt;
+    if (bestLap === 0 || lap < bestLap) bestLap = lap;
+  }
+  if (evt.type === "finish" && evt.place === 1) wins++;
+  return { wins, bestLap };
+}
+
 /** The players an event is about: their phones get the sound and visual cue */
 export function playersIn(evt: GameEvent): string[] {
   switch (evt.type) {
@@ -83,6 +103,8 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   private acc = 0;
   private tickCount = 0;
   private nextBot = 1;
+  /** playerId → server time their current lap started, for lap times */
+  private lapStartedAt = new Map<string, number>();
   /** True while rematch builds a fresh race; the loop waits */
   private rebuilding = false;
   /** Sends the room back to the lobby a while after the results */
@@ -255,17 +277,47 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     }
     if (!stepped) return;
     this.syncPhase();
+    this.syncStandings();
     const events = this.race.drainEvents();
     for (const evt of events) {
+      this.recordStats(evt);
       this.sendToScreens("evt", evt); // screens show every event (VFX, standings)
       this.sendToPads(playersIn(evt), "evt", evt); // phones only hear about their own player
     }
     if (this.tickCount % SNAP_EVERY === 0) {
+      // compact integer arrays (packSnap), about a third of the bytes of plain objects
       this.sendToScreens(
         "snap",
-        this.race.snapshot(this.tickCount, Date.now()),
+        packSnap(this.race.snapshot(this.tickCount, Date.now())),
       );
     }
+  }
+
+  /** Lap, checkpoint, place and finish time from game-core, for the HUD, standings and results */
+  private syncStandings() {
+    for (const s of this.race.standings()) {
+      const p = this.state.players.get(s.id);
+      if (!p) continue;
+      // only real changes go out: Colyseus patches what's different
+      if (p.lap !== s.lap) p.lap = s.lap;
+      if (p.checkpoint !== s.checkpoint) p.checkpoint = s.checkpoint;
+      if (p.place !== s.place) p.place = s.place;
+      const finished = s.finishedAt ?? 0;
+      if (p.finishedAt !== finished) p.finishedAt = finished;
+    }
+  }
+
+  /** Session stats from race events: lap times (best lap) and wins */
+  private recordStats(evt: GameEvent) {
+    if (evt.type !== "lap" && evt.type !== "finish") return;
+    const p = this.state.players.get(evt.player);
+    const now = Date.now();
+    if (p) {
+      const next = lapStats(p, evt, this.lapStartedAt.get(evt.player), now);
+      p.wins = next.wins;
+      p.bestLap = next.bestLap;
+    }
+    this.lapStartedAt.set(evt.player, now);
   }
 
   /** Copy game-core's phase into the synced state, and act on the changes */
@@ -274,7 +326,12 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     const phase = this.race.phase;
     if (phase === prev) return;
     this.state.phase = phase;
-    if (phase === "racing") this.state.countdownEndsAt = 0;
+    if (phase === "racing") {
+      this.state.countdownEndsAt = 0;
+      // lap 1 starts with the race: everyone crosses the line in the first moments
+      const now = Date.now();
+      this.state.players.forEach((_, id) => this.lapStartedAt.set(id, now));
+    }
     if (phase === "results") {
       this.resultsTimer?.clear();
       this.resultsTimer = this.clock.setTimeout(
@@ -357,6 +414,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
         p.lap = p.checkpoint = p.place = p.finishedAt = 0;
       });
       this.padInputs.clear();
+      this.lapStartedAt.clear();
       this.acc = 0;
       this.state.countdownEndsAt = 0;
       this.state.phase = race.phase;

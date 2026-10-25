@@ -12,12 +12,14 @@ let target: Room | undefined;
 /** Inputs sent so far (the debug overlay turns this into a rate) */
 export let sentCount = 0;
 
-// Gas, brake and item come with the touch zones and shake detection (M1 calibration task)
+/** Set by the touch zones (touch.ts). Item comes with shake detection (M2) */
+export const controls = { gas: 0, brake: false };
+
 const current = (): InputMsg => ({
   seq: ++seq,
   steer: steering.read(),
-  gas: 0,
-  brake: false,
+  gas: controls.gas,
+  brake: controls.brake,
   item: false,
 });
 

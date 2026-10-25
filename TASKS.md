@@ -163,7 +163,7 @@ Nothing right now. Add new questions here.
 - [ ] Shake detection for firing items
 
 **Nuris**
-- [ ] Big-screen overlay: `TrackMap` (SVG, color + shape markers), `Standings`, `Countdown`, `FollowTile` frames
+- [x] Big-screen overlay: `TrackMap` (SVG, color + shape markers), `Standings`, `Countdown`, `FollowTile` frames (in `apps/web/src/ui`, live preview at `/ui` > race)
 - [ ] Player HUD: `RaceHud` (position, lap, item slot, speed, wrong-way warning)
 - [ ] VFX v1 as JSON: rolling dust, bump sparks, respawn poof
 - [ ] `Results` screen + podium layout (with Ali)

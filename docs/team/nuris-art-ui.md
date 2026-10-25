@@ -107,13 +107,14 @@ Rolling loop, bump, countdown beeps, UI click.
 
 | Component | Props |
 |---|---|
-| `TrackMap` | `path` (the route outline as `[x, z]` points from Ali), `players[]` (id, x, z, color, shape) |
-| `Standings` | `rows[]` (place, name, color, shape, lap, gap) |
-| `Countdown` | `endsAt` (server time) |
-| `FollowTile` | `name`, `color`, `shape`, `place` (the frame around Ali's camera tiles) |
+| `TrackMap` | `path` (the route outline as `[x, z]` points in meters, in driving order, from Ali), `players[]` (id, x, z, color, shape), optional `labels[]` (x, z, text) and `width` (road width, default 12 m) |
+| `Standings` | `rows[]` (id, place, name, color, shape, lap, gap, optional finished), `laps`. The `id` lets rows slide to their new place on an overtake |
+| `Countdown` | `endsAt` (server time), `now` (pass the net session's `clock.serverNow`, so every screen flips together) |
+| `FollowTile` | `name`, `color`, `shape`, `place`, optional `children` (the frame around Ali's camera tiles; the middle is transparent) |
 
 - `TrackMap` is an SVG viewed from above. Fit `path` into the box, and draw each player as their **shape** in their **color**.
-- Ali exposes `path` and positions (throttled to about 10 Hz for the UI).
+- Ali exposes `path` and positions (throttled to about 10 Hz for the UI). The map smooths the 10 Hz jumps with a short transition.
+- **Layout:** wrap them in `<div className="race-overlay">` over the Babylon canvas: follow tiles along the top, standings on the right, the map in a `.map-card` at the bottom left. It doesn't catch clicks, so the canvas stays usable. `/ui` > race shows the full layout with a fake race on the real Happy Valley loop.
 - Everything must read from a couple of meters away on a laptop screen at a judging table: big type, thick outlines, no thin gray text.
 
 ### Player HUD (laptop)

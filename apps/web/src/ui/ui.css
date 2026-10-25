@@ -646,7 +646,366 @@
   }
 }
 
+/* ------------------------------------------------------------------ big-screen overlay */
+/*
+ * Sits on top of Ali's Babylon canvas during the race. .race-overlay is a full-screen,
+ * click-through layer: the map bottom left, standings on the right, follow tiles along the top.
+ */
+
+.race-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 30vw) 1fr minmax(280px, 26vw);
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  padding: 18px;
+  pointer-events: none;
+  font-family: var(--text);
+  color: var(--ink);
+}
+
+.race-overlay .follow-tiles {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 14px;
+}
+
+.race-overlay .standings {
+  grid-column: 3;
+  grid-row: 2 / 4;
+  align-self: start;
+}
+
+.race-overlay .map-card {
+  grid-column: 1;
+  grid-row: 3;
+  align-self: end;
+}
+
+/* the map sits on a paper card, like a printed race program */
+.map-card {
+  padding: 10px;
+  border: var(--line) solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: var(--drop) var(--drop) 0 var(--ink);
+}
+
+.track-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 42vh;
+  overflow: visible;
+}
+
+.map-shadow,
+.map-edge,
+.map-road,
+.map-center {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.map-shadow {
+  stroke: rgb(23 21 31 / 0.25);
+}
+.map-edge {
+  stroke: var(--ink);
+}
+.map-road {
+  stroke: #3a3944;
+}
+.map-center {
+  stroke: var(--paper);
+  opacity: 0.55;
+}
+
+.map-start {
+  stroke: var(--ink);
+  stroke-width: 0.8;
+}
+
+.map-label {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.map-player {
+  transition: transform 110ms linear;
+}
+
+.map-player > * {
+  stroke: var(--ink);
+  stroke-width: 0.28;
+  stroke-linejoin: round;
+}
+
+/* ---- standings (timing tower) */
+
+.standings {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.standing {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 40px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding-right: 12px;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 4px 4px 0 var(--ink);
+  overflow: hidden;
+  transform: skewX(-8deg);
+}
+
+.standing > * {
+  transform: skewX(8deg);
+}
+
+.standing-place {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 30px;
+  font-style: italic;
+  font-weight: 900;
+}
+
+.standing:first-child .standing-place {
+  background: var(--flag);
+  color: var(--ink);
+}
+
+.standing-plate {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  margin: 0 -10px;
+  background: var(--player);
+  border-right: var(--line) solid var(--ink);
+}
+
+.standing-plate .shape {
+  --shape-size: 22px;
+  background: var(--ink);
+}
+
+.standing-name {
+  padding-left: 8px;
+  font-family: var(--display);
+  font-size: clamp(20px, 2.6vmin, 30px);
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standing-lap {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.standing-gap {
+  min-width: 58px;
+  text-align: right;
+  font-family: var(--display);
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 800;
+}
+
+/* ---- countdown */
+
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.countdown-number {
+  font-family: var(--display);
+  font-size: min(48vh, 40vw);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.8;
+  -webkit-text-stroke: max(6px, 1.4vh) var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 2.4vh 2.4vh 0 var(--ink);
+  animation: count-pop 1s ease-out both;
+}
+
+.countdown-overlay[data-count="3"] .countdown-number {
+  color: var(--stop);
+}
+.countdown-overlay[data-count="2"] .countdown-number {
+  color: var(--gas);
+}
+.countdown-overlay[data-count="1"] .countdown-number {
+  color: var(--flag);
+}
+.countdown-overlay[data-count="go"] .countdown-number {
+  color: var(--go);
+}
+
+@keyframes count-pop {
+  0% {
+    scale: 1.6;
+    opacity: 0;
+  }
+  20% {
+    scale: 0.95;
+    opacity: 1;
+  }
+  30% {
+    scale: 1;
+  }
+}
+
+/* ---- follow-cam tiles */
+
+.follow-tile {
+  position: relative;
+  width: min(22vw, 320px);
+  aspect-ratio: 16 / 10;
+  margin: 0;
+  border: 5px solid var(--player);
+  border-radius: 10px;
+  outline: var(--line) solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  overflow: hidden;
+}
+
+/* transparent so Ali's camera tile shows through */
+.follow-view {
+  position: absolute;
+  inset: 0;
+}
+
+.follow-plate {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 10px 0 0;
+  border: var(--line) solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: skewX(-8deg);
+}
+
+.follow-plate > * {
+  transform: skewX(8deg);
+}
+
+.follow-place {
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  padding: 0 6px;
+  align-self: stretch;
+  background: var(--player);
+  border-right: var(--line) solid var(--ink);
+  font-family: var(--display);
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.follow-place small {
+  font-size: 0.5em;
+  vertical-align: top;
+}
+
+.follow-plate .shape {
+  --shape-size: 18px;
+  background: var(--ink);
+}
+
+.follow-name {
+  font-family: var(--display);
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown-number {
+    animation: none;
+  }
+  .map-player {
+    transition: none;
+  }
+}
+
 /* ------------------------------------------------------------------ dev gallery (/ui) */
+
+/* stand-ins for Ali's 3D views in the race preview */
+.race-preview {
+  position: fixed;
+  inset: 0;
+}
+
+.fake-3d {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(#9ccbe6 0 45%, #7fa34a 45%);
+  font-family: var(--display);
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: rgb(23 21 31 / 0.35);
+}
+
+.fake-cam {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#9ccbe6 0 50%, #3a3944 50%);
+}
+
+.race-restart {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  translate: -50% 0;
+  pointer-events: auto;
+}
 
 .gallery-nav {
   position: fixed;

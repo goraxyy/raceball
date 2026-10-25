@@ -1,0 +1,149 @@
+.local-hud {
+  position: fixed;
+  top: 22px;
+  left: 22px;
+  z-index: 2;
+  width: 282px;
+  box-sizing: border-box;
+  padding: 22px;
+  border: 1px solid #ffffff30;
+  border-radius: 16px;
+  background: #10233deb;
+  color: #f2f6ff;
+  box-shadow: 0 12px 40px #10233d35;
+  text-align: left;
+  font-family: system-ui, sans-serif;
+}
+
+.local-hud .local-eyebrow {
+  margin: 0 0 8px;
+  color: #b8d8ff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.local-hud h1 {
+  margin: 0 0 6px;
+  font-size: 27px;
+  line-height: 1.1;
+  font-weight: 750;
+}
+
+.local-status {
+  display: block;
+  color: #c6d3e6;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.local-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 16px;
+  margin: 20px 0 14px;
+}
+
+.local-metrics strong {
+  display: block;
+  font-size: 27px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.local-metrics span {
+  color: #a8bdd8;
+  font-size: 11px;
+}
+
+.local-hud .local-lap-info {
+  margin: 0 0 17px;
+  color: #c6d3e6;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.local-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.local-actions button {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ffffff35;
+  border-radius: 7px;
+  background: #ffffff12;
+  color: #fff;
+  font:
+    600 11px system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+
+.local-actions button:hover {
+  background: #ffffff25;
+}
+
+.local-actions button:focus-visible,
+.local-map-link:focus-visible {
+  outline: 2px solid #a6d6ff;
+  outline-offset: 3px;
+}
+
+.local-hud .local-map-link {
+  display: inline-block;
+  margin-top: 15px;
+  color: #b8d8ff;
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.local-hud .local-error {
+  color: #ffd2c9;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.local-controls {
+  position: fixed;
+  z-index: 2;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 12px 20px;
+  border: 1px solid #ffffff30;
+  border-radius: 30px;
+  background: #10233deb;
+  color: #f2f6ff;
+  text-align: center;
+  font:
+    500 12px/1.6 system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+
+.local-controls span {
+  margin: 0 8px;
+  color: #8fa8c8;
+}
+
+@media (max-width: 700px) {
+  .local-hud {
+    top: 12px;
+    left: 12px;
+    width: 232px;
+    padding: 16px;
+  }
+
+  .local-controls {
+    width: calc(100vw - 24px);
+    white-space: normal;
+    font-size: 11px;
+  }
+}

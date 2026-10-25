@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import RAPIER from "@dimforge/rapier3d-compat";
 import { Document, NodeIO, type Buffer, type Node } from "@gltf-transform/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { NEUTRAL_INPUT, TICK_DT, type Race } from "./index";
@@ -231,21 +232,99 @@ describe("checkTrack", () => {
   });
 });
 
-// Runs once the greybox is exported (docs/team/ali-game.md, M1 step 2)
+// The committed greybox is required: missing or broken exports must fail CI.
 const realTrack = fileURLToPath(
   new URL("../tracks/happy_valley_col.glb", import.meta.url),
 );
-it.skipIf(!existsSync(realTrack))(
-  "happy_valley_col.glb is raceable",
-  async () => {
-    await initPhysics();
-    const world = createWorld();
-    const track = await loadTrack(
-      world,
-      new Uint8Array(readFileSync(realTrack)),
-      new NodeIO(),
-    );
+it("happy_valley_col.glb is raceable", async () => {
+  await initPhysics();
+  const world = createWorld();
+  try {
+    const bytes = new Uint8Array(readFileSync(realTrack));
+    const track = await loadTrack(world, bytes, new NodeIO());
     expect(checkTrack(track)).toEqual([]);
+    expect([...new Set(track.checkpoints.map((c) => c.section))]).toEqual([
+      "start",
+      "pollock",
+      "library",
+      "lionshrine",
+      "creamery",
+      "stadium",
+      "arboretum",
+      "collegeave",
+    ]);
+
+    // Check dimensions in the grid's local frame, so the route can be rotated.
+    const heading = track.spawns[0].heading;
+    const forward = [Math.sin(heading), Math.cos(heading)];
+    const right = [forward[1], -forward[0]];
+    const project = (a: number[], b: number[], axis: number[]) =>
+      (a[0] - b[0]) * axis[0] + (a[2] - b[2]) * axis[1];
+    expect(
+      Math.abs(project(track.spawns[1].pos, track.spawns[0].pos, right)),
+    ).toBeCloseTo(1.5, 2);
+    expect(
+      Math.abs(project(track.spawns[1].pos, track.spawns[0].pos, forward)),
+    ).toBeCloseTo(1.5, 2);
+    for (const [i, spawn] of track.spawns.entries()) {
+      expect(Math.cos(spawn.heading - heading)).toBeCloseTo(1);
+      expect(
+        project(track.checkpoints[0].pos, spawn.pos, forward),
+      ).toBeGreaterThan(0);
+      if (i >= 2) {
+        expect(project(spawn.pos, track.spawns[i - 2].pos, right)).toBeCloseTo(
+          0,
+          2,
+        );
+        expect(
+          project(spawn.pos, track.spawns[i - 2].pos, forward),
+        ).toBeCloseTo(-3, 2);
+      }
+    }
+
+    expect(track.items.length).toBeGreaterThanOrEqual(3);
+    expect(track.boosts.length).toBeGreaterThanOrEqual(2);
+    for (const boost of track.boosts) expect(boost.power).toBe(1);
+    expect(track.cameras.length).toBeGreaterThanOrEqual(3);
+    for (const [kind, grip] of [
+      ["icecream", 0.2],
+      ["snow", 0.6],
+      ["ice", 0.1],
+    ] as const) {
+      expect(track.surfaces).toEqual(
+        expect.arrayContaining([expect.objectContaining({ kind, grip })]),
+      );
+    }
+
+    const doc = await new NodeIO().readBinary(bytes);
+    const librarySteps = doc
+      .getRoot()
+      .listNodes()
+      .filter(
+        (node) => /library.*_col$/.test(node.getName()) && node.getMesh(),
+      );
+    expect(librarySteps.length).toBeGreaterThan(0);
+    expect(
+      librarySteps.some((node) => node.getExtras().restitution === 0.5),
+    ).toBe(true);
+
+    // A valid marker index alone cannot ensure that a ball has somewhere to land.
+    world.step();
+    for (const marker of [...track.spawns, ...track.respawns]) {
+      const [x, y, z] = marker.pos;
+      const hit = world.castRay(
+        new RAPIER.Ray({ x, y: y + 1, z }, { x: 0, y: -1, z: 0 }),
+        1.25,
+        true,
+        RAPIER.QueryFilterFlags.EXCLUDE_SENSORS,
+      );
+      expect(
+        hit,
+        `solid road below marker at ${marker.pos.join(", ")}`,
+      ).not.toBeNull();
+      expect(hit!.timeOfImpact).toBeGreaterThanOrEqual(0.75);
+    }
+  } finally {
     world.free();
-  },
-);
+  }
+});

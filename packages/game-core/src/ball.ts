@@ -92,13 +92,13 @@ export function isGrounded(
   t: Tuning,
 ): boolean {
   const ray = new RAPIER.Ray(p.body.translation(), { x: 0, y: -1, z: 0 });
-  // exclude our own body from the ray (last argument)
+  // Trigger volumes do not support a ball; exclude them and our own body.
   return (
     world.castRay(
       ray,
       BALL_RADIUS + t.groundProbe,
       true,
-      undefined,
+      RAPIER.QueryFilterFlags.EXCLUDE_SENSORS,
       undefined,
       undefined,
       p.body,

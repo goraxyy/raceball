@@ -84,6 +84,7 @@ export class InteractableViews {
   private chevrons: Texture[] = [];
   private glimmers: ParticleSystem[] = [];
   private glow?: GlowLayer;
+  private glowOn = true;
   private time = 0;
   private disposed = false;
 
@@ -137,6 +138,7 @@ export class InteractableViews {
         blurKernelSize: 32,
       });
       this.glow.intensity = 1.1;
+      this.glow.isEnabled = this.glowOn;
     }
     pads.forEach((mark, i) => {
       const pos = new Vector3(
@@ -198,6 +200,12 @@ export class InteractableViews {
       }
       view.active = s.active;
     }
+  }
+
+  /** Switches the glow on or off (quality.ts drops it first when the frame rate can't keep up) */
+  setGlow(on: boolean): void {
+    this.glowOn = on;
+    if (this.glow) this.glow.isEnabled = on;
   }
 
   /** A pad lights up when a ball goes over it; a paw flashes and squashes when it kicks one */

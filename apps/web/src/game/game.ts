@@ -29,6 +29,7 @@ import { GREYBOX_PADS, InteractableViews } from "./interactables";
 import { ItemViews } from "./items";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
+import { QualityGovernor, ladderFor, type QualityLevel } from "./quality";
 import { loadBoostPads } from "./route";
 import { createSky, finishGreybox, loadWorld, tintLights } from "./world";
 
@@ -125,6 +126,19 @@ export function createGame(
   overview.upperRadiusLimit = 1000;
   overview.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
   const big = mode === "host" ? new BigScreen(scene, overview) : undefined;
+  // how much each frame draws, from the frame rate: the big screen's split screen holds 30 fps, a laptop 55
+  const quality = new QualityGovernor(
+    ladderFor(typeof devicePixelRatio === "number" ? devicePixelRatio : 1),
+    mode === "host" ? 30 : 55,
+  );
+  const applyQuality = (q: QualityLevel) => {
+    scene.getEngine().setHardwareScalingLevel(1 / q.scale);
+    toys.setGlow(q.glow);
+    sun.shadowEnabled = q.shadows !== "off";
+    shadows.usePercentageCloserFiltering = q.shadows === "soft";
+  };
+  applyQuality(quality.quality);
+  if (big) big.onPassesChanged = () => quality.restart();
   // the effects for every game event (Nuris's fx.ts); its files load alongside the map
   const fx = new GameFx(scene, {
     screen: mode === "host" ? "big" : "laptop",
@@ -382,6 +396,8 @@ export function createGame(
       if (disposed) return;
       heavens.update(dt);
       if (status.state !== "ready") return;
+      const hidden = typeof document !== "undefined" && document.hidden;
+      if (quality.update(dt, hidden)) applyQuality(quality.quality);
       local?.advance(dt);
       if (!feed) return;
       const poses = feed.sample(performance.now());

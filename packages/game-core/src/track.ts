@@ -56,6 +56,30 @@ export interface TrackData {
   path: TrackPath | null; // the route's centerline, from the `route` marker; null on tracks without one
 }
 
+/**
+ * Checkpoint gates reach at least this high above their base, m, so no jump clears one and costs a lap. On Happy
+ * Valley balls cross the Lion Shrine gates up to 8 m up at normal speed, and 15 m at 1.6× speed; nothing passes overhead.
+ */
+export const GATE_MIN_HEIGHT = 30;
+
+/**
+ * A checkpoint gate's box from its Empty (scale = half-extents), stretched up to GATE_MIN_HEIGHT with its base where
+ * it was. Local mode's lap timer uses the same box.
+ */
+export function gateBox(
+  pos: Vec3,
+  rot: Quat,
+  scale: Vec3,
+): { center: Vec3; halfExtents: Vec3 } {
+  const [sx, sy, sz] = scale.map((s) => Math.max(Math.abs(s), 0.01));
+  const hy = Math.max(sy, GATE_MIN_HEIGHT / 2);
+  const up = vec3.transformQuat(vec3.create(), [0, hy - sy, 0], rot);
+  return {
+    center: [pos[0] + up[0], pos[1] + up[1], pos[2] + up[2]],
+    halfExtents: [sx, hy, sz],
+  };
+}
+
 /** M0 test ground: half-size of the flat square, in meters. Its top surface is at y = 0. */
 export const FLAT_GROUND_HALF_SIZE = 50;
 
@@ -120,7 +144,11 @@ export async function loadTrack(
           index: Number(extras.index),
           section: String(extras.section ?? ""),
           pos,
-          collider: addGate(world, node).handle,
+          collider: addGate(
+            world,
+            node,
+            gateBox(pos, rot, node.getWorldScale() as Vec3),
+          ).handle,
         });
         break;
       case "respawn":
@@ -287,12 +315,19 @@ function headingOf(rot: Quat): number {
   return Math.atan2(fwd[0], fwd[2]);
 }
 
-/** A sensor box from an Empty with Cube display, size 1: its scale is the half-extents. */
-function addGate(world: RAPIER.World, node: Node): RAPIER.Collider {
-  const [sx, sy, sz] = node
-    .getWorldScale()
-    .map((s) => Math.max(Math.abs(s), 0.01));
-  const [x, y, z] = node.getWorldTranslation();
+/** A sensor box from an Empty with Cube display, size 1: its scale is the half-extents (or `box`, for a checkpoint). */
+function addGate(
+  world: RAPIER.World,
+  node: Node,
+  box = {
+    center: node.getWorldTranslation() as Vec3,
+    halfExtents: node
+      .getWorldScale()
+      .map((s) => Math.max(Math.abs(s), 0.01)) as Vec3,
+  },
+): RAPIER.Collider {
+  const [sx, sy, sz] = box.halfExtents;
+  const [x, y, z] = box.center;
   const [qx, qy, qz, qw] = node.getWorldRotation();
   return world.createCollider(
     RAPIER.ColliderDesc.cuboid(sx, sy, sz)

@@ -10,6 +10,7 @@ import {
 import {
   createFlatRace,
   createRace,
+  gateBox,
   HAPPY_VALLEY_GROUND,
   HAPPY_VALLEY_INTERACTABLES,
   KeyboardInput,
@@ -343,15 +344,22 @@ async function timingGates(bytes: Uint8Array): Promise<TimingGate[]> {
     .getRoot()
     .listNodes()
     .filter((node) => node.getExtras().rb === "checkpoint")
-    .map((node) => ({
-      index: Number(node.getExtras().index),
-      section: String(node.getExtras().section ?? ""),
-      position: node.getWorldTranslation(),
-      rotation: node.getWorldRotation(),
-      halfExtents: node
-        .getWorldScale()
-        .map(Math.abs) as TimingGate["halfExtents"],
-    }));
+    .map((node) => {
+      const rotation = node.getWorldRotation();
+      // the same tall box as the race's gate, so a jump can't skip it here either
+      const box = gateBox(
+        node.getWorldTranslation(),
+        rotation,
+        node.getWorldScale(),
+      );
+      return {
+        index: Number(node.getExtras().index),
+        section: String(node.getExtras().section ?? ""),
+        position: box.center,
+        rotation,
+        halfExtents: box.halfExtents,
+      };
+    });
 }
 
 /**

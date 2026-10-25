@@ -148,7 +148,8 @@ Nothing right now. Add new questions here.
   - `standings()` gives place, lap, last checkpoint, `finishedAt` and `progress` (m along the race, measured on the route), with `lap` and `finish` events. Rasim: copy them into the player schema and route the events to pads
 - [x] Race phases in `game-core`: lobby, countdown (inputs ignored), racing, results; `start(countdownMs, laps)` takes the lap count
   - `results` starts when everyone is in, or `finishGraceSeconds` (30 s) after the winner. Finished balls ignore input and roll to a stop
-- [ ] Ball-to-ball collisions that feel good; emit `bump` (with strength) and `overtake` (with section) events
+- [x] Ball-to-ball collisions that feel good; emit `bump` (with strength) and `overtake` (with section) events
+  - One `bump` per hit (over 50 N, strength = force / 600 N, 0.25 s cooldown per pair) and `overtake` once a racer is 1 m clear, with the section. The collision physics is unchanged (equal masses, restitution 0.3): judge the feel at the next playtest and tune `bump*` / restitution then
 - [x] `botInput()` for Rasim's bots
   - Follows the route at full gas, braking only into sharp turns: a bot laps Happy Valley in 65 s with no respawns (a test)
 - [ ] Own-ball extrapolation in the player view (with Rasim)

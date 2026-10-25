@@ -454,6 +454,13 @@ How it works:
 - `results`: freeze inputs, and let balls roll to a stop.
 
 ### Collisions and bump events
+
+**Done** (`race.ts`, tested in `rules.test.ts`):
+- **Bump:** ball colliders report contact forces over `bumpForceMin` (50 N); a ball-to-ball one becomes `{ type: "bump", a, b, strength }` with `strength = force / bumpBigHit` (600 N), at most once per pair per `bumpCooldown` (0.25 s). Measured: a 12 m/s rear-end hit is about 370 N (strength 0.6), and pushing contact stays under 20 N, so it never counts. Contact with the track never counts.
+- **Overtake:** the race keeps the unfinished racers in order and emits `{ type: "overtake", player, passed, section }` when one gets `overtakeGap` (1 m) ahead of the racer in front, with the section of the overtaker's last gate. The gap stops side-by-side balls from flickering.
+- **Feel:** the physics is unchanged (equal masses, restitution 0.3). Try `setRestitution(0.5)` at the next playtest if bumps feel flat; it also makes landings a little bouncier.
+
+Notes:
 - Ball-to-ball: `setRestitution(0.5)` feels bouncy. Use the same mass for every ball, unless an item changes it.
 - Set a contact force threshold on ball colliders (`setContactForceEventThreshold`). Then in `q.drainContactForceEvents(e => ...)`, emit `bump` with `strength = clamp(e.totalForceMagnitude() / BIG_HIT, 0, 1)` for both balls.
 - **Overtake:** compare the standings order with the previous tick. Emit `overtake` with the section of the checkpoint where it happened.

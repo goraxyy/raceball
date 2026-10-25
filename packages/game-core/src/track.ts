@@ -1,6 +1,7 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import type { Node, PlatformIO } from "@gltf-transform/core";
 import { vec3 } from "gl-matrix";
+import { makePath, type TrackPath } from "./path";
 
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number];
@@ -52,6 +53,7 @@ export interface TrackData {
   boosts: BoostPad[];
   surfaces: Surface[];
   cameras: CameraSpot[];
+  path: TrackPath | null; // the route's centerline, from the `route` marker; null on tracks without one
 }
 
 /** M0 test ground: half-size of the flat square, in meters. Its top surface is at y = 0. */
@@ -159,6 +161,22 @@ export async function loadTrack(
       case "camera":
         track.cameras.push({ section: String(extras.section ?? ""), pos, rot });
         break;
+      case "route": {
+        // x, z pairs in the node's space, flattened: [x0, z0, x1, z1, …]
+        const flat = Array.isArray(extras.points) ? extras.points : [];
+        const m = node.getWorldMatrix();
+        const points: [number, number][] = [];
+        for (let i = 0; i + 1 < flat.length; i += 2) {
+          const p = vec3.transformMat4(
+            vec3.create(),
+            [Number(flat[i]), 0, Number(flat[i + 1])],
+            m,
+          );
+          points.push([p[0], p[2]]);
+        }
+        if (points.length >= 2) track.path = makePath(points);
+        break;
+      }
       default:
         // plain collision mesh (a *_col object); optional friction / restitution custom properties
         for (const verts of worldVertices(node)) {
@@ -208,6 +226,7 @@ function emptyTrack(): TrackData {
     boosts: [],
     surfaces: [],
     cameras: [],
+    path: null,
   };
 }
 

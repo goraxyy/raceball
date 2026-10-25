@@ -31,6 +31,8 @@ export interface Race {
   standings(): Standing[]; // id, place, lap, checkpoint, finishedAt
   readonly phase: Phase;
   readonly laps: number;
+  /** The route's centerline as [x, z] points from the finish line, for the big-screen map; [] without a route */
+  readonly path: [number, number][];
   // bots, for Rasim's fill-up and load tests:
   botInput(id: string): InputMsg; // steer toward the next checkpoint, full gas
   dispose(): void; // frees the Rapier world (room disposed, page left)
@@ -74,6 +76,7 @@ interface Racer extends PlayerSim {
 class TrackRace implements Race {
   phase: Phase = "lobby";
   laps: number;
+  readonly path: [number, number][];
   private readonly world: RAPIER.World;
   private readonly track: TrackData;
   private readonly t: Tuning;
@@ -94,6 +97,7 @@ class TrackRace implements Race {
     this.track = track;
     this.t = t;
     this.laps = cfg.laps;
+    this.path = track.path?.points ?? [];
     track.checkpoints.forEach((c, i) => this.gateOrder.set(c.collider, i));
   }
 

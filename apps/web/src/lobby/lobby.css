@@ -1,17 +1,5 @@
-/* Host-only race controls over the 3D view. Nuris can restyle them to match the HUD. */
-/* top center: the seam between the split-screen views, clear of every name plate and the race board */
-.host-race-buttons {
-  position: fixed;
-  top: 12px;
-  left: 50%;
-  z-index: 20;
-  display: flex;
-  gap: 8px;
-  transform: translateX(-50%);
-}
-
-.host-rematch,
-.host-view-toggle {
+/* Host-only race controls: they sit on the race board (HostBoard's controls), off every player's view */
+.host-rematch {
   padding: 6px 12px;
   font:
     800 14px system-ui,

@@ -2,24 +2,19 @@ import {
   type AbstractEngine,
   ArcRotateCamera,
   type Camera,
-  Color3,
-  DynamicTexture,
   Engine,
-  Mesh,
-  MeshBuilder,
   type Observer,
   Scene,
-  StandardMaterial,
   Vector3,
   Viewport,
 } from "@babylonjs/core";
-import { MAX_PLAYERS, PLAYER_COLORS } from "@raceball/shared";
-import type { BallLook, BallPose } from "./balls";
+import { MAX_PLAYERS } from "@raceball/shared";
+import type { BallPose } from "./balls";
 import { DriverCamera } from "./cameras";
 
 /** Split-screen views on the big screen: one per player */
 export const MAX_TILES = MAX_PLAYERS;
-/** Below this fps for LOW_FPS_SECONDS, the split screen draws at a lower resolution, then gives way to the overview */
+/** Below this fps for LOW_FPS_SECONDS, the split screen draws at a lower resolution (it never gives way to the overview) */
 export const MIN_FPS = 30;
 const LOW_FPS_SECONDS = 3;
 /** Right after the tiles change (new render passes, shader compiles) the fps doesn't count, s */
@@ -28,16 +23,14 @@ const FPS_GRACE = 3;
 const HITCH = 0.25;
 /** How long the frame time is averaged over, s */
 const FPS_WINDOW = 0.5;
-/** Hardware scaling levels the split screen steps through before giving up: 1 = full resolution, 2 = half */
-export const RESOLUTION_STEPS = [1, 1.5, 2] as const;
+/** Hardware scaling levels the split screen steps down through: 1 = full resolution, 2 = half */
+export const RESOLUTION_STEPS = [1, 1.25, 1.5, 2, 2.5] as const;
 /** Overview framing: the camera backs off this much per metre of pack spread, plus a margin, m */
 const PACK_ZOOM = 1.2;
 const PACK_MARGIN = 30;
 const PACK_MIN_RADIUS = 45;
 /** How fast the overview follows the pack (per second) */
 const PACK_FOLLOW = 1.5;
-/** Name tag height as a share of the camera distance, so tags read the same at any zoom */
-const TAG_SCALE = 0.035;
 
 /** A tile's view in CSS pixels from the canvas's top left, as the DOM measures it */
 export interface TileRect {
@@ -47,36 +40,27 @@ export interface TileRect {
   height: number;
 }
 
-/** Who a ball belongs to, for the split screen and name tags */
+/** Who gets a view on the split screen */
 export interface BigScreenPlayers {
   /** Every player in join order: each gets a split-screen view */
   readonly all: readonly string[];
-  /** Phone-only players in join order */
-  readonly phoneOnly: readonly string[];
-  name(id: string): string | undefined;
-  look(id: string): BallLook | undefined;
 }
 
 /**
  * Every tile draws the scene again, so this is the safety valve: one slow projector laptop shouldn't make the whole
  * race stutter. When the frame rate (measured from the frame times) stays under MIN_FPS for LOW_FPS_SECONDS, it asks
- * for the next lower resolution (RESOLUTION_STEPS), and only once the lowest is still too slow does it trip.
- * One-off stalls and a hidden page don't count: they say nothing about how fast the screen can draw.
+ * for the next lower resolution (RESOLUTION_STEPS). At the lowest it stays: every player keeps their own view for
+ * the whole race. One-off stalls and a hidden page don't count: they say nothing about how fast the screen can draw.
  */
 export class FpsGuard {
-  tripped = false;
   /** Index into RESOLUTION_STEPS */
   step = 0;
-  /** The host brought the split screen back by hand: never trip again */
-  disabled = false;
   private low = 0;
   private grace = FPS_GRACE;
   private frameTime = 1 / 60;
 
-  /** Call every frame while tiles draw: "lower" = draw at RESOLUTION_STEPS[step], "trip" = give up on the tiles */
-  update(dt: number, hidden = false): "keep" | "lower" | "trip" {
-    if (this.tripped) return "trip";
-    if (this.disabled) return "keep";
+  /** Call every frame while tiles draw: "lower" = draw at RESOLUTION_STEPS[step] from now on */
+  update(dt: number, hidden = false): "keep" | "lower" {
     if (hidden) {
       this.restart(); // a hidden page barely draws; judge it afresh once it's back
       return "keep";
@@ -88,26 +72,17 @@ export class FpsGuard {
       return "keep";
     }
     this.low = 1 / this.frameTime < MIN_FPS ? this.low + dt : 0;
-    if (this.low < LOW_FPS_SECONDS) return "keep";
-    if (this.step + 1 < RESOLUTION_STEPS.length) {
-      this.step++;
-      this.restart();
-      return "lower";
-    }
-    this.tripped = true;
-    return "trip";
+    if (this.low < LOW_FPS_SECONDS || this.step + 1 >= RESOLUTION_STEPS.length)
+      return "keep";
+    this.step++;
+    this.restart();
+    return "lower";
   }
 
   /** The tiles changed: wait out the grace period again before judging */
   restart(): void {
     this.grace = FPS_GRACE;
     this.low = 0;
-  }
-
-  /** The host wants the split screen back after a trip: keep it, at the lowest resolution */
-  override(): void {
-    this.tripped = false;
-    this.disabled = true;
   }
 }
 
@@ -138,24 +113,19 @@ interface Tile {
 }
 
 /**
- * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player (up to MAX_TILES), each drawn
- * into the frame the page lays out on top of the canvas (`setRects`). If the fps can't take a render pass per
- * player, the split screen goes for good and the overview frames the pack, with a name tag on every ball.
- * The host can also switch to that global view by hand (`setGlobal`) and back.
+ * The big screen's cameras: a split screen with a driver's view (just behind the ball) for every player (up to
+ * MAX_TILES), each drawn into the frame the page lays out on top of the canvas (`setRects`). It never switches to a
+ * global view during the race: a slow screen draws the views at a lower resolution instead (FpsGuard). The
+ * overview, framing the pack, only fills the screen while no player has a view yet.
  */
 export class BigScreen {
   /** Players with a tile now, in order. The page draws a frame for each and reports its rect */
   tileIds: string[] = [];
-  /** True once the tiles fell back to name tags */
-  nameTags = false;
-  /** The host picked the global view: the overview with name tags instead of the split screen */
-  global = false;
   private readonly scene: Scene;
   private readonly overview: ArcRotateCamera;
   private readonly guard = new FpsGuard();
   private readonly tiles = new Map<string, Tile>();
   private rects = new Map<string, TileRect>();
-  private tags = new Map<string, { mesh: Mesh; key: string }>();
   private maxRadius = Infinity;
   private drawnKey = "";
   private readonly clearTile: Observer<Camera>;
@@ -176,25 +146,6 @@ export class BigScreen {
     });
   }
 
-  /**
-   * Global view (true) or split screen (false). The next update() swaps the tiles. Asking for the split screen after
-   * the fps guard gave up on it brings it back for good: the host can see whether it's smooth enough
-   */
-  setGlobal(on: boolean): void {
-    this.global = on;
-    if (!on && this.nameTags) {
-      this.nameTags = false;
-      this.guard.override();
-    }
-    this.guard.restart(); // the render passes change: judge the fps afresh
-    this.applyResolution();
-  }
-
-  /** True while the overview is what's on screen: picked by the host, or forced by a low fps */
-  get overviewShown(): boolean {
-    return this.nameTags || this.global;
-  }
-
   /** The map's size caps how far back the overview goes */
   fitMap(radius: number): void {
     this.maxRadius = radius;
@@ -206,7 +157,7 @@ export class BigScreen {
     this.applyCameras();
   }
 
-  /** Once per frame. Returns true when the tiles or name tags changed, so the page can redraw its frames */
+  /** Once per frame. Returns true when the tiles changed, so the page can redraw its frames */
   update(
     poses: Map<string, BallPose>,
     players: BigScreenPlayers,
@@ -214,21 +165,11 @@ export class BigScreen {
   ): boolean {
     this.frame(poses, dt);
     let changed = false;
-    if (
-      !this.overviewShown &&
-      this.tileIds.some((id) => this.tiles.get(id)?.drawn)
-    ) {
+    if (this.tileIds.some((id) => this.tiles.get(id)?.drawn)) {
       const hidden = typeof document !== "undefined" && document.hidden;
-      const verdict = this.guard.update(dt, hidden);
-      if (verdict === "lower") this.applyResolution();
-      if (verdict === "trip") {
-        this.nameTags = true;
-        changed = true;
-      }
+      if (this.guard.update(dt, hidden) === "lower") this.applyResolution();
     }
-    const want = this.overviewShown
-      ? []
-      : players.all.filter((id) => poses.has(id)).slice(0, MAX_TILES);
+    const want = players.all.filter((id) => poses.has(id)).slice(0, MAX_TILES);
     if (want.join() !== this.tileIds.join()) {
       this.setTiles(want);
       changed = true;
@@ -237,14 +178,11 @@ export class BigScreen {
       const pose = poses.get(id)!;
       this.tiles.get(id)!.eye.follow(Vector3.FromArray(pose.p), pose.h, dt);
     }
-    if (this.overviewShown) this.syncTags(poses, players);
-    else this.clearTags();
     return changed;
   }
 
   dispose(): void {
     this.setTiles([]);
-    this.clearTags();
     this.scene.onBeforeCameraRenderObservable.remove(this.clearTile);
   }
 
@@ -312,97 +250,4 @@ export class BigScreen {
     if (engine.getHardwareScalingLevel() !== this.resolution)
       engine.setHardwareScalingLevel(this.resolution);
   }
-
-  private clearTags(): void {
-    for (const tag of this.tags.values()) disposeTag(tag.mesh);
-    this.tags.clear();
-  }
-
-  /** A billboard over each ball with the player's name, sized by distance so it reads the same at any zoom */
-  private syncTags(
-    poses: Map<string, BallPose>,
-    players: BigScreenPlayers,
-  ): void {
-    for (const [id, tag] of this.tags) {
-      if (poses.has(id)) continue;
-      disposeTag(tag.mesh);
-      this.tags.delete(id);
-    }
-    const eye = this.overview.position;
-    for (const [id, pose] of poses) {
-      const name = players.name(id) ?? "";
-      const color = players.look(id)?.color ?? 0;
-      const key = `${name}|${color}`;
-      let tag = this.tags.get(id);
-      if (tag?.key !== key) {
-        if (tag) disposeTag(tag.mesh);
-        tag = { mesh: makeTag(this.scene, id, name, color), key };
-        this.tags.set(id, tag);
-      }
-      const ball = Vector3.FromArray(pose.p);
-      const scale = Vector3.Distance(eye, ball) * TAG_SCALE;
-      tag.mesh.scaling.setAll(scale);
-      tag.mesh.position.set(ball.x, ball.y + 1 + scale * 0.6, ball.z);
-    }
-  }
-}
-
-const TAG_W = 512;
-const TAG_H = 128;
-
-/** A paper plate with an ink outline, a dot in the player color and the name, like the lobby's name plates */
-function makeTag(scene: Scene, id: string, name: string, color: number): Mesh {
-  const tex = new DynamicTexture(
-    `tag-${id}`,
-    { width: TAG_W, height: TAG_H },
-    scene,
-    true,
-  );
-  tex.hasAlpha = true;
-  const ctx = tex.getContext() as CanvasRenderingContext2D;
-  ctx.clearRect(0, 0, TAG_W, TAG_H);
-  ctx.fillStyle = "#17151f";
-  ctx.beginPath();
-  ctx.roundRect?.(6, 6, TAG_W - 12, TAG_H - 12, 24);
-  ctx.fill();
-  ctx.fillStyle = "#f3ead9";
-  ctx.beginPath();
-  ctx.roundRect?.(14, 14, TAG_W - 28, TAG_H - 28, 18);
-  ctx.fill();
-  ctx.fillStyle = PLAYER_COLORS[color] ?? PLAYER_COLORS[0];
-  ctx.beginPath();
-  ctx.arc(TAG_H / 2 + 4, TAG_H / 2, 30, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#17151f";
-  ctx.font = "italic 900 64px Barlow, system-ui, sans-serif";
-  ctx.textBaseline = "middle";
-  ctx.fillText(
-    name.toUpperCase(),
-    TAG_H + 8,
-    TAG_H / 2 + 4,
-    TAG_W - TAG_H - 30,
-  );
-  tex.update();
-
-  const mat = new StandardMaterial(`tag-${id}`, scene);
-  mat.diffuseTexture = tex;
-  mat.emissiveColor = Color3.White();
-  mat.disableLighting = true;
-  mat.useAlphaFromDiffuseTexture = true;
-  mat.backFaceCulling = false;
-  const mesh = MeshBuilder.CreatePlane(
-    `tag-${id}`,
-    { width: TAG_W / TAG_H, height: 1 },
-    scene,
-  );
-  mesh.material = mat;
-  mesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
-  mesh.renderingGroupId = 1; // drawn after the world, so walls and hills never hide a name
-  mesh.isPickable = false;
-  return mesh;
-}
-
-function disposeTag(mesh: Mesh): void {
-  mesh.material?.dispose(true, true);
-  mesh.dispose();
 }

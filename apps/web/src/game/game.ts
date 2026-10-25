@@ -43,8 +43,6 @@ export interface Game {
   toggleOverview(): void;
   /** Host: where the page drew each follow-cam tile's frame */
   setTileRects(rects: Map<string, TileRect>): void;
-  /** Host: the global view (overview of the whole map) instead of the split screen */
-  setGlobalView(on: boolean): void;
   dispose(): void;
 }
 
@@ -56,10 +54,6 @@ export interface GameStatus {
   stats?: LocalStats;
   /** Host: players with a follow-cam tile, in order (the page draws a frame for each) */
   tiles?: string[];
-  /** Host: the fps fell short, so the tiles became name tags */
-  nameTags?: boolean;
-  /** Host: the global view is on, picked by the host */
-  globalView?: boolean;
 }
 
 interface GameOptions {
@@ -452,8 +446,6 @@ export function createGame(
       if (big && net) {
         if (big.update(poses, net, dt)) {
           status.tiles = big.tileIds;
-          status.nameTags = big.nameTags;
-          status.globalView = big.global;
           publish();
         }
       }
@@ -470,9 +462,6 @@ export function createGame(
     toggleOverview,
     setTileRects(rects) {
       big?.setRects(rects);
-    },
-    setGlobalView(on) {
-      big?.setGlobal(on);
     },
     dispose() {
       if (disposed) return;

@@ -3,12 +3,24 @@
  * Click-through, so it never blocks the host's buttons. Grid size comes from splitGrid().
  */
 .split-screen {
+  --board-width: clamp(240px, 22vw, 380px);
   position: fixed;
   inset: 0;
   display: grid;
   gap: 8px;
   padding: 8px;
   pointer-events: none;
+}
+
+/* the race board's own cell or column: ink behind it, like the gaps between views */
+.split-screen .board-slot {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ink, #17151f);
+  box-shadow: 0 0 0 8px var(--ink, #17151f);
 }
 
 /* the tiles fill their cells instead of the small follow-cam size */
@@ -41,8 +53,7 @@
   font-size: clamp(24px, 3vw, 44px);
 }
 
-/* each player's wheel indicator, just above their name plate: the ball fills the bottom center, and the race board
-   and the host's buttons cover the corners where the views meet */
+/* each player's wheel indicator, just above their name plate: the ball fills the bottom center */
 .split-screen .steer-wheel {
   position: absolute;
   left: 22px;
@@ -59,27 +70,36 @@
 }
 
 /*
- * The race board: the live map and the timing tower. In the split screen it sits in the middle, where the views
- * meet, like a kart game's center map; in the global view it moves to the right.
+ * The race board: the live map and the timing tower. In the split screen it fills its own cell or column of the
+ * grid (never over a view); before any view is up it sits at the right.
  */
 .host-board {
-  position: fixed;
   z-index: 3;
   display: grid;
+  align-content: start;
   gap: 8px;
-  width: clamp(220px, 22vw, 360px);
   pointer-events: none;
 }
 
-.host-board[data-layout="center"] {
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+.host-board[data-layout="slot"] {
+  width: min(100%, 380px);
+  max-height: 100%;
+  padding: 10px;
+  overflow: hidden;
 }
 
 .host-board[data-layout="side"] {
+  position: fixed;
   right: 16px;
   top: 16px;
+  width: clamp(220px, 22vw, 360px);
+}
+
+.host-board-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: auto;
 }
 
 .host-board .map-card {
@@ -88,6 +108,11 @@
 
 .host-board .track-map {
   max-height: 30vh;
+}
+
+/* in a grid cell (half the screen's height) the map shares the room with the tower */
+.split-screen[data-board="cell"] .host-board .track-map {
+  max-height: 20vh;
 }
 
 /* a compact timing tower: up to 8 rows next to the map */

@@ -41,6 +41,20 @@ export const tuning = {
   boostSeconds: 1.5, // how long the raised top speed lasts
   snowDrag: 0.6, // extra slowing on snow, like a light brake (higher = slower)
 
+  // Items (odds by place are ITEM_ODDS in items.ts)
+  itemBoxSize: 0.8, // m, half the size of an item box's pickup volume
+  itemBoxRespawn: 5, // s an item box stays hidden after a ball hits it
+  itemBoostSpeed: 8, // m/s the Blue & White Boost adds along the heading (top speed rises as for a pad)
+  roarRadius: 6, // m around the roarer that the Lion Roar reaches
+  roarSpeed: 12, // m/s of push away from the roarer at point blank, fading to 0 at roarRadius
+  roarLift: 2, // m/s of hop at point blank
+  spillBehind: 2, // m behind the ball where the Creamery Spill lands
+  spillRadius: 2, // m
+  spillSeconds: 10, // how long a puddle stays
+  spillGrip: 0.2, // grip inside a puddle (like the Creamery's own puddles)
+  snowDaySpeedMul: 0.7, // top speed multiplier for everyone ahead of a Snow Day
+  snowDaySeconds: 3,
+
   // Keyboard adapter (local mode only)
   keySteerRate: 4, // steer units per second while A/D is held
   keyReturnRate: 6, // steer units per second back toward 0 when released or reversed

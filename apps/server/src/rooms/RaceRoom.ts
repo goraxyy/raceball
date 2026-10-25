@@ -27,7 +27,7 @@ import {
 import { claimRoomCode, releaseRoomCode } from "./room-code";
 import { inputForStep } from "./stale-input";
 import { trackBytes } from "./track-file";
-import { PlayerState, RaceState } from "./schema";
+import { ItemBox, PlayerState, Puddle, RaceState } from "./schema";
 
 const ROLES: readonly Role[] = ["host", "viewer", "pad"];
 const MAX_NAME = 16;
@@ -94,6 +94,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       laps: this.state.laps,
     });
     this.state.phase = this.race.phase; // lobby: balls wait on the grid until the host starts
+    this.syncItemBoxes();
     this.onMessage("hello", (client) => {
       const seat = this.seats.get(client.sessionId);
       if (!seat?.playerId) return;
@@ -255,6 +256,8 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     }
     if (!stepped) return;
     this.syncPhase();
+    this.syncItemBoxes();
+    this.syncPuddles();
     const events = this.race.drainEvents();
     for (const evt of events) {
       this.sendToScreens("evt", evt); // screens show every event (VFX, standings)
@@ -281,6 +284,42 @@ export class RaceRoom extends Room<{ state: RaceState }> {
         () => void this.rematch(),
         RESULTS_MS,
       );
+    }
+  }
+
+  /** Item boxes come from the track; during a race only their active flags change */
+  private syncItemBoxes() {
+    const boxes = this.race.itemBoxes();
+    const synced = this.state.itemBoxes;
+    if (synced.length !== boxes.length) {
+      synced.clear();
+      for (const b of boxes) {
+        const box = new ItemBox();
+        box.id = b.id;
+        [box.x, box.y, box.z] = b.pos;
+        box.active = b.active;
+        synced.push(box);
+      }
+      return;
+    }
+    boxes.forEach((b, i) => {
+      if (synced[i].active !== b.active) synced[i].active = b.active;
+    });
+  }
+
+  /** Creamery Spill puddles come and go; resend the list when it changes */
+  private syncPuddles() {
+    const puddles = this.race.puddles();
+    const synced = this.state.puddles;
+    const ids = (list: { id: string }[]) => list.map((d) => d.id).join();
+    if (ids(puddles) === ids([...synced])) return;
+    synced.clear();
+    for (const d of puddles) {
+      const puddle = new Puddle();
+      puddle.id = d.id;
+      [puddle.x, puddle.y, puddle.z] = d.pos;
+      puddle.radius = d.radius;
+      synced.push(puddle);
     }
   }
 
@@ -351,6 +390,8 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       });
       this.race.dispose();
       this.race = race;
+      this.syncItemBoxes();
+      this.syncPuddles();
       this.state.players.forEach((p, id) => {
         race.addPlayer(id, p.ball);
         p.ready = p.bot;

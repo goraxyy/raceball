@@ -57,6 +57,16 @@
   font-size: 11px;
 }
 
+.local-hud .local-item {
+  margin: 0.4rem 0 0;
+  font-weight: 700;
+}
+
+.local-hud .local-item[data-item=""] {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
 .local-hud .local-lap-info {
   margin: 0 0 17px;
   color: #c6d3e6;

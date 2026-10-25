@@ -19,6 +19,7 @@ import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
 import { BallViews, type BallFeed } from "./balls";
 import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera } from "./cameras";
+import { ItemViews } from "./items";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { NetFeed, type SnapshotSource } from "./net-feed";
 
@@ -90,6 +91,7 @@ export function createGame(
 
   if (map === "flat") createFlatGround(scene);
   const balls = new BallViews(scene, shadows);
+  const items = new ItemViews(scene);
   const chase = new ChaseCamera(scene);
   scene.activeCamera = chase.camera;
   const overview = new ArcRotateCamera(
@@ -287,6 +289,23 @@ export function createGame(
       balls.sync(poses, (id) => feed?.look?.(id));
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
+      if (local) items.sync(local.itemBoxes(), local.puddles());
+      else if (options.session) {
+        const { itemBoxes = [], puddles = [] } = options.session.state;
+        items.sync(
+          itemBoxes.map((b) => ({
+            id: b.id,
+            pos: [b.x, b.y, b.z],
+            active: b.active,
+          })),
+          puddles.map((d) => ({
+            id: d.id,
+            pos: [d.x, d.y, d.z],
+            radius: d.radius,
+          })),
+        );
+      }
+      items.update(dt);
       if (big && net) {
         const fps = scene.getEngine().getFps();
         if (big.update(poses, net, dt, fps)) {
@@ -321,6 +340,7 @@ export function createGame(
       container = undefined;
       big?.dispose();
       balls.dispose();
+      items.dispose();
       overview.dispose();
       chase.camera.dispose();
       shadows.dispose();

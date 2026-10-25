@@ -91,6 +91,7 @@ function mesh(doc: Document, buffer: Buffer, pos: number[], idx: number[]) {
  * - wall: a solid wall across the road at x = 12, between gates 1 and 2
  * - swapGates: gates 1 and 2 trade places, so a ball crosses them out of order
  * - surface: a surface volume over the road from x = -4 to 24, covering the grid
+ * - itemsAt: extra item boxes at these [x, z] spots on the road (grid slot 1 is at [-3, -1.5])
  * A power-2 boost pad across the road at x = 20 faces +X.
  */
 async function syntheticTrack(
@@ -100,6 +101,7 @@ async function syntheticTrack(
     swapGates?: boolean;
     route?: boolean;
     surface?: { kind: string; grip: number };
+    itemsAt?: [number, number][];
   } = {},
 ): Promise<Uint8Array> {
   const doc = new Document();
@@ -155,6 +157,9 @@ async function syntheticTrack(
     );
   }
   add("item_1", { rb: "item" }, (n) => n.setTranslation([12, 0, 4]));
+  opts.itemsAt?.forEach(([x, z], i) =>
+    add(`item_test_${i}`, { rb: "item" }, (n) => n.setTranslation([x, 0, z])),
+  );
   add("boost_1", { rb: "boost", power: 2 }, (n) =>
     n.setTranslation([20, 0, 0]).setScale([3, 1, 1]).setRotation(FACE_PLUS_X),
   );
@@ -441,6 +446,129 @@ describe("section mechanics", () => {
     // measured after 1 s of gas: about 18 m/s on the road, 14.3 on snow
     expect(snow).toBeLessThan(road - 2);
     expect(iceCream).toBeCloseTo(road, 0);
+  });
+});
+
+describe("items", () => {
+  const races: Race[] = [];
+  afterEach(() => {
+    for (const r of races.splice(0)) r.dispose();
+  });
+
+  /** "me" in grid slot 1 (-3, -1.5) and optionally "you" in slot 2 (-6, 1.5), both facing +X */
+  async function race(
+    opts: Parameters<typeof syntheticTrack>[0],
+    random: number,
+    two = false,
+  ) {
+    const r = await createRace(await syntheticTrack(opts), new NodeIO(), {
+      laps: 1,
+      random: () => random,
+    });
+    races.push(r);
+    r.addPlayer("me", "earth");
+    if (two) r.addPlayer("you", "mars");
+    r.start(0, 1);
+    return r;
+  }
+
+  const ball = (r: Race, id = "me") =>
+    r.snapshot(0, 0).balls.find((b) => b.id === id)!;
+  const flatSpeed = (v: number[]) => Math.hypot(v[0], v[2]);
+  const held = (r: Race, id = "me") =>
+    r.standings().find((s) => s.id === id)!.item;
+
+  function step(r: Race, inputs: Record<string, InputMsg> = {}) {
+    for (const [id, input] of Object.entries(inputs)) r.setInput(id, input);
+    r.step(TICK_DT);
+    return r.drainEvents();
+  }
+  function run(
+    r: Race,
+    seconds: number,
+    inputs: Record<string, InputMsg> = {},
+  ) {
+    for (let i = 0; i < Math.round(seconds / TICK_DT); i++) step(r, inputs);
+  }
+  const FIRE: InputMsg = { ...NEUTRAL_INPUT, item: true };
+  const GAS: InputMsg = { ...NEUTRAL_INPUT, gas: 1 };
+
+  it("an item box gives one item by place, then hides for itemBoxRespawn", async () => {
+    // the leader's row is boost 20 / roar 40 / spill 40, so random 0 draws a boost
+    const r = await race({ itemsAt: [[-3, -1.5]] }, 0);
+    expect(step(r)).toContainEqual({
+      type: "item",
+      player: "me",
+      item: "boost",
+    });
+    expect(held(r)).toBe("boost");
+    const test = () => r.itemBoxes().find((b) => b.pos[0] === -3)!;
+    expect(r.itemBoxes()).toHaveLength(2); // the track's own box at (12, 4) too
+    expect(test().active).toBe(false);
+    run(r, tuning.itemBoxRespawn - 0.1);
+    expect(test().active).toBe(false);
+    run(r, 0.2);
+    expect(test().active).toBe(true);
+  });
+
+  it("Boost fires once, along the heading", async () => {
+    const r = await race({ itemsAt: [[-3, -1.5]] }, 0);
+    step(r);
+    const events = step(r, { me: FIRE });
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: "fire", player: "me", item: "boost" }),
+    );
+    expect(held(r)).toBeNull();
+    const b = ball(r);
+    expect(b.v[0]).toBeGreaterThan(tuning.itemBoostSpeed * 0.6); // the grid faces +X
+    expect(Math.abs(b.v[2])).toBeLessThan(0.5);
+    expect(step(r, { me: FIRE }).some((e) => e.type === "fire")).toBe(false);
+  });
+
+  it("Lion Roar knocks nearby balls away from the roarer", async () => {
+    // two players: the leader's row again, and 0.3 lands in roar (20 … 60)
+    const r = await race({ itemsAt: [[-3, -1.5]] }, 0.3, true);
+    step(r);
+    expect(held(r)).toBe("roar");
+    step(r, { me: FIRE });
+    const you = ball(r, "you"); // 4.2 m away, up and to the left
+    expect(flatSpeed(you.v)).toBeGreaterThan(2);
+    expect(you.v[0]).toBeLessThan(0); // away from me, along -X …
+    expect(you.v[2]).toBeGreaterThan(0); // … and +Z
+    expect(flatSpeed(ball(r).v)).toBeLessThan(0.5); // the roarer isn't pushed
+  });
+
+  it("Creamery Spill leaves a puddle behind that dries up after spillSeconds", async () => {
+    const r = await race({ itemsAt: [[-3, -1.5]] }, 0.7); // 60 … 100 is spill
+    step(r);
+    const fired = step(r, { me: FIRE }).find((e) => e.type === "fire");
+    expect(fired).toMatchObject({ item: "spill" });
+    const [puddle] = r.puddles();
+    expect(puddle.pos[0]).toBeCloseTo(-5, 0); // 2 m behind a ball facing +X
+    expect(puddle.pos[2]).toBeCloseTo(-1.5, 0);
+    expect(puddle.radius).toBe(tuning.spillRadius);
+    expect(fired).toMatchObject({ pos: puddle.pos });
+    run(r, tuning.spillSeconds - 0.1);
+    expect(r.puddles()).toHaveLength(1);
+    run(r, 0.2);
+    expect(r.puddles()).toHaveLength(0);
+  });
+
+  it("Snow Day slows everyone ahead for snowDaySeconds", async () => {
+    // "you" starts second of two, so the last row: boost 50 / roar 20 / snowday 30, and 0.9 is snowday
+    const r = await race({ itemsAt: [[-6, 1.5]] }, 0.9, true);
+    step(r);
+    expect(held(r, "you")).toBe("snowday");
+    step(r, { you: FIRE });
+    let mine = 0;
+    let yours = 0;
+    for (let i = 0; i < 1.5 / TICK_DT; i++) {
+      step(r, { me: GAS, you: GAS });
+      mine = Math.max(mine, flatSpeed(ball(r).v));
+      yours = Math.max(yours, flatSpeed(ball(r, "you").v));
+    }
+    expect(mine).toBeLessThan(tuning.maxSpeed * tuning.snowDaySpeedMul * 1.05);
+    expect(yours).toBeGreaterThan(tuning.maxSpeed * 0.9);
   });
 });
 

@@ -1,13 +1,15 @@
 import GUI from "lil-gui";
 import { WebIO } from "@gltf-transform/core";
-import type { SnapMsg } from "@raceball/shared";
+import type { ItemId, SnapMsg } from "@raceball/shared";
 import {
   createFlatRace,
   createRace,
   KeyboardInput,
   TICK_DT,
   tuning,
+  type ItemBoxState,
   type KeyState,
+  type PuddleState,
   type Race,
 } from "@raceball/game-core";
 import type { BallFeed, BallLook, BallPose } from "./balls";
@@ -29,6 +31,7 @@ export interface LocalStats {
   error: string | null;
   position: [number, number, number];
   heading: number;
+  item: ItemId | null; // held, fired with Space
 }
 
 const OWN_ID = "local";
@@ -79,6 +82,7 @@ export class LocalSession implements BallFeed {
     error: null,
     position: [0, 0, 0],
     heading: 0,
+    item: null,
   };
   private race: Race;
   private readonly makeRace: () => Promise<Race>;
@@ -160,10 +164,20 @@ export class LocalSession implements BallFeed {
     this.stats.section = this.timer.section;
     this.stats.lastLap = this.timer.lastLap;
     this.stats.bestLap = this.timer.bestLap;
+    this.stats.item =
+      this.race.standings().find((s) => s.id === OWN_ID)?.item ?? null;
     if (own) {
       this.stats.position = own.p;
       this.stats.heading = own.h;
     }
+  }
+
+  itemBoxes(): ItemBoxState[] {
+    return this.race.itemBoxes();
+  }
+
+  puddles(): PuddleState[] {
+    return this.race.puddles();
   }
 
   look(id: string): BallLook | undefined {
@@ -226,6 +240,7 @@ export class LocalSession implements BallFeed {
         section: "start",
         lastLap: null,
         bestLap: null,
+        item: null,
       });
     } catch (error) {
       if (!this.disposed)

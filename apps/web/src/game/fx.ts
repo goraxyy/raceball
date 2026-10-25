@@ -37,7 +37,12 @@ type FxFile =
   | "fx_spill_sprinkles"
   | "fx_snowfall"
   | "fx_snow_puff"
-  | "fx_confetti";
+  | "fx_confetti"
+  | "fx_pad_burst"
+  | "fx_scoop_sparkle"
+  | "fx_scoop_drop"
+  | "fx_paw_ring"
+  | "fx_paw_stars";
 type BurstFile = Exclude<
   FxFile,
   "fx_dust" | "fx_boost_flames" | "fx_boost_trail" | "fx_snowfall"
@@ -50,7 +55,8 @@ export type Anchor =
   | "contact" // where the two bumping balls touch
   | "behind" // where a fired item lands: the event's position, or 1.2 m behind the ball
   | "above" // 2.5 m over the ball
-  | "ahead"; // 6 m ahead on the road: a finisher rolls on into the confetti cannon
+  | "ahead" // 6 m ahead on the road: a finisher rolls on into the confetti cannon
+  | "pos"; // the event's own spot: the scoop collected, the paw that kicked (else the ball)
 
 export interface Burst {
   file: BurstFile;
@@ -92,7 +98,11 @@ export type CueName =
   | "boost"
   | "roar"
   | "spill"
-  | "snowday";
+  | "snowday"
+  | "pad"
+  | "scoop"
+  | "scoopDrop"
+  | "bounce";
 
 /** The table. Read a row as: when this happens, these particles go off here, this plays, this caption shows. */
 export const FX_TABLE: Record<CueName, FxCue> = {
@@ -187,6 +197,37 @@ export const FX_TABLE: Record<CueName, FxCue> = {
     caption: "Snow Day!",
     laptop: "near",
   },
+  // the interactables: no captions, they happen all race long
+  pad: {
+    bursts: [{ file: "fx_pad_burst", at: "ball", count: 36 }], // then the boost flames, see run()
+    sound: "pad",
+    laptop: "near",
+    coolMs: 200,
+  },
+  scoop: {
+    bursts: [
+      { file: "fx_scoop_sparkle", at: "pos", count: 14 },
+      { file: "fx_spill_sprinkles", at: "pos", count: 12 },
+    ],
+    sound: "scoop", // a little higher with every scoop held, like coins
+    laptop: "own",
+  },
+  scoopDrop: {
+    // strength is how many scoops fell
+    bursts: [{ file: "fx_scoop_drop", at: "ball", count: 2, perStrength: 3 }],
+    sound: "scoopDrop",
+    laptop: "near",
+  },
+  bounce: {
+    bursts: [
+      { file: "fx_paw_ring", at: "pos", count: 1 },
+      { file: "fx_paw_stars", at: "pos", count: 14 },
+      { file: "fx_bump_sparks", at: "ball", count: 8 },
+    ],
+    sound: "bounce",
+    laptop: "near",
+    coolMs: 120,
+  },
 };
 
 /** What the screen knows about the race, to pick and word a cue */
@@ -208,9 +249,11 @@ export interface Cue {
   player: string;
   /** The other ball in a bump */
   other?: string;
-  /** Where a fired item happens, from the event (a spill: the puddle) */
+  /** Where it happens, from the event: a spill's puddle, the scoop, the paw */
   pos?: [number, number, number];
   strength: number;
+  /** Playback rate of its sound (the scoop's climbs with each one held) */
+  rate?: number;
   vars: Record<string, string | number>;
 }
 
@@ -256,6 +299,18 @@ export function cueFor(evt: FxEvent, world: FxWorld): Cue | null {
       });
     case "respawn":
       return cue("respawn", evt.player);
+    case "pad":
+      return { ...cue("pad", evt.player), pos: evt.pos };
+    case "scoop":
+      return {
+        ...cue("scoop", evt.player),
+        pos: evt.pos,
+        rate: 1 + SCOOP_STEP * (evt.count - 1),
+      };
+    case "drop":
+      return { ...cue("scoopDrop", evt.player), strength: evt.lost };
+    case "bounce":
+      return { ...cue("bounce", evt.player), pos: evt.pos };
   }
 
   function cue(
@@ -281,6 +336,9 @@ export function caption(text: string, vars: Cue["vars"]): string {
 
 export const ordinal = (n: number) =>
   `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th")}`;
+
+/** Each scoop held raises the next one's pop by this much (playback rate) */
+const SCOOP_STEP = 0.05;
 
 /** On a laptop, someone else's cue fades out over this distance, m */
 const HEAR_RANGE = 45;
@@ -318,6 +376,11 @@ const POOL: Record<BurstFile, number> = {
   fx_spill_sprinkles: 2,
   fx_snow_puff: 2,
   fx_confetti: 1,
+  fx_pad_burst: 2,
+  fx_scoop_sparkle: 3,
+  fx_scoop_drop: 2,
+  fx_paw_ring: 2,
+  fx_paw_stars: 2,
 };
 const DUST_RATE = 24; // per second at top speed (ASSETS.md > VFX v1)
 const FLAMES_RATE = 70;
@@ -606,9 +669,13 @@ export class GameFx {
       if (b && this.clock - b.jumpedAt < 0.3) this.fireRespawn(cue.player); // it already reappeared
       return;
     }
-    if (cue.name === "boost") {
+    if (cue.name === "boost" || cue.name === "pad") {
       const b = this.balls.get(cue.player);
-      if (b) b.boostLeft = BOOST_SECONDS;
+      if (b)
+        b.boostLeft = Math.max(
+          b.boostLeft,
+          cue.name === "boost" ? BOOST_SECONDS : tuning.boostSeconds,
+        );
     }
     if (cue.name === "finalLap" && this.levelOf(cue) > 0)
       this.mixer?.finalLap();
@@ -658,6 +725,8 @@ export class GameFx {
         return b.p.add(new Vector3(0, 2.5, 0));
       case "ahead":
         return b.p.add(new Vector3(Math.sin(b.h) * 6, 0, Math.cos(b.h) * 6));
+      case "pos":
+        return cue.pos ? Vector3.FromArray(cue.pos) : b.p.clone();
     }
   }
 
@@ -733,7 +802,7 @@ export class GameFx {
       const own = "caption" in SOUNDS[id];
       const give =
         text && !captioned && (own || id === EVENT_SOUNDS[line].at(-1));
-      mix.play(id, { strength }, give ? text : "");
+      mix.play(id, { strength, rate: cue.rate }, give ? text : "");
       if (give) captioned = true;
     }
   }

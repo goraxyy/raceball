@@ -17,6 +17,9 @@ export interface RaceHudProps {
   total?: number;
   /** Top of the speedometer, km/h */
   maxSpeed?: number;
+  /** Creamery Scoops held (game-core's scoopMax is 10); no meter without it */
+  scoops?: number;
+  maxScoops?: number;
 }
 
 const ITEM_LABEL: Record<ItemId, string> = {
@@ -49,6 +52,8 @@ export function RaceHud({
   shape,
   total,
   maxSpeed = 40,
+  scoops,
+  maxScoops = 10,
 }: RaceHudProps) {
   const finalLap = lap >= laps;
   const lit = Math.round(Math.min(1, Math.max(0, speed / maxSpeed)) * SEGMENTS);
@@ -73,6 +78,17 @@ export function RaceHud({
           {item ? ITEM_LABEL[item] : "No item"}
         </span>
         {item && <span className="hud-item-hint">Shake!</span>}
+        {scoops !== undefined && (
+          <span
+            className="hud-scoops"
+            data-full={scoops >= maxScoops}
+            aria-label={`${scoops} of ${maxScoops} scoops`}
+          >
+            {Array.from({ length: maxScoops }, (_, i) => (
+              <i key={i} className={i < scoops ? "is-held" : undefined} />
+            ))}
+          </span>
+        )}
       </div>
 
       <div className="hud-speed" aria-label={`${Math.round(speed)} km/h`}>

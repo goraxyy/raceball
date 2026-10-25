@@ -11,6 +11,7 @@ export function HudPreview() {
   const [lap, setLap] = useState(1);
   const [item, setItem] = useState(1);
   const [wrongWay, setWrongWay] = useState(false);
+  const [scoops, setScoops] = useState(3);
 
   useEffect(() => {
     const id = setInterval(() => setT((n) => n + 0.05), 50);
@@ -35,6 +36,7 @@ export function HudPreview() {
         color={1}
         shape={1}
         total={6}
+        scoops={scoops}
       />
       <div className="hud-controls">
         <button
@@ -60,6 +62,9 @@ export function HudPreview() {
         </button>
         <button type="button" onClick={() => setWrongWay((w) => !w)}>
           Wrong way
+        </button>
+        <button type="button" onClick={() => setScoops((n) => (n + 1) % 11)}>
+          Scoop
         </button>
       </div>
     </section>

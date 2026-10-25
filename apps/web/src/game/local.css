@@ -67,6 +67,19 @@
   opacity: 0.7;
 }
 
+.local-hud .local-scoops {
+  margin: 0.2rem 0 0;
+  color: #f6b9cc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.local-hud .local-scoops[data-scoops="0"] {
+  color: inherit;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
 .local-hud .local-lap-info {
   margin: 0 0 17px;
   color: #c6d3e6;

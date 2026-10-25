@@ -10,13 +10,18 @@ import {
 import {
   createFlatRace,
   createRace,
+  HAPPY_VALLEY_GROUND,
+  HAPPY_VALLEY_INTERACTABLES,
   KeyboardInput,
+  readBoostPads,
   TICK_DT,
   tuning,
+  type BoostPadMark,
   type ItemBoxState,
   type KeyState,
   type PuddleState,
   type Race,
+  type ScoopState,
 } from "@raceball/game-core";
 import type { BallFeed, BallLook, BallPose } from "./balls";
 import { LocalLapTimer, type TimingGate } from "./local-timing";
@@ -38,6 +43,7 @@ export interface LocalStats {
   position: [number, number, number];
   heading: number;
   item: ItemId | null; // held, fired with Space
+  scoops: number; // Creamery Scoops held
 }
 
 const OWN_ID = "local";
@@ -92,7 +98,10 @@ export class LocalSession implements BallFeed {
     position: [0, 0, 0],
     heading: 0,
     item: null,
+    scoops: 0,
   };
+  /** Happy Valley's boost pads, for the views (none on the flat ground) */
+  readonly pads: BoostPadMark[];
   private race: Race;
   private readonly makeRace: () => Promise<Race>;
   private readonly timer: LocalLapTimer;
@@ -104,8 +113,10 @@ export class LocalSession implements BallFeed {
     makeRace: () => Promise<Race>,
     gates: TimingGate[],
     ball: string,
+    pads: BoostPadMark[],
   ) {
     this.race = race;
+    this.pads = pads;
     this.ball = ball;
     this.makeRace = makeRace;
     this.timer = new LocalLapTimer(gates);
@@ -135,13 +146,14 @@ export class LocalSession implements BallFeed {
       bytes = new Uint8Array(await response.arrayBuffer());
     }
     const gates = bytes ? await timingGates(bytes) : [];
+    const pads = bytes ? await readBoostPads(bytes, new WebIO()) : [];
     const makeRace = () => newRace(ball, bytes);
     const race = await makeRace();
     if (signal.aborted) {
       race.dispose();
       throw new DOMException("Local load cancelled", "AbortError");
     }
-    return new LocalSession(race, makeRace, gates, ball);
+    return new LocalSession(race, makeRace, gates, ball, pads);
   }
 
   /** Runs as many fixed 1/60 s steps as the frame time covers. */
@@ -178,8 +190,9 @@ export class LocalSession implements BallFeed {
     this.stats.section = this.timer.section;
     this.stats.lastLap = this.timer.lastLap;
     this.stats.bestLap = this.timer.bestLap;
-    this.stats.item =
-      this.race.standings().find((s) => s.id === OWN_ID)?.item ?? null;
+    const mine = this.race.standings().find((s) => s.id === OWN_ID);
+    this.stats.item = mine?.item ?? null;
+    this.stats.scoops = mine?.scoops ?? 0;
     if (own) {
       this.stats.position = own.p;
       this.stats.heading = own.h;
@@ -192,6 +205,10 @@ export class LocalSession implements BallFeed {
 
   puddles(): PuddleState[] {
     return this.race.puddles();
+  }
+
+  scoops(): ScoopState[] {
+    return this.race.scoops();
   }
 
   get phase(): Phase {
@@ -261,6 +278,7 @@ export class LocalSession implements BallFeed {
         lastLap: null,
         bestLap: null,
         item: null,
+        scoops: 0,
       });
     } catch (error) {
       if (!this.disposed)
@@ -308,7 +326,11 @@ export class LocalSession implements BallFeed {
 
 async function newRace(ball: string, bytes?: Uint8Array): Promise<Race> {
   const race = bytes
-    ? await createRace(bytes, new WebIO(), { laps: 3 })
+    ? await createRace(bytes, new WebIO(), {
+        laps: 3,
+        ground: HAPPY_VALLEY_GROUND,
+        interactables: HAPPY_VALLEY_INTERACTABLES,
+      })
     : await createFlatRace({ laps: 3 });
   race.addPlayer(OWN_ID, ball);
   race.start(COUNTDOWN_MS, 3); // the same countdown as online, for the grid swoop

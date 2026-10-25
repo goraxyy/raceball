@@ -125,6 +125,16 @@ describe("eventShake", () => {
     expect(eventShake(bump, null)).toBe(0);
     expect(eventShake({ type: "lap", player: "me", lap: 2 }, "me")).toBe(0);
   });
+
+  it("shakes when a Lion Paw kicks your own ball", () => {
+    const kick = {
+      type: "bounce" as const,
+      player: "me",
+      pos: [0, 0, 0] as [number, number, number],
+    };
+    expect(eventShake(kick, "me")).toBeGreaterThan(0.3);
+    expect(eventShake({ ...kick, player: "you" }, "me")).toBe(0);
+  });
 });
 
 describe("grid swoop", () => {

@@ -314,6 +314,28 @@ Starting tuning values (`tuning.ts`):
 
 ### 2. Greybox the route in Blender
 
+**Done, and generated from code.** `tools/track/build_happy_valley.py` builds the whole greybox in Blender:
+- the 8 sections as one closed loop: a 12 m road with rails, library steps, a banked Lion Shrine hairpin with a jump, the Creamery cone climb, the stadium tunnel and the Arboretum downhill
+- every marker
+- landmark boxes and a few Kenney props
+- it saves `assets-src/happy_valley.blend` and exports both `.glb` files
+
+**Numbers:** the centerline is 1,096 m. An autopilot at full gas laps in about 63 s with no falls, so players should land in the 60–75 s window.
+
+**To change the map:**
+- Edit the script (route knots in `KNOTS`, `SCALE`, `WIDTH`, landmark positions).
+- Re-run it, either in Blender's Scripting tab, or through the Blender MCP add-on (`exec` the file with `RACEBALL_ROOT` set to the repo path). It only replaces its own "Happy Valley" scene.
+- **Edits made by hand in the `.blend` are lost on the next run**, so keep the route in the script.
+- After a run, `pnpm --filter @raceball/game-core test` checks the export ("happy_valley_col.glb is raceable").
+- Upload the new `.blend` to the Drive folder.
+
+**Playtest:** `/play?local=1` now plays Happy Valley:
+- `&map=flat` gives the flat test ground, and `&view=overview` starts zoomed out.
+- **R** resets, and **V** toggles the overview camera.
+- The HUD times each lap from the checkpoint gates.
+
+The manual steps below are what the script automates.
+
 1. Open `happy_valley.blend` from Drive. Import Kenney Marble Kit pieces (File > Import > glTF 2.0).
 2. Lay out the 8 sections from [MAP.md](../MAP.md) with track pieces. Use **boxes for landmarks**, roughly the final size. Turn on increment snapping so pieces line up.
 3. Put collision meshes in the `collision` collection, named `*_col`. Keep them simple: a few hundred triangles per section is plenty.

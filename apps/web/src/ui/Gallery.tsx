@@ -8,6 +8,7 @@ import {
   ViewerJoin,
   type LobbyPlayer,
 } from ".";
+import { HudPreview } from "./HudPreview";
 import { RacePreview } from "./RacePreview";
 
 const FAKE: LobbyPlayer[] = [
@@ -61,7 +62,15 @@ const FAKE: LobbyPlayer[] = [
   },
 ];
 const PAD_URL = "https://raceball-pad.vercel.app/?room=ABCD";
-const VIEWS = ["host", "join", "pairing", "paired", "loading", "race"] as const;
+const VIEWS = [
+  "host",
+  "join",
+  "pairing",
+  "paired",
+  "loading",
+  "race",
+  "hud",
+] as const;
 type View = (typeof VIEWS)[number];
 
 export default function Gallery() {
@@ -156,6 +165,7 @@ export default function Gallery() {
         </section>
       )}
       {view === "race" && <RacePreview />}
+      {view === "hud" && <HudPreview />}
       {view === "loading" && (
         <LoadingScreen progress={progress} label="Loading Happy Valley" />
       )}

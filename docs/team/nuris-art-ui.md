@@ -118,7 +118,9 @@ Rolling loop, bump, countdown beeps, UI click.
 - Everything must read from a couple of meters away on a laptop screen at a judging table: big type, thick outlines, no thin gray text.
 
 ### Player HUD (laptop)
-`RaceHud` props: `place`, `lap`, `laps`, `item`, `speed`, `wrongWay`. Keep it in the corners, and leave the middle clear for the race.
+`RaceHud` props: `place`, `lap`, `laps`, `item` (an `ItemId` or `null`), `speed` (km/h: the ball's speed in m/s × 3.6), `wrongWay`, the player's `color` and `shape` slots, and optional `total` (players in the race) and `maxSpeed` (top of the gauge, default 40). Keep it in the corners, and leave the middle clear for the race.
+
+Built in `apps/web/src/ui/RaceHud.tsx`: the place plate and lap top left (the lap turns yellow on the final lap), the item badge top right (it wiggles with "Shake!"), a segmented toy speedometer bottom right, and the wrong-way banner top center. `/ui` > hud previews it with controls.
 
 ### VFX v1 (rolling dust, bump sparks, respawn poof)
 1. In the Babylon Playground, create a `ParticleSystem` on a sphere, open the Inspector, and tweak it until it looks right.

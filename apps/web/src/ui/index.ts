@@ -14,6 +14,8 @@ export type { HostLobbyProps } from "./HostLobby";
 export { LoadingScreen } from "./LoadingScreen";
 export { PairingQR } from "./PairingQR";
 export { PlayerList } from "./PlayerList";
+export { RaceHud } from "./RaceHud";
+export type { RaceHudProps } from "./RaceHud";
 export { ViewerJoin } from "./ViewerJoin";
 export type { ViewerJoinProps } from "./ViewerJoin";
 export type { LobbyPlayer } from "./types";

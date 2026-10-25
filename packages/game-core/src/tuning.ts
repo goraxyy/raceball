@@ -35,6 +35,12 @@ export const tuning = {
   botBrakeAngle: 0.7, // rad off the target before the bot brakes
   botBrakeSpeed: 8, // m/s; the bot only brakes above this
 
+  // Section mechanics (boost pads and surfaces come from the track's markers)
+  boostPadSpeed: 8, // m/s added along a boost pad's facing, times the pad's power
+  boostMaxSpeedMul: 1.5, // top speed multiplier right after a boost
+  boostSeconds: 1.5, // how long the raised top speed lasts
+  snowDrag: 0.6, // extra slowing on snow, like a light brake (higher = slower)
+
   // Keyboard adapter (local mode only)
   keySteerRate: 4, // steer units per second while A/D is held
   keyReturnRate: 6, // steer units per second back toward 0 when released or reversed

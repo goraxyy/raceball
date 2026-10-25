@@ -186,7 +186,8 @@ Nothing right now. Add new questions here.
 
 **Ali**
 - [ ] Items: Blue & White Boost, Lion Roar (shockwave), Creamery Spill (puddle); item boxes; odds by place
-- [ ] Section mechanics: library-step bounces, Lion Shrine bank + jump, Creamery cone ramp + puddles, stadium tunnel, snow/ice surfaces, College Ave boost pads
+- [x] Section mechanics: library-step bounces, Lion Shrine bank + jump, Creamery cone ramp + puddles, stadium tunnel, snow/ice surfaces, College Ave boost pads (geometry in the greybox; surface grip, snow drag and boost pads in `race.ts`)
+- [ ] Event-to-effect table (`fx.ts`): particles, sounds and camera shake for every event
 - [ ] Performance pass: instancing/merging, one shadow light, LOD, freezing static meshes; under 150 draw calls
 - [ ] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown
 - [ ] Railway: check the health check, logs and resource graphs under load

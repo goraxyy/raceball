@@ -163,12 +163,12 @@ Nothing right now. Add new questions here.
 
 **Rasim**
 - [ ] Lobby flow end to end: create, join, pair, calibrate, assets loaded, ready, host starts. `/host` and `/play` use Nuris's components from `apps/web/src/ui` (`HostLobby`, `ViewerJoin`, `PairingQR`, `LoadingScreen`)
-- [ ] Host controls: lap selector (1 or 3, default 3), add/remove bots, start, rematch (`start`, `addBot`, `removeBot`, `rematch` messages)
+- [x] Host controls: lap selector (1 or 3, default 3), add/remove bots, start, rematch (`start`, `addBot`, `removeBot`, `rematch` messages)
 - [ ] **Phone-only join:** pad joins from the big-screen QR with no token; `setProfile` with name/ball; `phoneOnly` in the schema
 - [ ] **One planet per player:** each of the 8 `PLANETS` at most once per room; a missing or taken `ball` gets the first free planet; send the taken list so the pad and laptop pickers can grey them out
-- [ ] Phases synced in the schema: lobby, countdown, racing, results, back to lobby
+- [ ] Phases synced in the schema: lobby, countdown, racing, results, back to lobby (lobby → countdown → racing → lobby done; results → lobby after 15 s is wired, waiting on game-core to reach `results`)
 - [ ] Reconnection for pad + viewer into the same slot (`allowReconnection`); stale input becomes neutral after 200 ms
-- [ ] Fill-up bots (server-side, using `botInput`) and a load-test bot script (8 pads against Railway)
+- [ ] Fill-up bots (server-side, using `botInput`) and a load-test bot script (8 pads against Railway) (server-side bots done; load-test script to do)
 - [ ] Route `evt` messages to the right pads; pad sound + visual cues for each event
 - [ ] Shake detection for firing items
 

@@ -7,6 +7,10 @@ export const PAD_PORT = 5174;
 export const MAX_PLAYERS = 8;
 /** Default race length; demo races use 1 */
 export const DEFAULT_LAPS = 3;
+/** Countdown before the race, ms */
+export const COUNTDOWN_MS = 3000;
+/** Results stay up this long before the room goes back to the lobby, ms */
+export const RESULTS_MS = 15000;
 
 /** Player colors by slot (art bible in docs/ASSETS.md). Colorblind-safe, from Okabe-Ito. */
 export const PLAYER_COLORS = [

@@ -14,8 +14,9 @@ You own **how RaceBall looks, sounds and feels**:
 | Map art direction, landmark list | [docs/MAP.md](../MAP.md) |
 | Raw sources (`.psd`, `.wav`, references) | Drive: `RaceBall/assets-src/` |
 | Optimized runtime assets | `apps/web/public/assets/` (`fx/`, `sfx/`, `mus/`, `ui/`). Ali owns `models/`, `maps/`, `tex/` and `mat/` |
-| React UI components | `apps/web/src/ui/` |
-| Phone controller look | `apps/pad/src/style.css` + the markup in `apps/pad/index.html` |
+| Shared theme: fonts, tokens, buttons, shapes, planet balls | `packages/shared/theme/theme.css` (imported by the pad and the web app) |
+| React UI components | `apps/web/src/ui/` (styles in `ui.css`; preview them all at `/ui` in dev) |
+| Phone controller look | `apps/pad/src/style.css` + the markup in `apps/pad/screens.html` |
 
 ## How your work connects to the others
 
@@ -63,13 +64,13 @@ Download and look through the Kenney **Particle Pack** and the Kenney audio pack
 ## M1: Vertical slice
 
 ### Lobby UI (`apps/web/src/ui`)
-Build React components that **only take props**. Rasim's hooks feed them data, so you can build them with fake data first.
+Build React components that **only take props**. Rasim's hooks feed them data, so you can build them with fake data first. They're built in `apps/web/src/ui` (import them from `./ui`), and `/ui` in dev shows all of them with fake data. Players are `LobbyPlayer` objects: the lobby fields of `PlayerView` plus the player's `id`.
 
 | Component | Props | Shown on |
 |---|---|---|
 | `HostLobby` | `code`, `phoneJoinUrl`, `players[]`, `laps`, `onLapsChange`, `onAddBot`, `canStart`, `onStart` | Big screen |
-| `ViewerJoin` | `onJoin(code, name, ball)` | Laptop |
-| `PairingQR` | `url`, `paired` | Laptop |
+| `ViewerJoin` | `onJoin(code, name, ball)`, optional `taken` (planets already picked) and `initialCode` (from `?room=`) | Laptop |
+| `PairingQR` | `url` (undefined until the token arrives), `paired` | Laptop |
 | `PlayerList` | `players[]` (name, ball, color, shape, paired, calibrated, ready, connected) | Both |
 | `LoadingScreen` | `progress` (0–1), `label` | Both |
 

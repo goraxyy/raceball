@@ -127,8 +127,8 @@ Nothing right now. Add new questions here.
 - [x] Net HUD (`~`) on web + pad debug overlay with Eruda (`?debug=1`)
 
 **Nuris**
-- [ ] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen`
-- [ ] Pad screens in `apps/pad/screens.html`; agree the markup contract with Rasim; write `apps/pad/src/style.css` (screens and style.css done; waiting on Rasim to agree the markup)
+- [x] Lobby components with fake data: `HostLobby` (with the lap selector and bot buttons), `ViewerJoin`, `PairingQR`, `PlayerList`, `LoadingScreen` (in `apps/web/src/ui`, preview at `/ui`)
+- [x] Pad screens in `apps/pad/screens.html`; agree the markup contract with Rasim; write `apps/pad/src/style.css` (Rasim builds the screens from this markup in `apps/pad/src/screens.ts`)
 - [x] First sound set: rolling loop, bump, countdown, UI click
 
 ---
@@ -146,9 +146,10 @@ Nothing right now. Add new questions here.
 - [ ] Expose the track outline (`path`) and positions (about 10 Hz) for Nuris's `TrackMap`
 
 **Rasim**
-- [ ] Lobby flow end to end: create, join, pair, calibrate, assets loaded, ready, host starts
+- [ ] Lobby flow end to end: create, join, pair, calibrate, assets loaded, ready, host starts. `/host` and `/play` use Nuris's components from `apps/web/src/ui` (`HostLobby`, `ViewerJoin`, `PairingQR`, `LoadingScreen`)
 - [ ] Host controls: lap selector (1 or 3, default 3), add/remove bots, start, rematch (`start`, `addBot`, `removeBot`, `rematch` messages)
 - [ ] **Phone-only join:** pad joins from the big-screen QR with no token; `setProfile` with name/ball; `phoneOnly` in the schema
+- [ ] **One planet per player:** each of the 8 `PLANETS` at most once per room; a missing or taken `ball` gets the first free planet; send the taken list so the pad and laptop pickers can grey them out
 - [ ] Phases synced in the schema: lobby, countdown, racing, results, back to lobby
 - [ ] Reconnection for pad + viewer into the same slot (`allowReconnection`); stale input becomes neutral after 200 ms
 - [ ] Fill-up bots (server-side, using `botInput`) and a load-test bot script (8 pads against Railway)

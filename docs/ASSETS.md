@@ -152,7 +152,8 @@ Where they appear:
 - **Display:** Barlow Condensed, heavy italic, uppercase (titles, numbers, place, lap, buttons).
 - **Text:** Barlow, semibold (sentences, hints, labels).
 - Both are SIL Open Font License.
-- Self-hosted in `apps/pad/public/fonts/` (latin subset, with `OFL.txt`) and embedded in the swatch sheets in `docs/art/`.
+- Self-hosted in `packages/shared/theme/fonts/` (latin subset, with `OFL.txt`) and embedded in the swatch sheets in `docs/art/`.
+- **One theme for every screen:** [`packages/shared/theme/theme.css`](../packages/shared/theme/theme.css) holds the fonts, color tokens, buttons, player shapes and planet balls. The pad (`apps/pad/src/style.css`) and the web app (`apps/web/src/ui/ui.css`) both import it, so the phone, laptops and big screen can't drift apart. Change shared looks there, not in an app.
 - See every UI screen in [`apps/pad/screens.html`](../apps/pad/screens.html) (open `/screens.html` while `pnpm dev` runs).
 
 ### Mood board
@@ -301,5 +302,5 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 
 | Asset | Author | License | Link | Used for |
 |---|---|---|---|---|
-| Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`apps/pad/public/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad UI, art bible sheets |
+| Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`packages/shared/theme/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad, web and big-screen UI, art bible sheets |
 | `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |

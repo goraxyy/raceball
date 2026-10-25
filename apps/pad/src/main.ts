@@ -1,4 +1,5 @@
 import "./style.css";
+import { debugEnabled, mountDebugOverlay } from "./debug";
 import { startFromTap } from "./start";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -29,7 +30,8 @@ function showPermissionHelp() {
   app.innerHTML = `
     <section class="screen permission-help">
       <h1>Motion access is off</h1>
-      <p>RaceBall needs motion to steer. Close Safari completely, reopen this page, and tap Allow.</p>
+      <p>RaceBall needs motion to steer. On iPhone, close Safari completely, reopen this page and tap Allow.
+      On Android, allow "Motion sensors" in the site settings.</p>
       <button class="start-button" type="button">Try again</button>
     </section>
   `;
@@ -37,3 +39,4 @@ function showPermissionHelp() {
 }
 
 showStart();
+if (debugEnabled) mountDebugOverlay();

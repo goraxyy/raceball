@@ -23,7 +23,7 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import { PLANETS, PLAYER_COLORS } from "@raceball/shared";
-import { REPLACED } from "../game/landmarks";
+import { loadLandmarks } from "../game/landmarks";
 
 interface Shelf {
   label: string;
@@ -41,8 +41,8 @@ interface Shelf {
   place?: Record<string, [number, number, number?]>;
   /** Where the camera looks, m */
   target?: [number, number, number];
-  /** Meshes to hide, by name prefix (greybox pieces a layer replaces) */
-  hide?: string[];
+  /** The map: load the landmarks over it as the game does (game/landmarks.ts) */
+  landmarks?: boolean;
   /** Which way the camera starts looking (ArcRotateCamera alpha); default from the south-west */
   alpha?: number;
   /** A whole map: no shadow casting, as in the game (only balls cast), or a 400 m shadow map draws it all dark */
@@ -77,15 +77,27 @@ const SHELVES: Shelf[] = [
     },
   },
   {
-    // the landmarks layer over Ali's map, as the game shows it (game/landmarks.ts)
+    // the landmarks over Ali's map, as the game shows them (game/landmarks.ts)
     label: "Landmarks",
-    files: ["maps/happy_valley.glb", "maps/happy_valley_landmarks.glb"],
+    files: ["maps/happy_valley.glb"],
     gap: 0,
     radius: 150,
     close: 60,
     target: [195, 8, 50],
-    hide: REPLACED,
+    landmarks: true,
     alpha: Math.PI / 2 + 0.5, // from the south, as the race comes in: the scoreboard faces you
+    map: true,
+  },
+  {
+    // the same, from the starting grid: Old Main, the arch and the flags; orbit round to the library and beyond
+    label: "Campus",
+    files: ["maps/happy_valley.glb"],
+    gap: 0,
+    radius: 80,
+    close: 40,
+    target: [-20, 9, 14],
+    landmarks: true,
+    alpha: -Math.PI / 2 + 0.45,
     map: true,
   },
 ];
@@ -182,9 +194,10 @@ function startScene(canvas: HTMLCanvasElement, shelf: Shelf) {
           spinners.push(root);
         }
         for (const group of container.animationGroups) group.play(true);
-        for (const mesh of container.meshes)
-          if (shelf.hide?.some((prefix) => mesh.name.startsWith(prefix)))
-            mesh.setEnabled(false);
+        if (shelf.landmarks)
+          void loadLandmarks(scene, container, () => disposed).catch(
+            (error: unknown) => console.warn("Landmarks failed to load", error),
+          );
       },
       (error: unknown) => console.warn(`${file} failed to load`, error),
     );

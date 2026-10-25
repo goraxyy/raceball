@@ -1,6 +1,6 @@
 # Ali: Game guide
 
-You own **the game**: how the ball moves, the race rules, the track, the items, and everything you see in 3D, including most **3D models** (the first four planets, the dressing kit, the landmarks a ball touches) and their pipeline. Nuris builds planets 5–8, the animated props, Beaver Stadium, the Mount Nittany backdrop and the event-to-effect table.
+You own **the game**: how the ball moves, the race rules, the track, the items, and everything you see in 3D, including most **3D models** (the first four planets, the dressing kit) and their pipeline. Nuris builds planets 5–8, the animated props, the landmarks (she took over the ones a ball touches) and the event-to-effect table.
 
 | Area | Where |
 |---|---|
@@ -582,7 +582,7 @@ On the real map, the bot's laps drop from about 64 s to about 61 s. The two star
 
 ## Assets: 3D models and pipeline
 
-You build the first four planets, the track dressing kit and the landmarks a ball touches (Old Main, Lion Shrine, Creamery + cone, Pattee Library). **Nuris builds** planets 5–8, the animated props, Beaver Stadium and the Mount Nittany backdrop with the same scripts and pipeline ([her guide](nuris-art-ui.md#m3-models-and-effects-taken-over-from-ali)); check that anything of hers a ball touches still matches the collision. **Nuris's art bible in [ASSETS.md](../ASSETS.md) sets the style**, so ask Nuris to review each of your models before it's merged.
+You build the first four planets and the track dressing kit. **Nuris builds** planets 5–8, the animated props and every landmark (she took over Old Main, the Lion Shrine, the Creamery + cone and Pattee Library) with the same scripts and pipeline ([her guide](nuris-art-ui.md#m3-models-and-effects-taken-over-from-ali)); check that anything of hers a ball touches still matches the collision. **Nuris's art bible in [ASSETS.md](../ASSETS.md) sets the style**, so ask Nuris to review each of your models before it's merged.
 
 ### M0: Kenney track and prop packs
 Download and look through the **Kenney Marble Kit** and **Racing Kit** (both CC0). Add the track pieces and props you'd use to the shortlist in ASSETS.md. Put the downloads in `assets-src/packs/` in Drive.
@@ -684,12 +684,14 @@ From [MAP.md](../MAP.md).
 
 | Order | Landmark | Owner | Triangle budget | Notes |
 |---|---|---|---|---|
-| 1 | Old Main + start/finish arch | Ali | 25k | The judges see this first. Bell tower silhouette |
-| 2 | Lion Shrine | Ali | 8k | Original low-poly lion on a rock |
-| 3 | Creamery + giant cone | Ali | 15k | The cone is also a ramp. Match your collision shape |
+| 1 | Old Main + start/finish arch | Nuris (from Ali) | 25k | The judges see this first. Bell tower silhouette |
+| 2 | Lion Shrine | Nuris (from Ali) | 8k | Original low-poly lion on a rock |
+| 3 | Creamery + giant cone | Nuris (from Ali) | 15k | The cone is also a ramp. Match your collision shape |
 | 4 | Beaver Stadium bowl + tunnel + scoreboard prop | Nuris | 40k total | Build one stand segment and instance it around the bowl. The tunnel walls are collision, so model over them |
-| 5 | Pattee Library facade + steps | Ali | 12k | Steps must line up with the collision steps |
+| 5 | Pattee Library facade + steps | Nuris (from Ali) | 12k | Steps must line up with the collision steps |
 | 6 | Mount Nittany backdrop | Nuris | Card or texture | A far-away silhouette layer, not real geometry |
+
+**All six are done**, generated from code into one layer over your map, `maps/happy_valley_landmarks.glb` (`tools/models/build_landmarks.py` and `landmarks_campus.py`; what's in them: [ASSETS.md > Landmarks](../ASSETS.md#landmarks-beaver-stadium-and-mount-nittany)). Your map and collision are untouched: `landmarks.ts` cuts the greybox landmark boxes out of your batches when the layer loads (`GREYBOX_BOXES`, `GREYBOX_SOLIDS`), and a test fails if you move one. When you next rebuild the greybox, you can leave those boxes and their labels out and empty the lists. The Creamery's cone run stays your road hump: a waffle skirt fills under it, and nothing touches the road or rails (the build checks).
 
 ### M3: How to model over the greybox
 1. Open `happy_valley.blend` in Drive. Your greybox boxes and collision meshes are there.

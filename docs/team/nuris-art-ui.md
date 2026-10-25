@@ -6,7 +6,7 @@ You own **how RaceBall looks, sounds and feels**:
 - every screen of UI: lobby, HUD, big-screen overlay, results, and the look of the phone controller
 - branding
 
-**Ali builds** the first four planets, the track dressing kit and the landmarks a ball touches, and runs the model pipeline. **You build** planets 5–8, the animated props, Beaver Stadium, the Mount Nittany backdrop and the event-to-effect table ([M3 below](#m3-models-and-effects-taken-over-from-ali)). You review Ali's models against the art bible.
+**Ali builds** the first four planets and the track dressing kit, and runs the model pipeline. **You build** planets 5–8, the animated props, the landmarks (Beaver Stadium, Mount Nittany, and the ones a ball touches, which you took over from Ali) and the event-to-effect table ([M3 below](#m3-models-and-effects-taken-over-from-ali)). You review Ali's models against the art bible.
 
 | Area | Where |
 |---|---|
@@ -197,6 +197,17 @@ Done: `tools/models/build_animated_props.py` builds them all on the kit's palett
 Model over the greybox boxes in `assets-src/happy_valley.blend`, in the `visual` collection, and don't touch `collision` or `markers` (Ali's guide: [how to model over the greybox](ali-game.md#m3-how-to-model-over-the-greybox)). The stadium tunnel walls are collision, so the bowl must leave the tunnel clear. Budgets: 40k triangles for the stadium (instance one stand segment around the bowl), a card or texture for Mount Nittany. The map visuals are rebuilt by `tools/track/build_happy_valley.py`, so agree with Ali how your models get placed (imported by the script, or a separate `maps/` file) before you start.
 
 Done as a separate `maps/` file, so Ali's map script stays as it is: `tools/models/build_landmarks.py` builds both in map coordinates into `maps/happy_valley_landmarks.glb`, and `apps/web/src/game/landmarks.ts` loads it over the map and hides the greybox pieces it replaces. What's in it, the clearances and what Ali can drop from the greybox: [ASSETS.md > Landmarks](../ASSETS.md#landmarks-beaver-stadium-and-mount-nittany).
+
+#### Old Main, Pattee Library, the Lion Shrine and the Creamery (taken over from Ali)
+Done the same way, into the same layer: `tools/models/landmarks_campus.py`, which `build_landmarks.py` runs. It reads Ali's exports for the route, the road heights, the library steps and the greybox trees, and fails the build if anything comes within 25 cm of the road or rails or goes over budget. Rebuild everything with:
+
+```bash
+python tools/models/build_landmarks.py          # bpy from PyPI (Python 3.11), or blender -b -P
+gltf-transform optimize assets-src/models/happy_valley_landmarks.glb apps/web/public/assets/maps/happy_valley_landmarks.glb \
+  --compress meshopt --texture-compress webp --simplify false --flatten false
+```
+
+Keep `--flatten false`: it keeps the `lm_*` root nodes, which the tests look for. What's in them: [ASSETS.md > Campus landmarks](../ASSETS.md#campus-landmarks-old-main-pattee-library-the-lion-shrine-and-the-creamery).
 
 ---
 

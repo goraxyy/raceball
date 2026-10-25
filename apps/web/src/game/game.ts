@@ -139,7 +139,7 @@ export function createGame(
   let feed: BallFeed | undefined;
   let disposed = false;
   let container: AssetContainer | undefined;
-  let landmarks: AssetContainer | undefined;
+  let landmarks: { dispose(): void } | undefined;
   let publishAfter = 0;
   let countdown = 0; // s into the countdown, for the grid swoop
   const abort = new AbortController();
@@ -248,7 +248,7 @@ export function createGame(
   /** Adds the map to the scene, freezes it (it never moves) and frames the overview camera on it */
   function showMap(assets: AssetContainer): void {
     assets.addAllToScene();
-    // Nuris's stadium and Mount Nittany go over the greybox once they're in; the race doesn't wait for them
+    // the landmarks (and the animated arch and flags) go over the greybox once they're in; the race doesn't wait
     void loadLandmarks(scene, assets, () => disposed)
       .then((layer) => (landmarks = layer))
       .catch((error: unknown) => {

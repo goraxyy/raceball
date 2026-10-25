@@ -191,7 +191,7 @@ Nothing right now. Add new questions here.
 - [ ] Performance pass: instancing/merging, one shadow light, LOD, freezing static meshes; under 150 draw calls
 - [x] Camera polish: wider FOV at speed, shake on bumps (off with reduced motion), grid swoop during the countdown (`cameras.ts`; `camFov*` and `camShake*` in `tuning.ts`; `ChaseCamera.shake()` is the hook for `fx.ts`; local mode now has the 3 s countdown)
 - [ ] Railway: check the health check, logs and resource graphs under load
-- [ ] **Landmark art pass** for the landmarks a ball touches, in this order: Old Main, Lion Shrine, Creamery + cone, Pattee Library (budgets in [your guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Nuris reviews each against the art bible
+- [x] **Landmark art pass** for the landmarks a ball touches, in this order: Old Main, Lion Shrine, Creamery + cone, Pattee Library (budgets in [your guide](docs/team/ali-game.md#m3-landmark-order-and-budgets)); Nuris reviews each against the art bible (taken over and built by Nuris: `tools/models/landmarks_campus.py`, into the landmarks layer with the stadium; the animated arch and two flags at Old Main; the greybox boxes are cut out of the map at load. [ASSETS.md](docs/ASSETS.md#campus-landmarks-old-main-pattee-library-the-lion-shrine-and-the-creamery))
 
 **Rasim**
 - [ ] Snapshot compression (quantized arrays); confirm 60 Hz on Railway (compression done: `packSnap` in `packages/shared/src/snap.ts`, 8 balls 983 → 330 bytes, ~19 KB/s per screen at 60 Hz; still to confirm 60 Hz on Railway after this deploys, e.g. with `pnpm --filter @raceball/server bots`)

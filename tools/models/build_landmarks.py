@@ -1,4 +1,5 @@
-"""Builds Nuris's landmarks over the Happy Valley greybox (M3): Beaver Stadium and the Mount Nittany backdrop.
+"""Builds the landmarks over the Happy Valley greybox (M3): Beaver Stadium and the Mount Nittany backdrop here, and
+Old Main, Pattee Library, the Lion Shrine and the Creamery from tools/models/landmarks_campus.py.
 
 Run it headless with the bpy module from PyPI (pip install bpy): python tools/models/build_landmarks.py
 or in Blender (blender -b -P tools/models/build_landmarks.py).
@@ -13,11 +14,14 @@ Ali's map (apps/web/src/game/landmarks.ts). Nothing here is collision, and nothi
     Kenney grandstands, which the game hides by name.
   - Mount Nittany: a long, faceted ridge behind the Arboretum, fall forest and the first snow on the crest.
     The greybox mountain and snowcap boxes are merged into Ali's batches, so the ridge's surface encloses them.
+  - Old Main, Pattee Library, the Lion Shrine and the Creamery: see landmarks_campus.py.
 
-Everything is on the dressing kit's palette (one material). Writes assets-src/models/happy_valley_landmarks.glb and
+Everything is on the dressing kit's palette (one material), except Old Main's brass bell and spike (mat_brass). Writes assets-src/models/happy_valley_landmarks.glb and
 landmarks.blend. Optimize into the game with:
   gltf-transform optimize assets-src/models/happy_valley_landmarks.glb \
-    apps/web/public/assets/maps/happy_valley_landmarks.glb --compress meshopt --texture-compress webp --simplify false
+    apps/web/public/assets/maps/happy_valley_landmarks.glb --compress meshopt --texture-compress webp --simplify false \
+    --flatten false
+(--flatten false keeps the lm_* root nodes, which apps/web/src/game/landmarks.test.ts looks for)
 """
 
 import importlib.util
@@ -39,6 +43,11 @@ _spec = importlib.util.spec_from_file_location("dressing_kit_lib", ROOT / "tools
 kit = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(kit)
 kit.PALETTE["lawn_dark"] = "#6E9140"  # mowing stripes; a free swatch after the kit's own colors
+
+_spec = importlib.util.spec_from_file_location("landmarks_campus", ROOT / "tools" / "models" / "landmarks_campus.py")
+campus = importlib.util.module_from_spec(_spec)
+campus.kit = kit  # its palette and helpers, with the swatches above
+_spec.loader.exec_module(campus)
 
 # The greybox, in game meters (tools/track/build_happy_valley.py): the field's center and the stadium road
 FIELD = (201.25, 75.9)  # center of prop_stadium_field, 42 x 52 m
@@ -382,6 +391,7 @@ def build():
     scene.collection.children.link(col)
     segments = stadium(mat, col)
     clearance = nittany(mat, col)
+    campus_triangles = campus.build_campus(mat, col)
     OUT.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(OUT / "happy_valley_landmarks.glb"), export_format="GLB",
                               collection=col.name, export_yup=True, export_extras=False, export_animations=False,
@@ -391,7 +401,7 @@ def build():
     drawn = sum(tri(o.data) for o in col.objects if o.type == "MESH")
     print({"stand_segments": segments, "triangles_drawn": drawn,
            "unique_meshes": {me.name: tri(me) for me in bpy.data.meshes if me.users},
-           "nittany_clearance_over_greybox_m": clearance, "out": str(OUT)})
+           "nittany_clearance_over_greybox_m": clearance, "campus_triangles": campus_triangles, "out": str(OUT)})
 
 
 build()

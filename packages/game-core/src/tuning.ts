@@ -18,6 +18,17 @@ export const tuning = {
   stuckSeconds: 5, // holding gas this long while barely moving respawns the ball
   stuckSpeed: 1, // m/s; slower than this counts as barely moving
 
+  // Race rules
+  finishGraceSeconds: 30, // after the winner finishes, the race ends this long after (or when everyone is in)
+
+  // Bots (botInput): aim at a point ahead on the route, full gas, brake only into sharp turns
+  botLookahead: 5, // m ahead on the route at a standstill
+  botLookaheadPerSpeed: 0.5, // extra m of lookahead per m/s
+  botLookaheadMax: 14, // m
+  botSteerGain: 2.5, // steer per radian off the target
+  botBrakeAngle: 0.7, // rad off the target before the bot brakes
+  botBrakeSpeed: 8, // m/s; the bot only brakes above this
+
   // Keyboard adapter (local mode only)
   keySteerRate: 4, // steer units per second while A/D is held
   keyReturnRate: 6, // steer units per second back toward 0 when released or reversed

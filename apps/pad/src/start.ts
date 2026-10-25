@@ -1,4 +1,5 @@
 import { requestMotionPermission, startMotion } from "./motion";
+import { keepScreenOn } from "./wake-lock";
 
 /** Everything browsers only allow inside a tap. Returns false if motion was denied. */
 export async function startFromTap(): Promise<boolean> {
@@ -16,5 +17,6 @@ export async function startFromTap(): Promise<boolean> {
   } catch {
     // not supported here
   }
+  await keepScreenOn();
   return true;
 }

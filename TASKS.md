@@ -64,7 +64,7 @@ Nothing right now. Add new questions here.
 | Person | Phone | OS / browser | Laptop |
 |---|---|---|---|
 | Ali | | | |
-| Rasim | | | |
+| Rasim | iPhone 18 Pro | iOS, Safari | Windows 11 laptop |
 | Nuris | | | |
 
 ---
@@ -92,7 +92,7 @@ Nothing right now. Add new questions here.
 - [x] Bootstrap the monorepo (README > Bootstrap, then the rest of the [M0 steps](docs/team/rasim-platform.md#m0-setup)); `pnpm dev` starts web, pad and server
 - [x] ESLint + Prettier, `tsconfig.base.json`, root scripts, `.env.example` files
 - [x] Give Ali the Vercel settings for web + pad
-- [x] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone
+- [ ] Pad: "Tap to start", then motion permission, then a debug overlay with live gravity, on an iPhone **and** an Android phone. iPhone 18 Pro passed. BLOCKED: no Android phone on the team yet
 
 **Nuris**
 - [ ] Art bible in `docs/ASSETS.md`: style, palette, the 8 player colors + shapes, Penn State mood board (done except the mood board: style, palettes, player colors + shapes and the planet balls are in ASSETS.md)

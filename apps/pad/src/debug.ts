@@ -1,4 +1,5 @@
-import { status } from "./connection";
+import { clock, inputAge, status } from "./connection";
+import { sentCount } from "./input-loop";
 import { gravity, permission } from "./motion";
 import { steering } from "./steering";
 import { wakeLockActive } from "./wake-lock";
@@ -23,13 +24,23 @@ export function mountDebugOverlay() {
   document.body.append(el);
 
   let lastEvents = 0;
+  let lastSent = 0;
+  let frames = 0;
   let lastRateAt = performance.now();
   let rate = 0;
+  let sendRate = 0;
+  let fps = 0;
 
   const render = (now: number) => {
+    frames++;
     if (now - lastRateAt >= 1000) {
-      rate = ((gravity.events - lastEvents) * 1000) / (now - lastRateAt);
+      const secs = (now - lastRateAt) / 1000;
+      rate = (gravity.events - lastEvents) / secs;
+      sendRate = (sentCount - lastSent) / secs;
+      fps = frames / secs;
       lastEvents = gravity.events;
+      lastSent = sentCount;
+      frames = 0;
       lastRateAt = now;
     }
     const age = gravity.at ? `${Math.round(now - gravity.at)} ms` : "no data";
@@ -44,7 +55,9 @@ export function mountDebugOverlay() {
       `angle     ${fmt((steering.angle * 180) / Math.PI)}°`,
       `steer     ${steering.calib ? fmt(steering.read()) : "— (not calibrated)"}`,
       `net       ${status.state}${"playerId" in status ? " " + status.playerId : ""}`,
-      `rtt       —`,
+      `rtt       ${clock.offset === undefined ? "—" : `${Math.round(clock.rtt)} ms, p95 ${Math.round(clock.percentile(95))}, jitter ${Math.round(clock.jitter)}`}`,
+      `input     ${Math.round(sendRate)} Hz, age at server ${inputAge === undefined ? "—" : `${inputAge} ms`}`,
+      `fps       ${Math.round(fps)}`,
       `hold side —`,
       `calib     —`,
     ].join("\n");

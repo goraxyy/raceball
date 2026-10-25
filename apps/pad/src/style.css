@@ -11,42 +11,9 @@
  * on iPhone, and container units follow the rotated box while viewport units don't.
  */
 
-/* Barlow (SIL Open Font License). Self-host it before demo day, like the Babylon decoders;
-   until then the system font stack below takes over when the network is slow. */
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800;1,900&family=Barlow:wght@600;700;800&display=swap");
+@import "@raceball/shared/theme/theme.css";
 
 :root {
-  color-scheme: light;
-
-  --ink: #17151f;
-  --ink-2: #2b2838;
-  --paper: #f3ead9;
-  --paper-2: #e6d8c0;
-  --paper-3: #d6c4a5;
-  --muted: #6b6273;
-
-  --brake: #7cc3e8; /* Gulf-style blue */
-  --brake-deep: #2f7fb3;
-  --gas: #f5702a; /* Gulf-style orange */
-  --gas-deep: #b9480f;
-  --flag: #ffc81e; /* items, highlights */
-  --go: #1f9e57;
-  --stop: #d7263d;
-  --asphalt: #1c1b24;
-  --asphalt-2: #262532;
-
-  /* set per player by the pad code: style="--player: #56B4E9" (colors in docs/team/nuris-art-ui.md) */
-  --player: #e69f00;
-
-  --line: 3px;
-  --drop: 5px; /* hard offset shadow */
-  --radius: 10px;
-
-  --display:
-    "Barlow Condensed", "Arial Narrow", "Roboto Condensed",
-    "Helvetica Neue Condensed", system-ui, sans-serif;
-  --text: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-
   font-family: var(--text);
   font-weight: 600;
   background: var(--paper);
@@ -151,57 +118,6 @@ p {
   rotate: -2deg;
 }
 
-/* ------------------------------------------------------------------ buttons */
-/* slanted like a race number board, with a hard shadow that it presses into */
-
-.start-button,
-.btn {
-  appearance: none;
-  position: relative;
-  min-height: 56px;
-  padding: 0.55em 1.6em 0.5em;
-  border: var(--line) solid var(--ink);
-  border-radius: 6px;
-  background: var(--gas);
-  color: var(--ink);
-  font-family: var(--display);
-  font-size: clamp(22px, 7cqmin, 38px);
-  font-style: italic;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  transform: skewX(-8deg);
-  box-shadow: var(--drop) var(--drop) 0 var(--ink);
-  cursor: pointer;
-  transition:
-    translate 70ms ease,
-    box-shadow 70ms ease;
-}
-
-.start-button:active,
-.btn:active {
-  translate: var(--drop) var(--drop);
-  box-shadow: 0 0 0 var(--ink);
-}
-
-.btn-ghost {
-  min-height: 44px;
-  padding: 0.5em 1.2em 0.45em;
-  font-size: clamp(15px, 4.4cqmin, 22px);
-  background: var(--paper);
-  box-shadow: 3px 3px 0 var(--ink);
-}
-
-.btn-ghost:active {
-  translate: 3px 3px;
-}
-
-.btn:disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -233,102 +149,8 @@ p {
   paint-order: stroke fill;
 }
 
-/* a flat toy ball in the player color, ink outline, one highlight, their shape on it */
-.ball {
-  --size: clamp(64px, 26cqmin, 180px);
-  position: relative;
-  width: var(--size);
-  height: var(--size);
-  flex: none;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  border: max(3px, calc(var(--size) * 0.035)) solid var(--ink);
-  background:
-    radial-gradient(
-      circle at 30% 26%,
-      rgb(255 255 255 / 0.9) 0 9%,
-      transparent 9.5%
-    ),
-    radial-gradient(
-      circle at 70% 78%,
-      color-mix(in srgb, var(--player) 70%, var(--ink)) 0 32%,
-      transparent 33%
-    ),
-    var(--player);
-  box-shadow: calc(var(--size) * 0.05) calc(var(--size) * 0.06) 0 var(--ink);
-}
-
-.ball .shape {
-  --shape-size: calc(var(--size) * 0.4);
-  background: var(--paper);
-  filter: drop-shadow(2px 2px 0 var(--ink));
-}
-
 .ball-roll {
   animation: ball-roll 2.2s ease-in-out infinite;
-}
-
-/* ------------------------------------------------------------------ player shapes */
-/* <span class="shape" data-shape="star"></span>: shape + color, never color alone */
-
-.shape {
-  --shape-size: 1em;
-  display: inline-block;
-  flex: none;
-  width: var(--shape-size);
-  height: var(--shape-size);
-  background: var(--player);
-}
-
-.shape[data-shape="circle"] {
-  border-radius: 50%;
-}
-.shape[data-shape="square"] {
-  border-radius: 8%;
-  transform: scale(0.86);
-}
-.shape[data-shape="triangle"] {
-  clip-path: polygon(50% 6%, 96% 90%, 4% 90%);
-}
-.shape[data-shape="star"] {
-  clip-path: polygon(
-    50% 2%,
-    62% 36%,
-    98% 37%,
-    69% 59%,
-    80% 95%,
-    50% 74%,
-    20% 95%,
-    31% 59%,
-    2% 37%,
-    38% 36%
-  );
-}
-.shape[data-shape="diamond"] {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-.shape[data-shape="cross"] {
-  clip-path: polygon(
-    35% 0,
-    65% 0,
-    65% 35%,
-    100% 35%,
-    100% 65%,
-    65% 65%,
-    65% 100%,
-    35% 100%,
-    35% 65%,
-    0 65%,
-    0 35%,
-    35% 35%
-  );
-}
-.shape[data-shape="pentagon"] {
-  clip-path: polygon(50% 2%, 98% 38%, 79% 96%, 21% 96%, 2% 38%);
-}
-.shape[data-shape="hexagon"] {
-  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
 }
 
 /* ------------------------------------------------------------------ start */
@@ -467,6 +289,14 @@ p {
   background: var(--flag);
   translate: -2px -2px;
   box-shadow: 5px 5px 0 var(--ink);
+}
+
+/* a planet another player already picked */
+.ball-option:has(input:disabled) {
+  opacity: 0.4;
+  box-shadow: none;
+  translate: 2px 2px;
+  cursor: not-allowed;
 }
 
 .ball-option:has(input:focus-visible) {

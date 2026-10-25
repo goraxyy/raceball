@@ -1,4 +1,4 @@
-import type { PongMsg } from "@raceball/shared";
+import type { PongMsg } from "./protocol";
 
 /** How much each new ping moves the offset/jitter estimates (exponential moving average) */
 const SMOOTHING = 0.1;

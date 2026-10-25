@@ -108,7 +108,7 @@ Keep `experimentalDecorators: true` and `useDefineForClassFields: false` in the 
 
 1. In Vercel, choose New Project > Import `goraxyy/raceball`.
 2. **Root Directory:** `apps/web`. Framework: Vite. Make sure "Include files outside the root directory in the build step" is enabled, because the app imports `packages/shared`.
-3. **Env:** `VITE_SERVER_URL = wss://raceball-server-production.up.railway.app`, and `VITE_PAD_URL` = the pad's production URL.
+3. **Env:** `VITE_SERVER_URL = wss://raceball-server-production.up.railway.app`, and `VITE_PAD_URL = https://raceball-pad.vercel.app`.
 4. Repeat for the pad with Root Directory `apps/pad`. It only needs `VITE_SERVER_URL`.
 5. **SPA routing** for `/host` and `/play`: add `apps/web/vercel.json`:
 

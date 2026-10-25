@@ -4,7 +4,9 @@ import {
   JoinError,
   MAX_PLAYERS,
   PROTOCOL_VERSION,
+  type InputMsg,
   type JoinOptions,
+  type NetStatMsg,
   type PongMsg,
   type Role,
   type WelcomeMsg,
@@ -14,6 +16,8 @@ import { PlayerState, RaceState } from "./schema";
 
 const ROLES: readonly Role[] = ["host", "viewer", "pad"];
 const MAX_NAME = 16;
+/** How often each player's pad and laptop get a NetStatMsg, ms */
+const NETSTAT_MS = 1000;
 /** Close code for a pad whose laptop player left */
 const PLAYER_GONE = 4100;
 
@@ -34,6 +38,8 @@ export class RaceRoom extends Room<{ state: RaceState }> {
   private pairTokens = new Map<string, string>();
   /** playerId → pairToken */
   private tokenOf = new Map<string, string>();
+  /** playerId → latest input from their pad, and when it arrived (ms) */
+  private padInputs = new Map<string, { msg: InputMsg; at: number }>();
 
   async onCreate() {
     this.roomId = await claimRoomCode(this.presence);
@@ -48,6 +54,14 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     this.onMessage("ping", (client, c: number) => {
       client.send("pong", { c, s: Date.now() } satisfies PongMsg);
     });
+    this.onMessage("input", (client, msg: InputMsg) => {
+      const seat = this.seats.get(client.sessionId);
+      if (seat?.role !== "pad" || !seat.playerId) return; // only a bound pad may drive
+      const last = this.padInputs.get(seat.playerId);
+      if (last && msg.seq <= last.msg.seq) return; // latest wins
+      this.padInputs.set(seat.playerId, { msg, at: Date.now() });
+    });
+    this.clock.setInterval(() => this.sendNetStats(), NETSTAT_MS);
   }
 
   /** Runs before a seat is taken, so rejected clients never count against maxClients */
@@ -143,9 +157,28 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     return playerId;
   }
 
+  /** Latest input for the simulation loop (M1), with when it arrived */
+  latestInput(playerId: string) {
+    return this.padInputs.get(playerId);
+  }
+
+  /** Tell each player's pad and laptop how fresh their input is at the server */
+  private sendNetStats() {
+    const now = Date.now();
+    for (const client of this.clients) {
+      const playerId = this.seats.get(client.sessionId)?.playerId;
+      const input = playerId && this.padInputs.get(playerId);
+      if (input)
+        client.send("netstat", {
+          inputAge: now - input.at,
+        } satisfies NetStatMsg);
+    }
+  }
+
   /** Remove a player and their pairing token, and disconnect their paired pad */
   private removePlayer(playerId: string) {
     this.state.players.delete(playerId);
+    this.padInputs.delete(playerId);
     const token = this.tokenOf.get(playerId);
     if (token) this.pairTokens.delete(token);
     this.tokenOf.delete(playerId);

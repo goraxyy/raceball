@@ -31,9 +31,9 @@
 
 Item odds depend on race position: players at the back get stronger items, which keeps races friendly and close.
 
-## Ball skins (pick 8)
+## Balls: the eight planets
 
-Lion (an original cartoon lion, **not** the official logo) · Creamery scoop (vanilla, chocolate) · Football · Snowball · Old Main bell · Blue-white beach ball · Library book · Campus squirrel
+HackPSU's theme is space, so the balls are planets: Mercury · Venus · Earth · Mars · Jupiter · Saturn · Uranus · Neptune. Eight planets for eight players, each wearing an orbit ring in its player's color. Looks and file names are in the [art bible](ASSETS.md#balls-the-eight-planets).
 
 ## Asset list
 
@@ -41,7 +41,7 @@ Lion (an original cartoon lion, **not** the official logo) · Creamery scoop (va
 |---|---|---|
 | **P0** (needed to play) | Track pieces | Kenney Marble Kit (CC0) as the base |
 | **P0** | Start/finish arch, barriers, ground tiles, trees (fall colors) | Reuse heavily with instancing |
-| **P0** | 4 ball skins | One material each |
+| **P0** | 4 planet balls | One material each, plus the orbit ring |
 | **P1** (the Penn State look) | Old Main | Simplified low-poly bell tower + facade |
 | **P1** | Lion Shrine | Low-poly lion on a rock |
 | **P1** | Creamery + giant cone | The cone doubles as a ramp |

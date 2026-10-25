@@ -256,7 +256,7 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 
 ### VFX v1 files
 
-Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` JSON, all drawing from one atlas, `fx_atlas.png` (512×256, eight 128² cells: blob, cloud, puff ring, sparkle, star, leaf, confetti, ring). The atlas cells are grayscale, so each system's `color1`/`color2`/`colorDead` paints them. No effect uses color gradients, so code can retint any of them.
+Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` JSON, all drawing from one atlas, `fx_atlas.png` (its first eight 128² cells: blob, cloud, puff ring, sparkle, star, leaf, confetti, ring; v2 below adds eight more). The atlas cells are grayscale, so each system's `color1`/`color2`/`colorDead` paints them. No effect uses color gradients, so code can retint any of them.
 
 | File | Event | How code drives it |
 |---|---|---|
@@ -268,7 +268,29 @@ Three effects ship in `apps/web/public/assets/fx/` as Babylon `ParticleSystem` J
 - **Loading:** `ParticleSystem.Parse(json, scene, "/assets/fx/", true)`, then `start()` once. Bursts are saved with `manualEmitCount` 0, so they sit idle until an event sets the count. Load each file once per scene and reuse it, so a crash of eight balls doesn't create eight systems.
 - **Source:** `tools/fx/gen_fx_textures.py` draws the atlas and `tools/fx/build_fx.mjs` builds the four systems with Babylon's own API, so the JSON always matches the engine version. Run both after a change (`python3 tools/fx/gen_fx_textures.py && node tools/fx/build_fx.mjs`).
 - **Preview:** `/ui` > fx shows a ball circling a patch of track with buttons for a light or hard bump, a respawn, the player color, speed, snow dust and the camera. The preview loads the files the same way the game should.
-- **Budget:** 112 particles at most across the four systems for one ball, and one 40 KB texture.
+- **Budget:** 112 particles at most across the four systems for one ball.
+
+### VFX v2 files
+
+Nine more effects in the same folder and from the same atlas. The atlas is now **512×512, sixteen 128² cells**: the first eight are unchanged (so v1 still works), then flame, splat, snowflake, streak, and four confetti pieces **already painted** in the livery colors with ink edges (gas orange, brake blue, flag yellow, go green). Painted cells use a white tint.
+
+| File | Event | How code drives it |
+|---|---|---|
+| `fx_boost_flames.json` | Blue & White Boost (while it lasts) | `emitRate = 70` during the boost, 0 after. Directions point backward along +Z: give it a TransformNode that follows the ball's position and **heading** (not its roll) and set `isLocal = true`, or rotate `direction1`/`direction2` to the heading each frame |
+| `fx_boost_trail.json` | With the flames | The same, at `emitRate = 40`. Stretched billboards, so the streaks line up with their motion |
+| `fx_roar_ring.json` | Lion Roar | Move `emitter` to the ball, `manualEmitCount = 1`, then again 120 ms later: two flag-yellow rings, like a sound wave |
+| `fx_roar_debris.json` | Lion Roar (with the ring) | Same `emitter`, `manualEmitCount = 14`: a low ring of limestone dust along the ground |
+| `fx_spill_splat.json` | Creamery Spill dropped | `emitter` about 1.2 m behind the ball, `manualEmitCount = 12`: vanilla and strawberry splats (the puddle itself is a mesh) |
+| `fx_spill_sprinkles.json` | With the splat | Same `emitter`, `manualEmitCount = 20` |
+| `fx_snowfall.json` | Arboretum (continuous) | Keep `emitter` on the camera target. `start()` entering the section, `stop()` leaving it. It pre-warms, so the sky is already full. **GPU** where supported |
+| `fx_snow_puff.json` | Landing or a bump in the snow | `emitter` at the ball, `manualEmitCount = 6 + 8 × strength` |
+| `fx_confetti.json` | A player finishes | `emitter` on top of the finish arch, `manualEmitCount = 260`. A fast launch, then a slow paper flutter. **GPU** where supported |
+
+- **GPU particles:** load `fx_snowfall` and `fx_confetti` with `GPUParticleSystem.Parse(json, scene, "/assets/fx/", true)` when `GPUParticleSystem.IsSupported`, otherwise `ParticleSystem.Parse`. The same JSON works for both. `/ui` > fx does exactly this.
+- **Cell ranges:** a system picks a *range* of cells (`startSpriteCellID` to `endSpriteCellID`), so it can only mix neighbors in the atlas. `build_fx.mjs` refuses anything else.
+- **Speed lines** aren't particles. They're `SpeedLines` in `apps/web/src/ui`: comic-book streaks that rush in from the screen edges over the laptop chase view, from 55% of top speed, at full strength during a boost. `<SpeedLines intensity={speed / topSpeed} />`, or 1 while boosting. The middle of the screen stays clear, they cost nothing in the 3D scene, and they're off with reduced motion.
+- **Preview:** `/ui` > fx now also has Boost, Lion Roar, Creamery Spill, Finish confetti and Arboretum snow (snowfall, snow dust and snow puffs on bumps), with the speed lines over the follow camera.
+- **Budget:** a race peaks around 400 confetti + 1,500 snowflakes on the GPU, about 200 CPU particles per busy ball, and one 67 KB texture.
 
 ## Animation
 
@@ -409,7 +431,7 @@ All 80 are white on transparent at 512², so we tint them with the art bible pal
 | `mus_lobby_loop`, `mus_race_loop` | RaceBall team (composed by `tools/audio/gen_music.py`) | Original, MIT with the code | This repo | Lobby and race music |
 | `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |
 | RaceBall logo, ball mark, favicons, `apple-touch-icon.png` | RaceBall team (drawn by `tools/brand/gen_brand.py`; the wordmark is Barlow Condensed, see the font row) | Original, MIT with the code | This repo | Logo, title screen, browser tabs, home-screen icons |
-| `fx_atlas.png`, `fx_dust, `fx_bump_sparks`, `fx_respawn_poof`, `fx_respawn_stars` | RaceBall team (drawn by `tools/fx/gen_fx_textures.py`, built by `tools/fx/build_fx.mjs`) | Original, MIT with the code | This repo | Rolling dust, bump sparks, respawn poof |
+| `fx_atlas.png`, `fx_dust`, `fx_bump_sparks`, `fx_respawn_poof`, `fx_respawn_stars`, and the v2 `fx_boost_*`, `fx_roar_*`, `fx_spill_*`, `fx_snowfall`, `fx_snow_puff`, `fx_confetti` | RaceBall team (drawn by `tools/fx/gen_fx_textures.py`, built by `tools/fx/build_fx.mjs`) | Original, MIT with the code | This repo | All particle effects (VFX v1 + v2) |
 | Marble Kit 2.0: `tree-large` | Kenney | CC0 | https://kenney.nl/assets/marble-kit | Trees in `maps/happy_valley.glb` |
 | Racing Kit: `overhead`, `grandStand`, `barrierRed` | Kenney | CC0 | https://kenney.nl/assets/racing-kit | Finish arch, stadium stands and start barriers in `maps/happy_valley.glb` |
 | Happy Valley greybox: road, rails, landmark boxes, markers | RaceBall team (generated by `tools/track/build_happy_valley.py`) | Original, MIT with the code | This repo | `maps/happy_valley.glb`, `tracks/happy_valley_col.glb` |

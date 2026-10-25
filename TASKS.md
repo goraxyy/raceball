@@ -194,7 +194,7 @@ Nothing right now. Add new questions here.
 - [ ] Pad accessibility settings: auto-gas, sensitivity, dead zone
 
 **Nuris**
-- [ ] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones)
+- [x] VFX v2: boost flames, roar ring, ice-cream splat, snowfall, confetti, speed lines (GPU particles for the heavy ones) (9 effects in `apps/web/public/assets/fx/`, `SpeedLines` in `apps/web/src/ui`; preview at `/ui` > fx; [ASSETS.md](docs/ASSETS.md#vfx-v2-files))
 - [ ] Full sound pass + mix (big screen vs laptops), crowd cheers; captions for key audio cues
 - [x] Logo, title screen, loading screen with progress, brag card, favicons (`TitleScreen` on `/`, `BragCard`; previews at `/ui` > title, loading, brag; how they're made: [your guide](docs/team/nuris-art-ui.md#branding))
 

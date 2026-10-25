@@ -2022,6 +2022,49 @@
   }
 }
 
+/* ---- speed lines (laptop chase view): streaks rush in from the edges, the middle stays clear */
+
+.speed-lines {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  opacity: calc(0.35 + 0.55 * var(--k));
+}
+
+.speed-lines span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--len);
+  height: var(--w);
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #fff 35%, #fff);
+  transform-origin: 0 50%;
+  animation: speed-rush 0.45s linear infinite;
+}
+
+@keyframes speed-rush {
+  from {
+    transform: rotate(var(--a)) translateX(78vmax);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    transform: rotate(var(--a)) translateX(34vmax);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speed-lines {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------------ dev gallery (/ui) */
 
 /* ---- music listening view (/ui > music), record sleeves in the livery */

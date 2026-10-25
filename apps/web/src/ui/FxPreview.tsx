@@ -1,4 +1,4 @@
-// Dev-only: the VFX v1 particle files on a 1 m ball circling a patch of track, for /ui.
+// Dev-only: the VFX v1 + v2 particle files on a 1 m ball circling a patch of track, for /ui.
 // Loads apps/web/public/assets/fx/*.json the way the game should (see docs/ASSETS.md).
 import { useEffect, useRef, useState } from "react";
 import {
@@ -7,14 +7,17 @@ import {
   Color4,
   DirectionalLight,
   Engine,
+  GPUParticleSystem,
   HemisphericLight,
   MeshBuilder,
   ParticleSystem,
+  type PointParticleEmitter,
   Scene,
   StandardMaterial,
   Vector3,
 } from "@babylonjs/core";
 import { PLAYER_COLORS } from "@raceball/shared";
+import { SpeedLines } from "./SpeedLines";
 
 const FX_URL = "/assets/fx/";
 const FILES = [
@@ -22,7 +25,20 @@ const FILES = [
   "fx_bump_sparks",
   "fx_respawn_poof",
   "fx_respawn_stars",
+  "fx_boost_flames",
+  "fx_boost_trail",
+  "fx_roar_ring",
+  "fx_roar_debris",
+  "fx_spill_splat",
+  "fx_spill_sprinkles",
+  "fx_snowfall",
+  "fx_snow_puff",
+  "fx_confetti",
 ] as const;
+/** The heavy ones run on the GPU where the browser supports it (docs/ASSETS.md) */
+const GPU: readonly FxName[] = ["fx_snowfall", "fx_confetti"];
+const BOOST_SECONDS = 2.5;
+type Fx = ParticleSystem | GPUParticleSystem;
 type FxName = (typeof FILES)[number];
 const TOP_SPEED = 12; // m/s, a lap-pace ball
 const ORBIT = 6;
@@ -34,17 +50,24 @@ interface FxControls {
   setSnow(snow: boolean): void;
   setFollow(follow: boolean): void;
   setSlot(slot: number): void;
+  boost(): void;
+  roar(): void;
+  spill(): void;
+  confetti(): void;
 }
 
 async function loadFx(scene: Scene, name: FxName) {
   const json: unknown = await (await fetch(`${FX_URL}${name}.json`)).json();
-  const ps = ParticleSystem.Parse(json, scene, FX_URL, true);
+  const ps: Fx =
+    GPU.includes(name) && GPUParticleSystem.IsSupported
+      ? GPUParticleSystem.Parse(json, scene, FX_URL, true)
+      : ParticleSystem.Parse(json, scene, FX_URL, true);
   ps.emitter = Vector3.Zero(); // moved by the caller; never the rolling mesh
   return ps;
 }
 
 /** Sets a white-texture system's tint: color1/color2 to the color, colorDead to it at alpha 0. */
-function tint(ps: ParticleSystem, hex: string, alpha = 1) {
+function tint(ps: Fx, hex: string, alpha = 1) {
   const c = Color3.FromHexString(hex);
   ps.color1 = new Color4(c.r, c.g, c.b, alpha);
   ps.color2 = new Color4(c.r, c.g, c.b, alpha);
@@ -106,7 +129,8 @@ function startScene(canvas: HTMLCanvasElement) {
   const pos = new Vector3(ORBIT, 0.5, 0);
   let angle = 0;
   let speed = TOP_SPEED;
-  let fx: Partial<Record<FxName, ParticleSystem>> = {};
+  let fx: Partial<Record<FxName, Fx>> = {};
+  let boostLeft = 0;
   let dustColors: Color4[] = [];
   let slot = 0;
   let snow = false;
@@ -131,7 +155,10 @@ function startScene(canvas: HTMLCanvasElement) {
       c.clone(),
     );
     applyLooks();
-    for (const s of systems) s.start(); // bursts start idle (manualEmitCount 0)
+    fx.fx_boost_flames!.emitRate = 0; // on only while boosting
+    fx.fx_boost_trail!.emitRate = 0;
+    for (const s of systems) if (s !== fx.fx_snowfall) s.start(); // bursts start idle
+    if (snow) fx.fx_snowfall!.start();
   });
 
   engine.runRenderLoop(() => {
@@ -148,6 +175,26 @@ function startScene(canvas: HTMLCanvasElement) {
       camera.alpha = angle - Math.PI / 2 + 0.5;
     }
     if (fx.fx_dust) fx.fx_dust.emitRate = 24 * Math.min(1, speed / TOP_SPEED);
+    // the boost blows backward along the direction of travel
+    const back = new Vector3(Math.sin(angle), 0, -Math.cos(angle));
+    const side = new Vector3(back.z, 0, -back.x);
+    for (const [name, lo, hi, up, spread] of [
+      ["fx_boost_flames", 1.6, 2.4, [0.5, 1.1], 0.35],
+      ["fx_boost_trail", 0.8, 1.2, [0.1, 0.3], 0.15],
+    ] as const) {
+      const ps = fx[name];
+      if (!ps) continue;
+      (ps.emitter as Vector3).copyFrom(pos);
+      const e = ps.particleEmitterType as PointParticleEmitter;
+      e.direction1.copyFrom(back.scale(lo).addInPlace(side.scale(-spread))).y =
+        up[0];
+      e.direction2.copyFrom(back.scale(hi).addInPlace(side.scale(spread))).y =
+        up[1];
+      ps.emitRate = boostLeft > 0 ? (name === "fx_boost_flames" ? 70 : 40) : 0;
+    }
+    boostLeft = Math.max(0, boostLeft - dt);
+    if (fx.fx_snowfall)
+      (fx.fx_snowfall.emitter as Vector3).copyFrom(camera.target);
     scene.render();
   });
   const onResize = () => engine.resize();
@@ -162,6 +209,10 @@ function startScene(canvas: HTMLCanvasElement) {
         .copyFrom(pos)
         .addInPlace(pos.normalizeToNew().scale(0.5));
       s.manualEmitCount = Math.round(6 + 12 * strength);
+      if (snow && fx.fx_snow_puff) {
+        (fx.fx_snow_puff.emitter as Vector3).copyFrom(pos);
+        fx.fx_snow_puff.manualEmitCount = Math.round(6 + 8 * strength);
+      }
     },
     respawn() {
       const poof = fx.fx_respawn_poof;
@@ -178,6 +229,40 @@ function startScene(canvas: HTMLCanvasElement) {
     setSnow(on) {
       snow = on;
       applyLooks();
+      if (on) fx.fx_snowfall?.start();
+      else fx.fx_snowfall?.stop();
+    },
+    boost() {
+      boostLeft = BOOST_SECONDS;
+    },
+    roar() {
+      const ring = fx.fx_roar_ring;
+      const debris = fx.fx_roar_debris;
+      if (!ring || !debris) return;
+      (ring.emitter as Vector3).copyFrom(pos);
+      (debris.emitter as Vector3).copyFrom(pos);
+      ring.manualEmitCount = 1;
+      setTimeout(() => (ring.manualEmitCount = 1), 120); // a second ring, a beat behind
+      debris.manualEmitCount = 14;
+    },
+    spill() {
+      const splat = fx.fx_spill_splat;
+      const sprinkles = fx.fx_spill_sprinkles;
+      if (!splat || !sprinkles) return;
+      // dropped behind the ball
+      const at = pos.add(
+        new Vector3(Math.sin(angle), 0, -Math.cos(angle)).scale(1.2),
+      );
+      (splat.emitter as Vector3).copyFrom(at);
+      (sprinkles.emitter as Vector3).copyFrom(at);
+      splat.manualEmitCount = 12;
+      sprinkles.manualEmitCount = 20;
+    },
+    confetti() {
+      const c = fx.fx_confetti;
+      if (!c) return;
+      (c.emitter as Vector3).set(ORBIT, 4.5, 0); // over the start line, like the finish arch
+      c.manualEmitCount = 260;
     },
     setFollow(on) {
       follow = on;
@@ -208,6 +293,7 @@ export function FxPreview() {
   const [fast, setFast] = useState(true);
   const [snow, setSnow] = useState(false);
   const [follow, setFollow] = useState(true);
+  const [boosting, setBoosting] = useState(false);
 
   useEffect(() => {
     const { controls: c, dispose } = startScene(canvasRef.current!);
@@ -226,6 +312,7 @@ export function FxPreview() {
   return (
     <section className="race-preview">
       <canvas ref={canvasRef} className="fx-canvas" />
+      {follow && <SpeedLines intensity={boosting ? 1 : fast ? 0.8 : 0.25} />}
       <div className="hud-controls">
         <button type="button" onClick={() => controls.current?.bump(0.3)}>
           Light bump
@@ -235,6 +322,25 @@ export function FxPreview() {
         </button>
         <button type="button" onClick={() => controls.current?.respawn()}>
           Respawn
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            controls.current?.boost();
+            setBoosting(true);
+            setTimeout(() => setBoosting(false), BOOST_SECONDS * 1000);
+          }}
+        >
+          Boost
+        </button>
+        <button type="button" onClick={() => controls.current?.roar()}>
+          Lion Roar
+        </button>
+        <button type="button" onClick={() => controls.current?.spill()}>
+          Creamery Spill
+        </button>
+        <button type="button" onClick={() => controls.current?.confetti()}>
+          Finish confetti
         </button>
         <button
           type="button"
@@ -250,7 +356,7 @@ export function FxPreview() {
           {fast ? "Slow down" : "Top speed"}
         </button>
         <button type="button" onClick={() => setSnow((s) => !s)}>
-          {snow ? "Normal dust" : "Snow dust"}
+          {snow ? "Leave the snow" : "Arboretum snow"}
         </button>
         <button type="button" onClick={() => setFollow((f) => !f)}>
           {follow ? "Overview" : "Follow ball"}

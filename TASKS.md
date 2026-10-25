@@ -101,7 +101,7 @@ Nothing right now. Add new questions here.
 **Nuris**
 - [x] Art bible in `docs/ASSETS.md`: style, palettes, the 8 player colors + shapes, the planet balls
 - [x] Mood board in `docs/moodboard/`: 5–10 campus and style references, each credited (9 Wikimedia Commons photos, style searches listed)
-- [ ] Review the Kenney Particle Pack and audio packs; add particle textures and sounds to the shortlist
+- [x] Review the Kenney Particle Pack and audio packs; add particle textures and sounds to the shortlist ([ASSETS.md](docs/ASSETS.md#kenney-shortlist-particle-pack--audio-packs-reviewed-by-nuris))
 
 ---
 

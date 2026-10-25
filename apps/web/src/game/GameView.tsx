@@ -1,28 +1,63 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Engine, Scene } from "@babylonjs/core";
+import { PLANETS } from "@raceball/shared";
 import "@babylonjs/loaders/glTF";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
 import { installInspectorToggle } from "./inspector";
+import type { TileRect } from "./big-screen";
+import type { SnapshotSource } from "./net-feed";
+import { TileFrames } from "./TileFrames";
 import "./local.css";
 
-/** Owns the Babylon engine for one canvas. React UI (HUD, lobby) sits on top of it as DOM. */
-export function GameView({ mode }: { mode: GameMode }) {
+/**
+ * Owns the Babylon engine for one canvas. React UI (HUD, lobby) sits on top of it as DOM.
+ * Viewer and host modes draw the balls of `session`, a room from Rasim's net library.
+ */
+export function GameView({
+  mode,
+  session,
+  onLoaded,
+}: {
+  mode: GameMode;
+  session?: SnapshotSource;
+  /** Once the map is in and the race can be drawn (a laptop tells the server its assets loaded) */
+  onLoaded?: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [status, setStatus] = useState<GameStatus | null>(null);
+  const onLoadedRef = useRef(onLoaded);
+  useEffect(() => {
+    onLoadedRef.current = onLoaded;
+  });
+  const onTileRects = useCallback(
+    (rects: Map<string, TileRect>) => gameRef.current?.setTileRects(rects),
+    [],
+  );
 
   useEffect(() => {
     let active = true;
+    let loaded = false;
     const engine = new Engine(canvasRef.current, true, { stencil: true });
     const scene = new Scene(engine);
     scene.useRightHandedSystem = true; // match glTF + Rapier, no conversions
 
     const params = new URLSearchParams(location.search);
+    const ball = params.get("ball") ?? "";
     const game = createGame(scene, mode, {
       map: params.get("map") === "flat" ? "flat" : "happy_valley",
-      overview: params.get("view") === "overview",
+      ball: (PLANETS as readonly string[]).includes(ball) ? ball : undefined,
+      overview: params.has("view")
+        ? params.get("view") === "overview"
+        : undefined,
+      session,
       onStatus: (next) => {
-        if (active) setStatus(next);
+        if (!active) return;
+        setStatus(next);
+        if (next.state === "ready" && !loaded) {
+          loaded = true;
+          onLoadedRef.current?.();
+        }
       },
     });
     gameRef.current = game;
@@ -42,7 +77,7 @@ export function GameView({ mode }: { mode: GameMode }) {
       scene.dispose();
       engine.dispose();
     };
-  }, [mode]);
+  }, [mode, session]);
 
   // fixed to the viewport, so page styles (body padding) never shrink the 3D view
   return (
@@ -60,6 +95,24 @@ export function GameView({ mode }: { mode: GameMode }) {
           outline: "none",
         }}
       />
+      {mode === "host" && session && !!status?.tiles?.length && (
+        <TileFrames
+          ids={status.tiles}
+          session={session}
+          onRects={onTileRects}
+        />
+      )}
+      {mode !== "local" && status && status.state !== "ready" && (
+        <p
+          className="game-status"
+          role={status.state === "error" ? "alert" : "status"}
+          data-state={status.state}
+        >
+          {status.state === "error"
+            ? `The map could not load: ${status.message}. Reload to retry.`
+            : status.message}
+        </p>
+      )}
       {mode === "local" && status && (
         <>
           <aside className="local-hud" aria-label="Local playtest">

@@ -226,6 +226,14 @@ for i,side in enumerate([-4,-2,0,2,4]):
     box("prop_item",xyz(s,side,1),(1.1,1.1,1.1),blue)
 for section in [0,3,5,6]:
     marker("cam_"+SECTIONS[section],"camera",starts[section]+20,side=-25,up=20,section=SECTIONS[section])
+# The route's centerline for game-core (ranking, bots) and the big-screen TrackMap:
+# game-space x, z pairs about every 4 m, starting at the finish line and going the racing way.
+route=bpy.data.objects.new("route",None)
+collections["markers"].objects.link(route)
+route["rb"]="route"
+route["length"]=round(length,2)
+route_n=math.ceil(length/4)
+route["points"]=[round(v,2) for i in range(route_n) for v in center(length*i/route_n)]
 for i,(s,side,kind,grip,mat) in enumerate([(starts[4]+35,-2,"icecream",.2,pink),(starts[4]+60,2,"icecream",.2,pink),(starts[6]+30,0,"snow",.6,white),(starts[6]+65,2,"ice",.1,ice),(starts[6]+95,-1,"snow",.6,white)]):
     heading=math.atan2(*tangent(s))
     surf=box(f"surface_{kind}_{i}",xyz(s,side,.5),(6,1.2,8),None,"markers",heading)

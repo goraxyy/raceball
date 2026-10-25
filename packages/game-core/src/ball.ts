@@ -15,11 +15,13 @@ export interface PlayerSim {
   surfaceGrip: number; // surfaces scale the grip (ice, Creamery Spill)
 }
 
+/** forceThreshold: contact force (N) above which the ball reports contact-force events, for bumps */
 export function addBall(
   world: RAPIER.World,
   x: number,
   y: number,
   z: number,
+  forceThreshold = 0,
 ): RAPIER.RigidBody {
   const body = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
@@ -31,7 +33,8 @@ export function addBall(
     RAPIER.ColliderDesc.ball(BALL_RADIUS)
       .setFriction(1.0)
       .setRestitution(0.3)
-      .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS),
+      .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
+      .setContactForceEventThreshold(forceThreshold),
     body,
   );
   return body;

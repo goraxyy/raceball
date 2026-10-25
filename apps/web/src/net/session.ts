@@ -37,6 +37,8 @@ export class NetSession {
   pairToken?: string;
   /** How old our player's latest input was at the server, ms (laptops, once the phone sends input) */
   inputAge?: number;
+  /** +1 on every state patch and welcome, so the hooks can tell when `state` changed */
+  version = 0;
   private listeners = new Set<() => void>();
   private pinger: ReturnType<typeof setInterval>;
   readonly room: Room;
@@ -127,6 +129,7 @@ export class NetSession {
   }
 
   private emit() {
+    this.version++;
     for (const listener of this.listeners) listener();
   }
 }

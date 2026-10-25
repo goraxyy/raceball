@@ -3,6 +3,7 @@ import {
   type AssetContainer,
   Color3,
   Color4,
+  CubeTexture,
   DirectionalLight,
   DynamicTexture,
   HemisphericLight,
@@ -16,15 +17,22 @@ import {
 } from "@babylonjs/core";
 import { FLAT_GROUND_HALF_SIZE } from "@raceball/game-core";
 import { BallViews, type BallFeed } from "./balls";
+import { BigScreen, type TileRect } from "./big-screen";
 import { ChaseCamera } from "./cameras";
 import { LocalSession, type LocalMap, type LocalStats } from "./local";
+import { NetFeed, type SnapshotSource } from "./net-feed";
 
 export type GameMode = "local" | "viewer" | "host";
+
+/** How strongly the sky HDRI lights PBR models: a fill under the sun, not the main light (art bible, docs/ASSETS.md) */
+const SKY_FILL = 0.6;
 
 export interface Game {
   update(dt: number): void;
   reset(): void;
   toggleOverview(): void;
+  /** Host: where the page drew each follow-cam tile's frame */
+  setTileRects(rects: Map<string, TileRect>): void;
   dispose(): void;
 }
 
@@ -34,11 +42,19 @@ export interface GameStatus {
   message: string;
   overview: boolean;
   stats?: LocalStats;
+  /** Host: players with a follow-cam tile, in order (the page draws a frame for each) */
+  tiles?: string[];
+  /** Host: the fps fell short, so the tiles became name tags */
+  nameTags?: boolean;
 }
 
 interface GameOptions {
   map?: LocalMap;
+  /** Local mode: the planet your ball wears */
+  ball?: string;
   overview?: boolean;
+  /** Viewer and host: the room whose snapshots the balls follow */
+  session?: SnapshotSource;
   onStatus?: (status: GameStatus) => void;
 }
 
@@ -48,13 +64,15 @@ export function createGame(
   mode: GameMode,
   options: GameOptions = {},
 ): Game {
-  const map = options.map ?? "happy_valley";
+  // the server always races on Happy Valley; the flat ground is a local test map
+  const map =
+    mode === "local" ? (options.map ?? "happy_valley") : "happy_valley";
   const status: GameStatus = {
     state: "loading",
     map,
     message:
       map === "flat" ? "Preparing flat test ground…" : "Loading Happy Valley…",
-    overview: options.overview ?? false,
+    overview: options.overview ?? mode === "host", // the big screen watches the whole map
   };
   const publish = () =>
     options.onStatus?.({
@@ -63,14 +81,14 @@ export function createGame(
     });
   scene.clearColor = new Color4(0.62, 0.8, 0.95, 1);
   const sky = new HemisphericLight("sky", new Vector3(0, 1, 0), scene);
-  sky.intensity = 0.65;
+  sky.intensity = 0.3;
   const sun = new DirectionalLight("sun", new Vector3(-0.4, -1, 0.35), scene);
   sun.position = new Vector3(20, 40, -20);
   sun.intensity = 0.9;
   const shadows = new ShadowGenerator(1024, sun); // only balls cast, so the shadow map stays tight around them
   shadows.usePercentageCloserFiltering = true;
 
-  if (map === "flat" || mode !== "local") createFlatGround(scene);
+  if (map === "flat") createFlatGround(scene);
   const balls = new BallViews(scene, shadows);
   const chase = new ChaseCamera(scene);
   scene.activeCamera = chase.camera;
@@ -87,13 +105,18 @@ export function createGame(
   overview.lowerRadiusLimit = 20;
   overview.upperRadiusLimit = 1000;
   overview.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
+  const big = mode === "host" ? new BigScreen(scene, overview) : undefined;
 
   let local: LocalSession | undefined;
-  let feed: BallFeed | undefined; // viewer/host: Rasim's net library plugs in here
+  let net: NetFeed | undefined;
+  let feed: BallFeed | undefined;
   let disposed = false;
   let container: AssetContainer | undefined;
   let publishAfter = 0;
   const abort = new AbortController();
+  void loadSky().catch((error: unknown) => {
+    if (!disposed) console.warn("Sky HDRI failed to load", error);
+  });
   const applyCamera = () => {
     scene.activeCamera = status.overview ? overview : chase.camera;
     if (status.overview) overview.attachControl(true);
@@ -105,6 +128,7 @@ export function createGame(
     publish();
   };
   const onKeyDown = (event: KeyboardEvent) => {
+    if (mode === "host") return; // the big screen has no ball of its own to follow
     if (
       event.code !== "KeyV" ||
       event.repeat ||
@@ -124,23 +148,95 @@ export function createGame(
   };
   addEventListener("keydown", onKeyDown);
   applyCamera();
-  if (mode === "local") {
+  const fail = (error: unknown) => {
+    if (disposed) return;
+    local?.dispose();
+    local = feed = undefined;
+    container?.dispose();
+    container = undefined;
+    status.state = "error";
+    status.message = error instanceof Error ? error.message : String(error);
     publish();
-    void loadLocal().catch((error: unknown) => {
-      if (disposed) return;
-      local?.dispose();
-      local = feed = undefined;
-      container?.dispose();
-      container = undefined;
-      status.state = "error";
-      status.message = error instanceof Error ? error.message : String(error);
-      publish();
-    });
+  };
+  publish();
+  if (mode === "local") {
+    void loadLocal().catch(fail);
+  } else if (options.session) {
+    feed = net = new NetFeed(options.session);
+    void loadMap()
+      .then((assets) => {
+        container = assets;
+        showMap(assets);
+        status.state = "ready";
+        status.message = "Ready";
+        publish();
+      })
+      .catch(fail);
+  } else {
+    fail(new Error("No room to watch"));
+  }
+
+  /**
+   * The sky HDRI fills in the light on glTF (PBR) models, so the hemispheric light is turned down to suit; it still
+   * lights the StandardMaterial ground and placeholder balls. It's fetched with the abort signal first: a CubeTexture
+   * load can't be cancelled, and in dev React mounts twice on the same canvas, where a first load that finishes after
+   * its engine is gone leaves the second one rendering black.
+   */
+  async function loadSky(): Promise<void> {
+    const response = await fetch(
+      `${import.meta.env.BASE_URL}assets/tex/env_happy_valley.env`,
+      { signal: abort.signal },
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (disposed) return;
+    const url = URL.createObjectURL(blob);
+    const env = CubeTexture.CreateFromPrefilteredData(url, scene, ".env");
+    env.onLoadObservable.addOnce(() => URL.revokeObjectURL(url));
+    scene.environmentTexture = env;
+    scene.environmentIntensity = SKY_FILL;
+  }
+
+  /** The visual map. A load that finishes after dispose is thrown away */
+  async function loadMap(): Promise<AssetContainer> {
+    const assets = await LoadAssetContainerAsync(
+      `${import.meta.env.BASE_URL}assets/maps/happy_valley.glb`,
+      scene,
+    );
+    if (disposed) {
+      assets.dispose();
+      throw new DOMException("Map load cancelled", "AbortError");
+    }
+    return assets;
+  }
+
+  /** Adds the map to the scene, freezes it (it never moves) and frames the overview camera on it */
+  function showMap(assets: AssetContainer): void {
+    assets.addAllToScene();
+    const meshes = assets.meshes.filter((mesh) => mesh.getTotalVertices() > 0);
+    for (const mesh of meshes) {
+      mesh.receiveShadows = true;
+      mesh.computeWorldMatrix(true);
+      mesh.freezeWorldMatrix();
+    }
+    const bounds = meshes.map((mesh) => mesh.getBoundingInfo().boundingBox);
+    if (!bounds.length) return;
+    const min = bounds.reduce(
+      (value, box) => Vector3.Minimize(value, box.minimumWorld),
+      bounds[0].minimumWorld.clone(),
+    );
+    const max = bounds.reduce(
+      (value, box) => Vector3.Maximize(value, box.maximumWorld),
+      bounds[0].maximumWorld.clone(),
+    );
+    overview.setTarget(min.add(max).scale(0.5));
+    overview.radius = Math.max(max.x - min.x, max.z - min.z) * 1.1;
+    big?.fitMap(overview.radius);
   }
 
   async function loadLocal(): Promise<void> {
     const results = await Promise.allSettled([
-      LocalSession.start(map, abort.signal).then((session) => {
+      LocalSession.start(map, abort.signal, options.ball).then((session) => {
         if (disposed) {
           session.dispose();
           throw new DOMException("Local load cancelled", "AbortError");
@@ -149,17 +245,7 @@ export function createGame(
         return session;
       }),
       map === "happy_valley"
-        ? LoadAssetContainerAsync(
-            `${import.meta.env.BASE_URL}assets/maps/happy_valley.glb`,
-            scene,
-          ).then((assets) => {
-            if (disposed) {
-              assets.dispose();
-              throw new DOMException("Map load cancelled", "AbortError");
-            }
-            container = assets;
-            return assets;
-          })
+        ? loadMap().then((assets) => (container = assets))
         : Promise.resolve(undefined),
     ]);
     const [sessionResult, visualResult] = results;
@@ -186,30 +272,7 @@ export function createGame(
       return;
     local = feed = sessionResult.value;
     container = visualResult.value;
-    if (container) {
-      container.addAllToScene();
-      const meshes = container.meshes.filter(
-        (mesh) => mesh.getTotalVertices() > 0,
-      );
-      for (const mesh of meshes) {
-        mesh.receiveShadows = true;
-        mesh.computeWorldMatrix(true);
-        mesh.freezeWorldMatrix();
-      }
-      const bounds = meshes.map((mesh) => mesh.getBoundingInfo().boundingBox);
-      if (bounds.length) {
-        const min = bounds.reduce(
-          (value, box) => Vector3.Minimize(value, box.minimumWorld),
-          bounds[0].minimumWorld.clone(),
-        );
-        const max = bounds.reduce(
-          (value, box) => Vector3.Maximize(value, box.maximumWorld),
-          bounds[0].maximumWorld.clone(),
-        );
-        overview.setTarget(min.add(max).scale(0.5));
-        overview.radius = Math.max(max.x - min.x, max.z - min.z) * 1.1;
-      }
-    }
+    if (container) showMap(container);
     status.state = "ready";
     status.message = "Ready";
     publish();
@@ -217,13 +280,22 @@ export function createGame(
 
   return {
     update(dt) {
-      if (disposed || (mode === "local" && status.state !== "ready")) return;
+      if (disposed || status.state !== "ready") return;
       local?.advance(dt);
       if (!feed) return;
       const poses = feed.sample(performance.now());
-      balls.sync(poses);
+      balls.sync(poses, (id) => feed?.look?.(id));
       const own = feed.ownId ? poses.get(feed.ownId) : undefined;
       if (own) chase.follow(Vector3.FromArray(own.p), own.h, dt);
+      if (big && net) {
+        const fps = scene.getEngine().getFps();
+        if (big.update(poses, net, dt, fps)) {
+          status.tiles = big.tileIds;
+          status.nameTags = big.nameTags;
+          publish();
+        }
+      }
+      if (!local) return; // only local mode has stats for the HUD
       publishAfter -= dt;
       if (publishAfter <= 0) {
         publishAfter = 0.1;
@@ -234,21 +306,28 @@ export function createGame(
       void local?.reset();
     },
     toggleOverview,
+    setTileRects(rects) {
+      big?.setRects(rects);
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
       abort.abort();
       removeEventListener("keydown", onKeyDown);
       local?.dispose();
-      local = feed = undefined;
+      net?.dispose();
+      local = net = feed = undefined;
       container?.dispose();
       container = undefined;
+      big?.dispose();
       balls.dispose();
       overview.dispose();
       chase.camera.dispose();
       shadows.dispose();
       sky.dispose();
       sun.dispose();
+      scene.environmentTexture?.dispose();
+      scene.environmentTexture = null;
     },
   };
 }

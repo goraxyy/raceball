@@ -1,21 +1,49 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { RaceStateView } from "@raceball/shared";
 import type { NetSession } from "./session";
 
 const STATS_MS = 500;
 
+/** What useRaceState reads: a NetSession, or a stand-in shaped like one */
+export interface RaceStateSource {
+  readonly version: number;
+  readonly state: RaceStateView;
+  subscribe(listener: () => void): () => unknown;
+}
+
+/**
+ * getSnapshot for useSyncExternalStore: toJSON() builds a new object each call, so keep one per session version.
+ * Keyed on the version, not filled in by a listener, so a patch or welcome that lands between render and subscribe
+ * still shows: React compares snapshots right after it subscribes.
+ */
+export function stateSnapshot(
+  session: Pick<RaceStateSource, "version" | "state">,
+): () => RaceStateView {
+  let version = session.version;
+  let state = session.state;
+  return () => {
+    if (session.version !== version) {
+      version = session.version;
+      state = session.state;
+    }
+    return state;
+  };
+}
+
 /** Lobby and race state, re-rendered on every server patch */
-export function useRaceState(session: NetSession): RaceStateView {
-  // toJSON() builds a new object each call, so cache it per patch for useSyncExternalStore
-  const [cache] = useState(() => ({ state: session.state }));
-  return useSyncExternalStore(
-    (onChange) =>
-      session.subscribe(() => {
-        cache.state = session.state;
-        onChange();
-      }),
-    () => cache.state,
+export function useRaceState(session: RaceStateSource): RaceStateView {
+  const snapshot = useMemo(() => stateSnapshot(session), [session]);
+  const subscribe = useCallback(
+    (onChange: () => void) => session.subscribe(onChange),
+    [session],
   );
+  return useSyncExternalStore(subscribe, snapshot);
 }
 
 /** The room's 4-letter code */
@@ -38,7 +66,8 @@ export function usePairing(session: NetSession): Pairing {
   return {
     playerId,
     pairToken,
-    paired: (playerId && state.players[playerId]?.paired) || false,
+    // players is missing until the room's first state arrives, which can be after the welcome
+    paired: (playerId && state.players?.[playerId]?.paired) || false,
     padUrl: pairToken ? session.padUrl() : undefined,
   };
 }

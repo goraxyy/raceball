@@ -181,7 +181,7 @@ addEventListener("keydown", async (e) => {
 
 | | |
 |---|---|
-| Project / service | `raceball` / `raceball-server`, deploying `main` |
+| Project / service | `raceball` / `raceball-server`, deploying `main` of `raceball/raceball` (Railway's GitHub app has access to the `raceball` org) |
 | Domain | `raceball-server-production.up.railway.app` (port 2567), so `VITE_SERVER_URL=wss://raceball-server-production.up.railway.app` |
 | Variables | `PORT=2567`, so the server listens on the port the domain points to |
 | Plan | **Free** for now: the server sleeps when idle and Railway placed it in `sfo`, even though `railway.json` asks for US East |
@@ -330,7 +330,7 @@ Starting tuning values (`tuning.ts`):
 - Upload the new `.blend` to the Drive folder.
 
 **Playtest:** `/play?local=1` now plays Happy Valley:
-- `&map=flat` gives the flat test ground, and `&view=overview` starts zoomed out.
+- `&map=flat` gives the flat test ground, `&view=overview` starts zoomed out, and `&ball=mars` picks your planet (default Earth).
 - **R** resets, and **V** toggles the overview camera.
 - The HUD times each lap from the checkpoint gates.
 
@@ -357,6 +357,7 @@ The manual steps below are what the script automates.
 - **Markers** (nodes with an `rb` custom property; see the [marker table](../ASSETS.md#blender-is-our-level-editor)) come back in `TrackData`, in world space:
   - `spawns` sorted by slot, `checkpoints` sorted by index
   - `respawns`, `items`, `boosts`, `surfaces`, `cameras`
+  - `path`: the `route` marker's centerline, a closed loop of [x, z] points from the finish line, the racing way. `path.ts` measures along it (`project`, `pointAt`), and the race exposes the points as `race.path` for the big-screen `TrackMap`. `tools/track/build_happy_valley.py` writes it, about every 4 m.
   - Headings come from each marker's rotation.
 - **Checkpoint gates and boost pads** become sensor boxes sized by the Empty's scale. **Surfaces** become a sensor from the mesh's convex hull. Each one keeps its Rapier collider handle, for the lap and boost logic.
 - **Every other mesh** becomes a solid trimesh with the node's world matrix applied, built with Rapier's `FIX_INTERNAL_EDGES` so balls don't bump on the seams between triangles. Optional `friction` (default 1) and `restitution` (default 0) custom properties on a `*_col` object change how it plays, e.g. bouncier library steps.
@@ -407,6 +408,10 @@ Rasim's net library exposes something like `net.sample(now)`, which returns `Map
 - `mesh.position.set(...p)`, `mesh.rotationQuaternion = new Quaternion(...q)`
 - The chase camera uses your own ball's `p` and `h`.
 
+**How it's wired:** `game/net-feed.ts` (`NetFeed`) turns a `NetSession` into the renderer's `BallFeed`: poses from `session.sample()`, and each ball's planet and color from `session.state.players` (no planet picked = `PLANETS[color]`, as on the server). `createGame(scene, "viewer" | "host", { session })` loads the Happy Valley map. The laptop chase-follows its own ball, and the big screen starts on the overview camera (`V` toggles). `game/Online.tsx` is the minimal M1 flow on `/play` and `/host`. The laptop shows `ViewerJoin`, then the game with the pairing QR in a corner, and reports `assetsLoaded` once the map is in. The big screen's room card has the lap choice, Add bot and Start (enabled by `canStart`). Rasim's M2 lobby replaces those screens, and the game side stays `<GameView mode session />`.
+
+**Run it end to end locally:** `pnpm dev` (web, pad and server), open `/host`, then `/play?room=CODE` in a second window, and scan the QR with a phone on the same Wi-Fi. Without a phone, a script can join as the pad with the laptop's `pairToken` and send `input` messages at 60 Hz. With 50–80 ms of added delay (65 ms round trip), the chase camera's jerk stayed under 0.1 m and 0.05° per frame, lower than following raw snapshots.
+
 ### 7. Tuning workflow
 
 Tuning **only works in local mode**, because online the physics runs on the server.
@@ -422,6 +427,15 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 ## M2: Full race
 
 ### Checkpoints, laps and ranking
+
+**Done** (`race.ts`, tested in `rules.test.ts` on a synthetic loop and on Happy Valley):
+- **Laps:** only the next gate counts. Crossing `cp_00` after the last gate completes a lap and emits `lap` (the lap just started, 2 … laps); the last one emits `finish` with the place. The first crossing of `cp_00` starts the race.
+- **Ranking:** finishers by `finishedAt`, then everyone else by `progress`, the meters along the route from the start line. Within a lap that's the distance past the last gate crossed, clamped to the next gate, so a shortcut or reversing never gains a place. Tracks without a route use straight lines between gates.
+- **Standings:** `{ id, place, lap, checkpoint, finishedAt, progress }`, where `lap` is the lap being raced (1 … laps) and `checkpoint` is the last gate crossed in order (0 = the finish line).
+- **End:** `results` when everyone is in, or `finishGraceSeconds` after the winner. Finished balls ignore input from then on.
+- **Bots:** `botInput(id)` aims at a point ahead on the route (`botLookahead…` in `tuning.ts`), full gas, braking only when that point is far off to the side at speed. It laps Happy Valley in 65 s with no respawns.
+
+How it works:
 - Step with an event queue:
 
   ```ts
@@ -444,6 +458,13 @@ Tuning **only works in local mode**, because online the physics runs on the serv
 - `results`: freeze inputs, and let balls roll to a stop.
 
 ### Collisions and bump events
+
+**Done** (`race.ts`, tested in `rules.test.ts`):
+- **Bump:** ball colliders report contact forces over `bumpForceMin` (50 N); a ball-to-ball one becomes `{ type: "bump", a, b, strength }` with `strength = force / bumpBigHit` (600 N), at most once per pair per `bumpCooldown` (0.25 s). Measured: a 12 m/s rear-end hit is about 370 N (strength 0.6), and pushing contact stays under 20 N, so it never counts. Contact with the track never counts.
+- **Overtake:** the race keeps the unfinished racers in order and emits `{ type: "overtake", player, passed, section }` when one gets `overtakeGap` (1 m) ahead of the racer in front, with the section of the overtaker's last gate. The gap stops side-by-side balls from flickering.
+- **Feel:** the physics is unchanged (equal masses, restitution 0.3). Try `setRestitution(0.5)` at the next playtest if bumps feel flat; it also makes landings a little bouncier.
+
+Notes:
 - Ball-to-ball: `setRestitution(0.5)` feels bouncy. Use the same mass for every ball, unless an item changes it.
 - Set a contact force threshold on ball colliders (`setContactForceEventThreshold`). Then in `q.drainContactForceEvents(e => ...)`, emit `bump` with `strength = clamp(e.totalForceMagnitude() / BIG_HIT, 0, 1)` for both balls.
 - **Overtake:** compare the standings order with the previous tick. Emit `overtake` with the section of the checkpoint where it happened.
@@ -462,6 +483,13 @@ Tuning **only works in local mode**, because online the physics runs on the serv
   ```
 
 - If `engine.getFps() < 50` for 3 s, drop the tiles and show name tags instead. Every tile draws the scene again, so this is the safety valve.
+
+**How it's built** (`game/big-screen.ts`, `game/TileFrames.tsx`):
+
+- **Overview:** frames the whole pack. It eases toward the middle of every ball and backs off 1.2 m per metre of spread, plus 30 m (at least 45 m, at most the whole map). The angle stays where it is.
+- **Tiles:** the first 4 phone-only players in join order. The page draws Nuris's `FollowTile` frames along the top and measures the inside of each one. The game then draws that player's `ChaseCamera` in the matching viewport. Babylon clears only depth before each extra camera, so every tile scissor-clears its own rectangle first. Without that, the tile's sky would show the overview underneath.
+- **Fallback:** `FpsGuard` ignores the 2 s after the tiles change (new render passes compile shaders), then trips after 3 s in a row under 50 fps. The tiles go for good, and every ball gets a billboard name tag (player color dot, name) that stays the same size on screen at any zoom. Headless software rendering trips it after about 12 s, so expect it on a weak projector laptop.
+- **Place on the tiles:** `FollowTile` hides the place while it's 0. It shows once the server syncs standings into the schema.
 
 **Done when:** 4+ players (laptop and phone-only, real or bots) finish 3 laps in the correct order.
 
@@ -534,6 +562,8 @@ Download and look through the **Kenney Marble Kit** and **Racing Kit** (both CC0
 ### M0: Run one asset through the whole pipeline
 Do this with one ball and one track piece, so the pipeline is proven before real work starts.
 
+**Done:** the planet balls and `models/trk_road_straight.glb` went through it. Both are built by scripts in `tools/models/`, so the Blender steps below are automated for them. The Babylon Sandbox site isn't reachable from the cloud sessions, so they were checked in headless Babylon renders (the same engine) instead.
+
 1. **Blender:**
    - 1 unit = 1 m. The ball is a 1 m diameter UV sphere, 5k triangles or fewer.
    - Apply the transforms (Ctrl+A > All Transforms).
@@ -569,6 +599,22 @@ Create the folders:
 Share the folder with Nuris and Rasim.
 
 ### M1: Planet balls (first 4: Earth, Mars, Jupiter, Saturn)
+
+**Done, and generated from code.** `tools/models/build_planet_balls.py` builds all four in Blender:
+- a 1 m UV sphere (about 3k triangles) with one material and a painted 1024×512 texture, in the colors of `packages/shared/theme/theme.css`
+- the `ring` (1.5k triangles): white with ink edges as vertex colors, so tinting `mat_player_color` gives the player color and keeps the edges dark
+- it saves `assets-src/models/planet_balls.blend` and the raw GLBs. Then optimize each one:
+
+  ```bash
+  gltf-transform optimize assets-src/models/ball_earth.glb apps/web/public/assets/models/ball_earth.glb \
+    --compress meshopt --texture-compress webp --simplify false
+  ```
+
+- Run it in Blender's Scripting tab, through the MCP add-on, or headless (`blender -b -P tools/models/build_planet_balls.py`). To add a planet, give it a base color and details in `PLANETS`, then add it to `PLANET_MODELS` in `apps/web/src/game/balls.ts`.
+
+**In the game,** `BallViews` (`apps/web/src/game/balls.ts`) loads each planet once and clones it per ball. The planet rolls inside a node that only follows the position, and that node holds the ring, tinted with the player's color from `PLAYER_COLORS`. A feed tells it each ball's planet and color slot through `look(id)`; Rasim's net feed can pass `ball` and `color` from the player state. Planets without a model show the striped placeholder, with the ring.
+
+**Meshopt decoder:** Babylon loads it from its CDN the first time a compressed model loads, until Rasim self-hosts the decoders (M3).
 - **The balls are the eight planets.** Looks, colors and details are in the [art bible](../ASSETS.md#balls-the-eight-planets): flat paint and 1–3 details, no photo textures.
 - **One material per planet.** Textures are 1024² at most, or paint the details with vertex colors.
 - **File names:** `models/ball_earth.glb`, `ball_mars.glb`, `ball_jupiter.glb`, `ball_saturn.glb`.
@@ -576,6 +622,30 @@ Share the folder with Nuris and Rasim.
 
 ### M1: Track dressing kit
 Barriers, fall trees (2–3 variants), lamp posts, benches, the start/finish arch, ground tiles.
+
+**Done, and generated from code.** `tools/models/build_dressing_kit.py` builds `models/kit_dressing.glb`: 9 props, each its own node at the origin, all on **one** material (`mat_palette`) and one 256×256 palette texture of the art bible colors.
+
+![The dressing kit: finish arch, lamp posts, round and cone trees, white and red barriers, with a 1 m cube](../art/dressing-kit-3d.png)
+
+| Prop | Size | Triangles | Made from |
+|---|---|---|---|
+| `prop_finish_arch` | 16 m wide, 8.5 m tall | 340 | Kenney `overhead` in navy, plus our checkered banner and flag-yellow trim |
+| `prop_lamp_single`, `prop_lamp_double` | 5 m | 628, 844 | Ours, navy with warm lamps (until Kenney's `lightPost*` are in reach) |
+| `prop_tree_round_gold`, `prop_tree_round_maple` | 5.6 m, 4.8 m | 300 each | Ours: chunky leaning "lollipops" |
+| `prop_tree_maple`, `prop_tree_pine` | 6.5 m | 80 each | Kenney `tree-large`, recolored |
+| `prop_barrier_red`, `prop_barrier_white` | 2 m | 28 each | Kenney `barrierRed`; alternate them along the track |
+
+- **Kenney pieces** come from `assets-src/packs` when the kits are there, and are otherwise cut out of `maps/happy_valley.glb`, which already holds them. Either way they're recolored onto the palette.
+- **The same script** builds `models/trk_road_straight.glb`, a 10 m stretch of the 12 m road with chalk lines and red and white curbs, with its top at y = 0.
+- **To change the kit:** edit the script, re-run it (Blender's Scripting tab, the MCP add-on, or `blender -b -P`), then optimize. Keep the props as separate nodes:
+
+  ```bash
+  gltf-transform optimize assets-src/models/kit_dressing.glb apps/web/public/assets/models/kit_dressing.glb \
+    --compress meshopt --texture-compress webp --simplify false --join false --flatten false --instance false --palette false
+  ```
+
+- **Sky:** `tex/env_happy_valley.env` is a Poly Haven sky HDRI (CC0), prefiltered into a 256 px cube with Babylon's `CreateEnvTextureAsync`. `game.ts` loads it as `scene.environmentTexture` at `SKY_FILL` (0.6), with the hemispheric light turned down to 0.3.
+- **Next:** place the props along the route in `tools/track/build_happy_valley.py` (or instance them in code from the kit), and add the rest of the shortlist (fences, rails, `flagCheckers`) once the packs are in reach.
 
 **Use one shared palette texture:** a small image (e.g. 256×256) of color swatches. UV each prop onto the swatches it needs, and give **every prop the same material**. Hundreds of props then cost a handful of draw calls instead of hundreds. This is the most important performance trick for an asset-heavy scene.
 

@@ -52,12 +52,12 @@ The art bible is in ASSETS.md: style pillars, the environment and livery palette
 
 - **Player colors and shapes** are `PLAYER_COLORS` and `PLAYER_SHAPES` in `packages/shared/src/constants.ts`. The server stores a slot number (0–7), and every screen looks up the values there. They appear on the planet's orbit ring, the map markers, name tags, the HUD and the pad.
 - **Planets** are `PLANETS` in the same file. No two players in a race share one.
-- **Mood board (still to do):** 5–10 images in `docs/moodboard/`, small JPGs under 300 KB each. Campus photos (Old Main, Lion Shrine, Creamery, Beaver Stadium, Pattee Library, fall trees, snow) from your own camera or with a free license, plus 3–4 style references: painted wooden toy sets, toy race tracks and race-day graphics. List each image with its license in the ASSETS.md credits.
+- **Mood board:** [docs/moodboard/](../moodboard/README.md), with notes on what to keep from each landmark. Add new references there, each with its license in the credits.
 
 ### 2. Particle and audio packs
 Download and look through the Kenney **Particle Pack** and the Kenney audio packs (all CC0). Add the particle textures and sounds you'd use to the shortlist in ASSETS.md. Put the downloads in `assets-src/packs/` in Drive. (Ali reviews the Marble Kit and Racing Kit.)
 
-**Done when:** the art bible (done), the mood board and the particle and audio shortlist are in the repo.
+**Done when:** the art bible (done), the mood board (done) and the particle and audio shortlist are in the repo.
 
 ---
 

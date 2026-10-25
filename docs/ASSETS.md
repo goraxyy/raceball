@@ -158,9 +158,7 @@ Where they appear:
 
 ### Mood board
 
-5–10 reference images in `docs/moodboard/`, small JPGs under 300 KB each:
-- [ ] Campus references: Old Main, the Lion Shrine, the Creamery, Beaver Stadium, Pattee Library, fall trees on campus, snow on campus. Use **your own photos** or images with a free license (for example Wikimedia Commons), and list each one in [Credits](#credits) with its license.
-- [ ] Style references: 3–4 images of painted wooden toy sets, toy race tracks and race-day graphics (checkered flags, number plates, chevrons). These are for the team only, so link them in a list below instead of copying them into the repo when their license is unclear.
+**[docs/moodboard/](moodboard/README.md):** nine campus photos in route order (Old Main, the bell tower, the HUB lawn and Mount Nittany, Pattee Library, the Lion Shrine, the Creamery, Beaver Stadium, the snowy campus, and an autumn leaf in snow for the color arc). Each one notes what to keep (silhouette, colors, one or two details) and what to simplify. Style references (toy sets, toy race tracks, race-day graphics) are listed as searches there, not stored.
 
 ## Units and conventions
 
@@ -326,6 +324,7 @@ Check draw calls and frame time with the Babylon Inspector, on the **actual demo
 
 | Asset | Author | License | Link | Used for |
 |---|---|---|---|---|
+| Mood board photos `docs/moodboard/01–09` | Dough4872, George Chriss, JohnDziak, Nathaniel C. Sheetz, adeans, Acroterion, photochem_PA (via Wikimedia Commons) | CC BY-SA 4.0 / 3.0, CC BY 2.5 / 2.0 (per image) | [docs/moodboard/README.md](moodboard/README.md#credits) | Team reference only, not shipped |
 | Barlow, Barlow Condensed (fonts) | The Barlow Project Authors | SIL Open Font License 1.1 (`packages/shared/theme/fonts/OFL.txt`) | https://github.com/jpt/barlow | Pad, web and big-screen UI, art bible sheets |
 | `sfx_roll_loop`, `sfx_bump_01–03`, `sfx_countdown_beep`, `sfx_countdown_go`, `sfx_ui_click` | RaceBall team (synthesized by `tools/audio/gen_sfx.py`) | Original, MIT with the code | This repo | Rolling, bumps, countdown, UI |
 | Marble Kit 2.0: `tree-large` | Kenney | CC0 | https://kenney.nl/assets/marble-kit | Trees in `maps/happy_valley.glb` |

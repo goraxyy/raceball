@@ -1,16 +1,18 @@
 import { Client, type Room } from "@colyseus/sdk";
 import {
+  Clock,
   PAD_PORT,
   PROTOCOL_VERSION,
   SERVER_PORT,
   padUrl,
   type JoinOptions,
+  type NetStatMsg,
   type PongMsg,
   type RaceStateView,
   type SnapMsg,
   type WelcomeMsg,
 } from "@raceball/shared";
-import { Clock } from "./clock";
+
 import { SnapshotBuffer, type BallPose } from "./snapshot-buffer";
 
 const PING_MS = 1000;
@@ -31,6 +33,8 @@ export class NetSession {
   /** Set by the server's welcome (viewers only) */
   playerId?: string;
   pairToken?: string;
+  /** How old our player's latest input was at the server, ms (laptops, once the phone sends input) */
+  inputAge?: number;
   private listeners = new Set<() => void>();
   private pinger: ReturnType<typeof setInterval>;
   readonly room: Room;
@@ -39,6 +43,10 @@ export class NetSession {
     this.room = room;
     room.onMessage("pong", (msg: PongMsg) =>
       this.clock.onPong(msg, performance.now()),
+    );
+    room.onMessage(
+      "netstat",
+      (msg: NetStatMsg) => (this.inputAge = msg.inputAge),
     );
     room.onMessage("snap", (msg: SnapMsg) =>
       this.buffer.push(msg, performance.now()),

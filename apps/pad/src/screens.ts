@@ -55,7 +55,11 @@ export const permissionHelpHtml = () => `
 
 export const CALIBRATE_TEXT = {
   1: { title: "Hold it like a wheel", hint: "Keep it level for a second." },
-  2: { title: "Now turn right", hint: "Like steering into a corner." },
+  2: {
+    title: "Now turn right",
+    hint: "Like steering into a corner, and hold it.",
+    wrongWay: "That's left. Turn the other way.",
+  },
 } as const;
 
 export const calibrateHtml = () => `

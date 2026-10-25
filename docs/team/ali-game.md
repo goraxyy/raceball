@@ -330,7 +330,7 @@ Starting tuning values (`tuning.ts`):
 - Upload the new `.blend` to the Drive folder.
 
 **Playtest:** `/play?local=1` now plays Happy Valley:
-- `&map=flat` gives the flat test ground, and `&view=overview` starts zoomed out.
+- `&map=flat` gives the flat test ground, `&view=overview` starts zoomed out, and `&ball=mars` picks your planet (default Earth).
 - **R** resets, and **V** toggles the overview camera.
 - The HUD times each lap from the checkpoint gates.
 
@@ -563,6 +563,22 @@ Create the folders:
 Share the folder with Nuris and Rasim.
 
 ### M1: Planet balls (first 4: Earth, Mars, Jupiter, Saturn)
+
+**Done, and generated from code.** `tools/models/build_planet_balls.py` builds all four in Blender:
+- a 1 m UV sphere (about 3k triangles) with one material and a painted 1024×512 texture, in the colors of `packages/shared/theme/theme.css`
+- the `ring` (1.5k triangles): white with ink edges as vertex colors, so tinting `mat_player_color` gives the player color and keeps the edges dark
+- it saves `assets-src/models/planet_balls.blend` and the raw GLBs. Then optimize each one:
+
+  ```bash
+  gltf-transform optimize assets-src/models/ball_earth.glb apps/web/public/assets/models/ball_earth.glb \
+    --compress meshopt --texture-compress webp --simplify false
+  ```
+
+- Run it in Blender's Scripting tab, through the MCP add-on, or headless (`blender -b -P tools/models/build_planet_balls.py`). To add a planet, give it a base color and details in `PLANETS`, then add it to `PLANET_MODELS` in `apps/web/src/game/balls.ts`.
+
+**In the game,** `BallViews` (`apps/web/src/game/balls.ts`) loads each planet once and clones it per ball. The planet rolls inside a node that only follows the position, and that node holds the ring, tinted with the player's color from `PLAYER_COLORS`. A feed tells it each ball's planet and color slot through `look(id)`; Rasim's net feed can pass `ball` and `color` from the player state. Planets without a model show the striped placeholder, with the ring.
+
+**Meshopt decoder:** Babylon loads it from its CDN the first time a compressed model loads, until Rasim self-hosts the decoders (M3).
 - **The balls are the eight planets.** Looks, colors and details are in the [art bible](../ASSETS.md#balls-the-eight-planets): flat paint and 1–3 details, no photo textures.
 - **One material per planet.** Textures are 1024² at most, or paint the details with vertex colors.
 - **File names:** `models/ball_earth.glb`, `ball_mars.glb`, `ball_jupiter.glb`, `ball_saturn.glb`.

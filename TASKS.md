@@ -118,7 +118,8 @@ Nothing right now. Add new questions here.
 - [x] Commit the `game-core` API types first (the `Race` interface), so Rasim can build against them
 - [ ] Player view renders **server snapshots** (via Rasim's net library); the chase camera follows the heading smoothly
 - [x] All feel constants in `game-core/src/tuning.ts`, with `lil-gui` sliders in local mode
-- [ ] 4 planet balls (Earth, Mars, Jupiter, Saturn), each with the player-color orbit ring ([art bible](docs/ASSETS.md#balls-the-eight-planets))
+- [x] 4 planet balls (Earth, Mars, Jupiter, Saturn), each with the player-color orbit ring ([art bible](docs/ASSETS.md#balls-the-eight-planets))
+  - Built by `tools/models/build_planet_balls.py`: 4.5k triangles with the ring, about 30 KB each after meshopt + WebP. `/play?local=1&ball=mars` drives one. Planets without a model yet get the striped placeholder, still with the ring
 - [ ] Track dressing kit on one shared palette texture: barriers, fall trees, lamp posts, start/finish arch; HDRI as `.env`
 
 **Rasim**

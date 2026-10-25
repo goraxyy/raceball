@@ -13,8 +13,11 @@ import {
   ErrorScreen,
   LoadingScreen,
   PairingQR,
+  Results,
   ViewerJoin,
 } from "../ui";
+import "./lobby.css";
+import { useRaceResults } from "./results";
 
 /** /play: a laptop player joins with the room code, pairs a phone, then sees their own race */
 export function PlayPage() {
@@ -66,13 +69,17 @@ export function PlayerRoom({
   session,
   lobby,
   controls,
+  onRematch,
 }: {
   session: NetSession;
   lobby?: ReactNode;
   controls?: ReactNode;
+  /** The host's Rematch on the results */
+  onRematch?: () => void;
 }) {
   const state = useRaceState(session);
   const pairing = usePairing(session);
+  const results = useRaceResults(session);
   const onLoaded = useCallback(
     () => session.setStatus({ assetsLoaded: true }),
     [session],
@@ -99,6 +106,17 @@ export function PlayerRoom({
           <PairingQR url={pairing.padUrl} paired={pairing.paired} />
           {me?.ready && <p>Ready! Waiting for the host to start.</p>}
         </section>
+      )}
+      {results && (
+        <div className="results-overlay">
+          <Results
+            rows={results.rows}
+            laps={results.laps}
+            lobbyAt={results.lobbyAt}
+            now={results.now}
+            onRematch={onRematch}
+          />
+        </div>
       )}
       {state.phase === "countdown" && (
         <Countdown

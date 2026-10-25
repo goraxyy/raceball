@@ -8,7 +8,13 @@ import { NEUTRAL_INPUT, TICK_DT, tuning, type Race } from "./index";
 import { createWorld, initPhysics } from "./physics";
 import { createRace } from "./race";
 import { pointAt, project as alongPath } from "./path";
-import { checkTrack, loadTrack, type TrackData } from "./track";
+import {
+  checkTrack,
+  gateBox,
+  GATE_MIN_HEIGHT,
+  loadTrack,
+  type TrackData,
+} from "./track";
 
 const FACE_PLUS_X: [number, number, number, number] = [
   0,
@@ -90,6 +96,7 @@ function mesh(doc: Document, buffer: Buffer, pos: number[], idx: number[]) {
  * ends at x = ±40.
  * - wall: a solid wall across the road at x = 12, between gates 1 and 2
  * - swapGates: gates 1 and 2 trade places, so a ball crosses them out of order
+ * - sunkenGate: gate 1's box sits under the road, so a ball rolls over its top (as on a jump over a gate)
  * - surface: a surface volume over the road from x = -4 to 24, covering the grid
  * - itemsAt: extra item boxes at these [x, z] spots on the road (grid slot 1 is at [-3, -1.5])
  * A power-2 boost pad across the road at x = 20 faces +X.
@@ -99,6 +106,7 @@ async function syntheticTrack(
     spawns?: boolean;
     wall?: boolean;
     swapGates?: boolean;
+    sunkenGate?: boolean;
     route?: boolean;
     surface?: { kind: string; grip: number };
     itemsAt?: [number, number][];
@@ -143,13 +151,14 @@ async function syntheticTrack(
   for (const index of [2, 0, 3, 1]) {
     const slot =
       opts.swapGates && (index === 1 || index === 2) ? 3 - index : index;
+    const sunken = opts.sunkenGate && index === 1;
     add(
       `cp_0${index}`,
       { rb: "checkpoint", index, section: `s${index}` },
       (n) =>
         n
-          .setTranslation([slot * 8, 1, 0])
-          .setScale([3, 2, 0.5]) // 6 m across the road, 1 m thick
+          .setTranslation([slot * 8, sunken ? -2.5 : 1, 0])
+          .setScale(sunken ? [3, 0.5, 0.5] : [3, 2, 0.5]) // 6 m across the road, 1 m thick
           .setRotation(FACE_PLUS_X),
     );
     add(`respawn_0${index}`, { rb: "respawn", checkpoint: index }, (n) =>
@@ -183,6 +192,25 @@ async function syntheticTrack(
   return new NodeIO().writeBinary(doc);
 }
 
+describe("gateBox", () => {
+  it("stretches a gate up from its base, along its own up axis", () => {
+    const tilt = Math.sin(0.2 / 2); // tipped 0.2 rad about x
+    const box = gateBox([5, 3, -2], [tilt, 0, 0, Math.cos(0.1)], [4, 3, 1]);
+    expect(box.halfExtents).toEqual([4, GATE_MIN_HEIGHT / 2, 1]);
+    const rise = GATE_MIN_HEIGHT / 2 - 3;
+    expect(box.center[0]).toBeCloseTo(5);
+    expect(box.center[1]).toBeCloseTo(3 + rise * Math.cos(0.2));
+    expect(box.center[2]).toBeCloseTo(-2 + rise * Math.sin(0.2));
+  });
+
+  it("leaves a gate that's already tall enough alone", () => {
+    expect(gateBox([1, 20, 2], [0, 0, 0, 1], [3, -20, 0.5])).toEqual({
+      center: [1, 20, 2],
+      halfExtents: [3, 20, 0.5],
+    });
+  });
+});
+
 describe("loadTrack", () => {
   it("reads every marker type, in world space, sorted", async () => {
     await initPhysics();
@@ -201,7 +229,13 @@ describe("loadTrack", () => {
     ]);
     const gate = world.getCollider(track.checkpoints[1].collider);
     expect(gate.isSensor()).toBe(true);
-    expect(gate.halfExtents()).toEqual({ x: 3, y: 2, z: 0.5 }); // the Empty's scale
+    // the Empty's scale, stretched up to GATE_MIN_HEIGHT from the same base
+    expect(gate.halfExtents()).toEqual({
+      x: 3,
+      y: GATE_MIN_HEIGHT / 2,
+      z: 0.5,
+    });
+    expect(gate.translation().y - gate.halfExtents()!.y).toBeCloseTo(-2);
 
     expect(track.respawns).toHaveLength(4);
     expect(track.respawns.find((r) => r.checkpoint === 3)?.pos).toEqual([
@@ -352,6 +386,12 @@ describe("respawn on a loaded track", () => {
     const r = await drive({ swapGates: true }); // crosses gates 0, 2, 1, 3
     const hit = untilRespawn(r, GAS);
     expect(hit!.ball.p[0]).toBeCloseTo(10); // respawn_01: gate 2 and 3 were out of order
+  });
+
+  it("counts a gate the ball passes over the top of, as on a jump", async () => {
+    const r = await drive({ sunkenGate: true }); // gate 1's box ends 2 m under the road
+    const hit = untilRespawn(r, GAS);
+    expect(hit!.ball.p[0]).toBeCloseTo(26); // respawn_03: gates 1, 2 and 3 all counted
   });
 
   it("respawns a ball held against a wall after stuckSeconds of gas", async () => {

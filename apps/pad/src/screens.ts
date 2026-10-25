@@ -164,6 +164,71 @@ export const readyHtml = (look: Look) => `
     </div>
   </section>`;
 
+/** A race time as race programs print it: 1:04.3, or DNF */
+export function raceTime(ms: number): string {
+  if (!(ms > 0)) return "DNF";
+  const m = Math.floor(ms / 60000);
+  return `${m}:${((ms % 60000) / 1000).toFixed(1).padStart(4, "0")}`;
+}
+
+const ordinalSuffix = (n: number) =>
+  n % 100 >= 11 && n % 100 <= 13
+    ? "th"
+    : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th");
+
+/** One row of the results board: everyone's place, plate, name and time */
+export interface BoardRow {
+  id: string;
+  place: number;
+  name: string;
+  color: string;
+  shape: string;
+  finishedAt: number;
+}
+
+/**
+ * After the race: your place (a checkered flag behind it if you won), your time, best lap and bumps, and the whole
+ * field's final order underneath, your row picked out
+ */
+export const resultsHtml = (
+  look: Look,
+  me: {
+    id: string;
+    place: number;
+    finishedAt: number;
+    bestLap: number;
+    bumps: number;
+  },
+  board: BoardRow[],
+) => `
+  <section class="screen results" data-place="${me.place}" style="--player: ${look.color}">
+    <div class="results-main">
+      <div class="place">${me.place || "–"}<small>${me.place ? ordinalSuffix(me.place) : ""}</small></div>
+    </div>
+    <div class="results-side">
+      <div class="stats">
+        <div class="stat"><b>${raceTime(me.finishedAt)}</b><span>Time</span></div>
+        <div class="stat"><b>${me.bestLap > 0 ? raceTime(me.bestLap) : "–"}</b><span>Best lap</span></div>
+        <div class="stat"><b>${me.bumps}</b><span>Bumps</span></div>
+      </div>
+      <ol class="board">
+        ${board
+          .map(
+            (
+              r,
+            ) => `<li class="board-row${r.id === me.id ? " is-me" : ""}" style="--player: ${r.color}">
+          <b class="board-place">${r.place || "–"}</b>
+          <span class="shape" data-shape="${r.shape}"></span>
+          <span class="board-name">${escape(r.name)}</span>
+          <span class="board-time">${raceTime(r.finishedAt)}</span>
+        </li>`,
+          )
+          .join("")}
+      </ol>
+      <p class="ready-status">Back to the lobby in a moment</p>
+    </div>
+  </section>`;
+
 /** Creamery Scoops a racer can hold (game-core's tuning.scoopMax): one pip each on the pad */
 export const SCOOP_MAX = 10;
 

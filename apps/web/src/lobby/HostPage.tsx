@@ -21,11 +21,13 @@ import {
   HostLobby,
   LoadingScreen,
   PairingQR,
+  Results,
   ViewerJoin,
 } from "../ui";
 import "./lobby.css";
 import { lobbyPlayers } from "./players";
 import { PlayerRoom } from "./PlayPage";
+import { useRaceResults } from "./results";
 
 /** /host: the big screen. Creates the room, runs the lobby, then shows the race */
 export function HostPage() {
@@ -62,6 +64,7 @@ function HostRoom({ session }: { session: NetSession }) {
   const [joining, setJoining] = useState(false);
   useEffect(() => () => void me?.leave(), [me]);
   const racing = !!state.phase && state.phase !== "lobby";
+  const results = useRaceResults(session);
 
   if (session.closed)
     return <ErrorScreen kind="disconnected" room={session.code} />;
@@ -112,6 +115,7 @@ function HostRoom({ session }: { session: NetSession }) {
       <PlayerRoom
         session={me}
         controls={controls}
+        onRematch={() => session.rematch()}
         lobby={
           <>
             {lobby}
@@ -130,6 +134,18 @@ function HostRoom({ session }: { session: NetSession }) {
       )}
       {!state.phase && <LoadingScreen progress={0.6} label="Opening a room" />}
       {state.phase === "lobby" && lobby}
+      {/* the race is over: the podium and the final classification, over the last of the race */}
+      {results && (
+        <div className="results-overlay">
+          <Results
+            rows={results.rows}
+            laps={results.laps}
+            lobbyAt={results.lobbyAt}
+            now={results.now}
+            onRematch={() => session.rematch()}
+          />
+        </div>
+      )}
       {state.phase === "countdown" && (
         <Countdown
           endsAt={state.countdownEndsAt}

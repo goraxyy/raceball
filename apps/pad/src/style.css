@@ -969,6 +969,63 @@ p {
   color: var(--muted);
 }
 
+/* the whole field's final order, under your numbers: place, plate, name, time; your row in your color */
+.board {
+  display: grid;
+  gap: 4px;
+  width: min(100%, 360px);
+  max-height: 46cqh;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.board-row {
+  display: grid;
+  grid-template-columns: 2.2em auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 2px 6px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  font-weight: 800;
+}
+
+.board-row.is-me {
+  background: var(--player);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.board-place {
+  font-family: var(--display);
+  font-size: 1.3em;
+  font-style: italic;
+  text-align: center;
+}
+
+.board-row .shape {
+  --shape-size: 16px;
+  background: var(--player);
+}
+
+.board-row.is-me .shape {
+  background: var(--ink);
+}
+
+.board-name {
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-time {
+  font-family: var(--display);
+  font-style: italic;
+}
+
 /* the brag title is a sticker slapped on at an angle */
 .brag-title {
   padding: 6px 14px 4px;

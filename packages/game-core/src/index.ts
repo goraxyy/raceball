@@ -30,6 +30,8 @@ export {
   checkTrack,
   createFlatTrack,
   FLAT_GROUND_HALF_SIZE,
+  GATE_MIN_HEIGHT,
+  gateBox,
   loadTrack,
   readBoostPads,
   readRoute,

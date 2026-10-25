@@ -7,6 +7,7 @@ import {
   myPlayer,
   phase,
   planetsTaken,
+  players,
   sendProfile,
   sendStatus,
   status,
@@ -15,7 +16,7 @@ import {
 import { readPadParams, type Phase } from "@raceball/shared";
 import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
 import { lockDownGestures } from "./lockdown";
-import { showEvent } from "./feedback";
+import { raceStats, showEvent } from "./feedback";
 import { fireItem } from "./input-loop";
 import { flip, keepUpright, lockLandscape } from "./orientation";
 import {
@@ -27,6 +28,7 @@ import {
   errorHtml,
   racingHtml,
   readyHtml,
+  resultsHtml,
   settingsHtml,
   startHtml,
 } from "./screens";
@@ -285,7 +287,40 @@ function onPhase(p: Phase) {
   const on = (cls: string) => !!app.querySelector(`.screen.${cls}`);
   if ((p === "countdown" || p === "racing") && on("ready") && waitingForStart)
     showRacing();
-  if (p === "lobby" && on("racing")) showReady();
+  if (p === "results" && on("racing")) showResults();
+  if (p === "lobby" && (on("racing") || on("results"))) showReady();
+}
+
+/** The race is over: this player's place and numbers, and the whole field's final order */
+function showResults() {
+  const mine = myPlayer();
+  const id = status.state === "joined" ? status.playerId : "";
+  const board = Object.entries(players())
+    .map(([pid, p]) => {
+      const look = lookOf(p);
+      return {
+        id: pid,
+        place: p.place,
+        name: p.name,
+        color: look.color,
+        shape: look.shape,
+        finishedAt: p.finishedAt,
+      };
+    })
+    .sort((a, b) => (a.place || 99) - (b.place || 99));
+  show(
+    resultsHtml(
+      lookOf(mine),
+      {
+        id,
+        place: mine?.place ?? 0,
+        finishedAt: mine?.finishedAt ?? 0,
+        bestLap: mine?.bestLap ?? 0,
+        bumps: raceStats.bumps,
+      },
+      board,
+    ),
+  );
 }
 
 /** Connection changes: refresh the ready screen's text and the player's look */
@@ -314,6 +349,7 @@ function onStatus(s: ConnectionStatus) {
 // ---------------------------------------------------------------- racing
 
 function showRacing() {
+  raceStats.bumps = 0; // a new race
   const screen = show(racingHtml(lookOf(myPlayer()), laps()));
   screen.classList.toggle("auto-gas", settings.autoGas); // Nuris's style: the gas zone shows it's always on
   lockLandscape(true); // never drop to portrait mid-turn

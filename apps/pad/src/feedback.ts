@@ -58,11 +58,15 @@ function setScoops(racing: HTMLElement, count: number) {
 /** Each scoop held raises the next one's pop a little, as on the screens (fx.ts) */
 const SCOOP_STEP = 0.05;
 
+/** This race's tally for the results screen: reset when a race starts */
+export const raceStats = { bumps: 0 };
+
 /** React to an event about our player (the server only sends us those) */
 export function showEvent(evt: GameEvent, me: string, laps: number) {
   const racing = document.querySelector<HTMLElement>(".screen.racing");
   switch (evt.type) {
     case "bump":
+      raceStats.bumps++;
       play("bump", 0.4 + 0.6 * evt.strength, 0.05);
       if (racing) cue(racing, "bump");
       break;

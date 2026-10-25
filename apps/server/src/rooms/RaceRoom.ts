@@ -296,7 +296,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
     }
   }
 
-  /** Lap, checkpoint, place and finish time from game-core, for the HUD, standings and results */
+  /** Lap, checkpoint, place, progress and finish time from game-core, for the HUD, standings and results */
   private syncStandings() {
     for (const s of this.race.standings()) {
       const p = this.state.players.get(s.id);
@@ -305,6 +305,8 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       if (p.lap !== s.lap) p.lap = s.lap;
       if (p.checkpoint !== s.checkpoint) p.checkpoint = s.checkpoint;
       if (p.place !== s.place) p.place = s.place;
+      const progress = Math.round(s.progress);
+      if (p.progress !== progress) p.progress = progress;
       const finished = s.finishedAt ?? 0;
       if (p.finishedAt !== finished) p.finishedAt = finished;
     }
@@ -452,7 +454,7 @@ export class RaceRoom extends Room<{ state: RaceState }> {
       this.state.players.forEach((p, id) => {
         race.addPlayer(id, p.ball);
         p.ready = p.bot;
-        p.lap = p.checkpoint = p.place = p.finishedAt = 0;
+        p.lap = p.checkpoint = p.place = p.progress = p.finishedAt = 0;
       });
       this.padInputs.clear();
       this.lapStartedAt.clear();

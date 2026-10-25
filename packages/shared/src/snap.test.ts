@@ -13,6 +13,8 @@ const snap: SnapMsg = {
       q: [0, s, 0, s],
       v: [10.123, -0.4, 3.333],
       h: 1.5708,
+      s: -0.734,
+      d: -1,
     },
     {
       id: "b2",
@@ -53,6 +55,8 @@ describe("snapshot packing", () => {
         expect(Math.abs(v - a.v[k])).toBeLessThanOrEqual(0.005),
       );
       expect(Math.abs(b.h - a.h)).toBeLessThanOrEqual(0.0005);
+      expect(Math.abs(b.s! - (a.s ?? 0))).toBeLessThanOrEqual(0.005);
+      expect(b.d).toBe(a.d ?? 0);
       expect(Math.hypot(...b.q)).toBeCloseTo(1, 6); // still a unit quaternion
       const len = Math.hypot(...a.q);
       b.q.forEach((v, k) =>

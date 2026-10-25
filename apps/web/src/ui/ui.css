@@ -2658,3 +2658,82 @@
   background: var(--ink);
   color: var(--paper);
 }
+
+/* ---- steering wheel indicator: how far the player's phone is turned (--steer, -1 … 1, set every frame) */
+
+.steer-wheel {
+  --steer: 0;
+  --wheel-size: 56px;
+  position: relative;
+  display: inline-grid;
+  justify-items: center;
+  width: var(--wheel-size);
+  pointer-events: none;
+}
+
+.steer-wheel svg {
+  display: block;
+  width: var(--wheel-size);
+  height: var(--wheel-size);
+  overflow: visible;
+  /* full lock shows a quarter turn, like the phone at the default sensitivity */
+  transform: rotate(calc(var(--steer) * 90deg));
+  filter: drop-shadow(3px 3px 0 var(--ink));
+}
+
+.steer-rim {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 14;
+}
+
+.steer-hub {
+  fill: var(--ink);
+}
+
+.steer-spokes {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.steer-mark {
+  fill: var(--player, var(--flag));
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.steer-drift {
+  position: absolute;
+  top: 100%;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--flag);
+  color: var(--ink);
+  font: italic 900 13px/1.2 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  visibility: hidden;
+}
+
+.steer-wheel:not([data-drift="0"]) .steer-drift {
+  visibility: visible;
+}
+
+.steer-wheel:not([data-drift="0"]) .steer-rim {
+  stroke: var(--gas);
+}
+
+/* a laptop player's own wheel, bottom center under their chase camera */
+.own-wheel {
+  position: fixed;
+  z-index: 2;
+  left: 50%;
+  bottom: 28px;
+  --wheel-size: 72px;
+  transform: translateX(-50%);
+}

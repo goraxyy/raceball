@@ -245,7 +245,10 @@ describe("laps, finishing and the results phase", () => {
   });
 
   it("doesn't count a lap for a ball that turns round and crosses the finish line backwards", async () => {
-    const r = await loopRace(["me"], 1);
+    // balls can't normally turn round (maxRouteAngle); lift that to check the gates on their own
+    const r = await loopRace(["me"], 1, {
+      tuning: { maxRouteAngle: Math.PI },
+    });
     run(r, 1.5, { hold: { me: { ...NEUTRAL_INPUT, gas: 1 } } }); // over the line, heading north
     // then steer back south through the middle of the line, to a point behind the grid's front row
     const events: GameEvent[] = [];
@@ -275,6 +278,111 @@ describe("laps, finishing and the results phase", () => {
       finishedAt: null,
       progress: 0,
     });
+  });
+});
+
+describe("no turning round", () => {
+  it("full steer one way never turns the heading more than maxRouteAngle from the road", async () => {
+    const r = await loopRace(["me"], 1);
+    run(r, 1, { hold: { me: { ...NEUTRAL_INPUT, gas: 1 } } }); // up to speed, heading north along the loop
+    let worst = 0;
+    for (let i = 0; i < 4 / TICK_DT; i++) {
+      // hard left, away from the loop's right-hand curve, at a crawl so the ball stays near the road
+      r.setInput("me", { ...NEUTRAL_INPUT, steer: -1, gas: 0.3 });
+      r.step(TICK_DT);
+      const ball = r.snapshot(0, 0).balls[0];
+      // the loop's direction at the nearest point: a circle round (30, 0), driven clockwise seen from above
+      if (Math.hypot(ball.p[0] - R, ball.p[2]) < R / 3) continue; // near the middle every way is "radial"
+      const a = Math.atan2(ball.p[2], ball.p[0] - R);
+      const road = Math.atan2(Math.sin(a), -Math.cos(a));
+      const off = Math.abs(
+        Math.atan2(Math.sin(ball.h - road), Math.cos(ball.h - road)),
+      );
+      worst = Math.max(worst, off);
+    }
+    expect(worst).toBeLessThanOrEqual(tuning.maxRouteAngle + 0.1); // the race reads the road a tick behind
+    expect(worst).toBeGreaterThan(tuning.maxRouteAngle - 0.2); // it did reach the limit
+  });
+
+  it("a track without a route doesn't limit the heading", async () => {
+    race = await createFlatRace({ laps: 1 });
+    race.addPlayer("me", "earth");
+    race.start(0, 1);
+    run(race, 3, { hold: { me: { ...NEUTRAL_INPUT, steer: 1, gas: 0.5 } } });
+    const turned = -race.snapshot(0, 0).balls[0].h; // steer right lowers the heading
+    expect(turned).toBeGreaterThan(Math.PI);
+  });
+});
+
+describe("drifting", () => {
+  /** A flat race with one ball up to speed, going straight. One race at a time; afterEach frees the last */
+  async function upToSpeed(): Promise<Race> {
+    race?.dispose();
+    const r = (race = await createFlatRace({ laps: 1 }));
+    r.addPlayer("me", "earth");
+    r.start(0, 1);
+    run(r, 1.2, { hold: { me: { ...NEUTRAL_INPUT, gas: 1 } } });
+    return r;
+  }
+  const hold = (r: Race, input: Partial<InputMsg>, seconds: number) =>
+    run(r, seconds, { hold: { me: { ...NEUTRAL_INPUT, ...input } } });
+  const me = (r: Race) => r.snapshot(0, 0).balls[0];
+  const speedOf = (b: { v: number[] }) => Math.hypot(b.v[0], b.v[2]);
+  const course = (v: number[]) => Math.atan2(v[0], v[2]);
+
+  /** Up to speed, then `seconds` of `input`: how far the heading and the path turned right */
+  async function drive(input: Partial<InputMsg>, seconds: number) {
+    const r = await upToSpeed();
+    const start = me(r);
+    hold(r, input, seconds);
+    const b = me(r);
+    return {
+      race: r,
+      ball: b,
+      speed: speedOf(b),
+      turned: start.h - b.h,
+      pathTurned: course(start.v) - course(b.v),
+    };
+  }
+
+  it("brake into a turn at speed drifts: keeps speed and turns tighter than steering alone", async () => {
+    const drift = await drive({ steer: 1, gas: 1, brake: true }, 0.8);
+    expect(drift.ball.d).toBe(1);
+    const steer = await drive({ steer: 1, gas: 1 }, 0.8);
+    const brake = await drive({ gas: 1, brake: true }, 0.8);
+    expect(drift.turned).toBeGreaterThan(steer.turned);
+    expect(drift.pathTurned).toBeGreaterThan(steer.pathTurned); // the ball goes round tighter, not just spins
+    expect(drift.speed).toBeGreaterThan(brake.speed * 1.5); // a drift isn't a brake
+    expect(drift.speed).toBeGreaterThan(tuning.driftKeepSpeed);
+  });
+
+  it("brake with the wheel straight still brakes, and doesn't drift", async () => {
+    const r = await drive({ brake: true }, 0.4);
+    expect(r.ball.d).toBe(0);
+  });
+
+  it("steering out of a drift widens the line but keeps turning its way", async () => {
+    const tight = await drive({ steer: 1, gas: 1, brake: true }, 0.8);
+    const r = await upToSpeed();
+    const h0 = me(r).h;
+    hold(r, { steer: 1, gas: 1, brake: true }, 0.1);
+    hold(r, { steer: -1, gas: 1, brake: true }, 0.7);
+    const wide = h0 - me(r).h;
+    expect(wide).toBeGreaterThan(0); // still turning right
+    expect(wide).toBeLessThan(tight.turned);
+  });
+
+  it("letting go after a long drift fires a mini-turbo", async () => {
+    const gainAfter = async (seconds: number) => {
+      const d = await drive({ steer: 0.6, gas: 1, brake: true }, seconds);
+      hold(d.race, { gas: 1 }, 0.05);
+      const after = me(d.race);
+      expect(after.d).toBe(0);
+      return speedOf(after) - d.speed;
+    };
+    const short = await gainAfter(0.3);
+    const long = await gainAfter(1);
+    expect(long).toBeGreaterThan(short + tuning.driftTurboSpeed * 0.6);
   });
 });
 

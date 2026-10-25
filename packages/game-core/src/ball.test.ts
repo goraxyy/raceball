@@ -23,6 +23,9 @@ it("does not grant ground control inside a surface sensor without solid support"
       input: { ...NEUTRAL_INPUT },
       maxSpeedMul: 1,
       surfaceGrip: 1,
+      routeHeading: null,
+      drift: 0,
+      driftTime: 0,
     };
     world.step();
     expect(isGrounded(player, world, tuning)).toBe(false);

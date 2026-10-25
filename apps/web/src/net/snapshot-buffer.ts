@@ -16,6 +16,10 @@ export interface BallPose {
   p: Vec3;
   q: Quat;
   h: number;
+  /** Steer input, -1 … 1, for the wheel indicator */
+  s: number;
+  /** Drifting: 1 right, -1 left, 0 not */
+  d: number;
 }
 
 /**
@@ -78,6 +82,8 @@ export class SnapshotBuffer {
         p: lerpVec(from.p, to.p, t),
         q: slerp(from.q, to.q, t),
         h: lerpAngle(from.h, to.h, t),
+        s: (from.s ?? 0) + ((to.s ?? 0) - (from.s ?? 0)) * t,
+        d: to.d ?? 0,
       });
     }
 
@@ -115,6 +121,8 @@ export class SnapshotBuffer {
       ],
       q: ball.q,
       h: ball.h,
+      s: ball.s ?? 0,
+      d: ball.d ?? 0,
     };
     const shown = this.shownOwn;
     const dt =
@@ -132,6 +140,8 @@ export class SnapshotBuffer {
       p: lerpVec(shown.p, target.p, k),
       q: slerp(shown.q, target.q, k),
       h: lerpAngle(shown.h, target.h, k),
+      s: target.s,
+      d: target.d,
     };
     return this.shownOwn;
   }

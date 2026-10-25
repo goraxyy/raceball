@@ -17,7 +17,7 @@ import { debugEnabled, loadEruda, mountDebugOverlay } from "./debug";
 import { lockDownGestures } from "./lockdown";
 import { showEvent } from "./feedback";
 import { fireItem } from "./input-loop";
-import { flip, keepUpright } from "./orientation";
+import { flip, keepUpright, lockLandscape } from "./orientation";
 import {
   CALIBRATE_TEXT,
   calibrateHtml,
@@ -43,6 +43,7 @@ let stopScreen = () => {};
 function show(html: string): HTMLElement {
   stopScreen();
   stopScreen = () => {};
+  lockLandscape(false); // the wheel screens (calibrate, racing) lock it again
   app.innerHTML = html;
   return app.querySelector<HTMLElement>(".screen")!;
 }
@@ -178,6 +179,7 @@ function showCalibrate() {
   const meter = screen.querySelector<HTMLElement>(".meter-fill")!;
   screen.querySelector(".flip-btn")!.addEventListener("click", flip);
 
+  lockLandscape(true); // step 2 turns the phone like a wheel
   const cal = new Calibrator();
   everyFrame(() => {
     const done = cal.feed(
@@ -314,6 +316,7 @@ function onStatus(s: ConnectionStatus) {
 function showRacing() {
   const screen = show(racingHtml(lookOf(myPlayer()), laps()));
   screen.classList.toggle("auto-gas", settings.autoGas); // Nuris's style: the gas zone shows it's always on
+  lockLandscape(true); // never drop to portrait mid-turn
   const unbindZones = bindZones(screen);
   screen.querySelector(".item-btn")!.addEventListener("click", fireItem);
   const steerEl = screen.querySelector<HTMLElement>(".steer")!;

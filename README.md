@@ -6,6 +6,16 @@ Built at **HackPSU Fall 2026**. The theme is space, so every racer is a planet, 
 
 **Play:** open [raceball-hw9w.vercel.app/host](https://raceball-hw9w.vercel.app/host) on a laptop and scan the QR code with your phone. To practise alone with a keyboard, open [/play?local=1](https://raceball-hw9w.vercel.app/play?local=1).
 
+## Demo
+
+[![RaceBall demo video](https://img.youtube.com/vi/_1BuCD5iqxc/maxresdefault.jpg)](https://www.youtube.com/watch?v=_1BuCD5iqxc)
+
+Watch the demo on YouTube: [youtube.com/watch?v=_1BuCD5iqxc](https://www.youtube.com/watch?v=_1BuCD5iqxc)
+
+## Inspiration
+
+We know many kids don't have a console at home, but a laptop and a phone are readily available. We tried to emulate the experience of playing racing games like Gran Turismo and Need for Speed with just a laptop and a phone, and that is how this idea came about.
+
 ## All you need is one laptop and your phone
 
 - **One laptop** (on a TV or projector if you have one) opens `/host`. It shows the room code and a QR code.

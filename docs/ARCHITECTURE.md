@@ -289,6 +289,7 @@ stateDiagram-v2
 ## Asset loading
 
 - The host and viewers **preload all race assets in the lobby**, with a progress bar. The Ready button only enables once the player is loaded, paired and calibrated. Phone-only pads skip the asset step.
+- "Loaded" means nothing is left to load or compile mid-race: every layer of the map is in, and `apps/web/src/game/warm-up.ts` has compiled the race's shaders by drawing the track from spots along the route behind the loading screen. A shader that compiles the first time something comes into view freezes that frame, worst on Windows. The big screen does this paused behind its lobby. The quality ladder (`quality.ts`) never changes shaders either: it trades sharpness and the glow, and only stops drawing the shadows as its last step.
 - Use hashed file names and CDN caching, so the second load is instant.
 - Babylon fetches the Meshopt and KTX2 decoders from its CDN by default. **Self-host them before demo day** in case the Wi-Fi is bad.
 

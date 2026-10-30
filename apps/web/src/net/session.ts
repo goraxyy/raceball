@@ -46,6 +46,8 @@ export class NetSession {
   /** The room is gone (left, or reconnection failed) */
   closed = false;
   private listeners = new Set<() => void>();
+  private json?: RaceStateView;
+  private jsonVersion = -1;
   private eventListeners = new Set<(event: GameEvent) => void>();
   private pinger: ReturnType<typeof setInterval>;
   readonly room: Room;
@@ -97,8 +99,16 @@ export class NetSession {
     return this.room.roomId;
   }
 
+  /**
+   * The room's state as plain objects. Built once per state change, not per read: the renderer reads it every
+   * frame, and toJSON() copies every player, box, star and puddle (garbage the collector then pauses for)
+   */
   get state(): RaceStateView {
-    return this.room.state.toJSON() as RaceStateView;
+    if (!this.json || this.jsonVersion !== this.version) {
+      this.json = this.room.state.toJSON() as RaceStateView;
+      this.jsonVersion = this.version;
+    }
+    return this.json;
   }
 
   /** For Ali's renderer, once per frame: every ball's pose now, plus which one is ours */

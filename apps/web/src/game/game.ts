@@ -8,6 +8,7 @@ import {
   HemisphericLight,
   LoadAssetContainerAsync,
   MeshBuilder,
+  RenderTargetTexture,
   Scene,
   ShadowGenerator,
   StandardMaterial,
@@ -31,7 +32,8 @@ import { LocalSession, type LocalMap, type LocalStats } from "./local";
 import { LobbyTour, type TourFrame } from "./lobby-tour";
 import { NetFeed, type SnapshotSource } from "./net-feed";
 import { QualityGovernor, ladderFor, type QualityLevel } from "./quality";
-import { loadBoostPads } from "./route";
+import { loadBoostPads, loadRoute } from "./route";
+import { WarmUp, warmUpSpots } from "./warm-up";
 import { createSky, finishGreybox, loadWorld, tintLights } from "./world";
 
 export type GameMode = "local" | "viewer" | "host";
@@ -40,7 +42,8 @@ export type GameMode = "local" | "viewer" | "host";
 const SKY_FILL = 0.6;
 
 export interface Game {
-  update(dt: number): void;
+  /** paused: the page isn't drawing the scene (the big screen behind its lobby), so the frame rate means nothing */
+  update(dt: number, paused?: boolean): void;
   reset(): void;
   toggleOverview(): void;
   /** Host: where the page drew each follow-cam tile's frame */
@@ -57,6 +60,12 @@ export interface GameStatus {
   /** Host: players with a follow-cam tile, in order (the page draws a frame for each) */
   tiles?: string[];
 }
+
+/**
+ * The map's later layers (world, landmarks, interactables, item box, effects) hold the loading screen at most this
+ * long, ms. A layer still loading after it pops in mid-race, as before
+ */
+const LAYERS_MS = 20000;
 
 interface GameOptions {
   map?: LocalMap;
@@ -95,6 +104,8 @@ export function createGame(
       ...status,
       stats: local ? { ...local.stats } : undefined,
     });
+  // nothing in the race is clicked: don't pick through every mesh on every mouse move
+  scene.skipPointerMovePicking = true;
   const sky = new HemisphericLight("sky", new Vector3(0, 1, 0), scene);
   sky.intensity = 0.3;
   const sun = new DirectionalLight("sun", new Vector3(-0.4, -1, 0.35), scene);
@@ -108,9 +119,13 @@ export function createGame(
   if (map === "flat") createFlatGround(scene);
   const balls = new BallViews(scene, shadows);
   const items = new ItemViews(scene);
-  void items.load().catch((error: unknown) => {
-    if (!disposed) console.warn("Item box model failed to load", error);
-  });
+  /** What the loading screen waits for after the map, so nothing new arrives (and compiles) mid-race */
+  const layers: Promise<unknown>[] = [];
+  layers.push(
+    items.load().catch((error: unknown) => {
+      if (!disposed) console.warn("Item box model failed to load", error);
+    }),
+  );
   // boost pads, Lion Paw bumpers and Creamery Scoops; the glow is too dear for the big screen's tiles
   const toys = new InteractableViews(scene, { glow: mode !== "host" });
   const chase = new ChaseCamera(scene);
@@ -139,8 +154,12 @@ export function createGame(
   const applyQuality = (q: QualityLevel) => {
     scene.getEngine().setHardwareScalingLevel(1 / q.scale);
     toys.setGlow(q.glow);
-    sun.shadowEnabled = q.shadows !== "off";
-    shadows.usePercentageCloserFiltering = q.shadows === "soft";
+    // off stops drawing the shadow map and lightens what's left in it away; the materials keep their shadow code,
+    // since taking it out recompiles every one of them
+    shadows.getShadowMap()!.refreshRate = q.shadows
+      ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+      : RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+    shadows.setDarkness(q.shadows ? 0 : 1);
   };
   applyQuality(quality.quality);
   if (big) big.onPassesChanged = () => quality.restart();
@@ -154,9 +173,11 @@ export function createGame(
     place: (id) => (net ? net.place(id) : 1),
   });
   fx.mixer = options.mixer;
-  void fx.load().catch((error: unknown) => {
-    if (!disposed) console.warn("Effects failed to load", error);
-  });
+  layers.push(
+    fx.load().catch((error: unknown) => {
+      if (!disposed) console.warn("Effects failed to load", error);
+    }),
+  );
 
   let local: LocalSession | undefined;
   let net: NetFeed | undefined;
@@ -166,6 +187,10 @@ export function createGame(
   let landmarks: { dispose(): void } | undefined;
   let world: AssetContainer | undefined;
   let publishAfter = 0;
+  /** The session state version the item boxes, stars and puddles were last synced from */
+  let synced = -1;
+  /** While the loading screen is up: compiling the race's shaders, a step each frame (warm-up.ts) */
+  let warm: WarmUp | undefined;
   let countdown = 0; // s into the countdown, for the grid swoop
   const abort = new AbortController();
   void loadSky().catch((error: unknown) => {
@@ -225,9 +250,11 @@ export function createGame(
     feed = net = new NetFeed(options.session);
     net.onEvent = onEvent;
     void loadMap()
-      .then((assets) => {
+      .then(async (assets) => {
         container = assets;
         showMap(assets);
+        await prepare();
+        if (disposed) return;
         status.state = "ready";
         status.message = "Ready";
         publish();
@@ -276,27 +303,35 @@ export function createGame(
     assets.addAllToScene();
     finishGreybox(assets);
     // the grass board, its chasms and the causeways under the raised road, from the same JSON as the ground colliders
-    void loadWorld(scene, () => disposed)
-      .then((layer) => (world = layer))
-      .catch((error: unknown) => {
-        if (!disposed) console.warn("World failed to load", error);
-      });
+    layers.push(
+      loadWorld(scene, () => disposed)
+        .then((layer) => (world = layer))
+        .catch((error: unknown) => {
+          if (!disposed) console.warn("World failed to load", error);
+        }),
+    );
     // the boost pads (from the collision track's markers), paws and scoops; the greybox pads go once they're in
-    void (local ? Promise.resolve(local.pads) : loadBoostPads())
-      .then((pads) => toys.load(pads, HAPPY_VALLEY_INTERACTABLES.paws))
-      .then((loaded) => {
-        if (loaded)
-          assets.meshes.find((m) => m.name === GREYBOX_PADS)?.setEnabled(false);
-      })
-      .catch((error: unknown) => {
-        if (!disposed) console.warn("Interactables failed to load", error);
-      });
-    // the landmarks (and the animated arch and flags) go over the greybox once they're in; the race doesn't wait
-    void loadLandmarks(scene, assets, () => disposed)
-      .then((layer) => (landmarks = layer))
-      .catch((error: unknown) => {
-        if (!disposed) console.warn("Landmarks failed to load", error);
-      });
+    layers.push(
+      (local ? Promise.resolve(local.pads) : loadBoostPads())
+        .then((pads) => toys.load(pads, HAPPY_VALLEY_INTERACTABLES.paws))
+        .then((loaded) => {
+          if (loaded)
+            assets.meshes
+              .find((m) => m.name === GREYBOX_PADS)
+              ?.setEnabled(false);
+        })
+        .catch((error: unknown) => {
+          if (!disposed) console.warn("Interactables failed to load", error);
+        }),
+    );
+    // the landmarks (and the animated arch and flags) go over the greybox once they're in
+    layers.push(
+      loadLandmarks(scene, assets, () => disposed)
+        .then((layer) => (landmarks = layer))
+        .catch((error: unknown) => {
+          if (!disposed) console.warn("Landmarks failed to load", error);
+        }),
+    );
     const meshes = assets.meshes.filter((mesh) => mesh.getTotalVertices() > 0);
     for (const mesh of meshes) {
       mesh.receiveShadows = true;
@@ -316,6 +351,30 @@ export function createGame(
     overview.setTarget(min.add(max).scale(0.5));
     overview.radius = Math.max(max.x - min.x, max.z - min.z) * 1.1;
     big?.fitMap(overview.radius);
+  }
+
+  /**
+   * Holds the loading screen until the race has nothing left to load or compile: every layer is in (LAYERS_MS at
+   * most), the balls on the grid have their models, and warm-up.ts has compiled the shaders. Anything that loaded or
+   * compiled mid-race instead froze a frame, worst on Windows
+   */
+  async function prepare(): Promise<void> {
+    status.message = "Warming up the track…";
+    publish();
+    const timeout = new Promise((resolve) => setTimeout(resolve, LAYERS_MS));
+    await Promise.race([Promise.allSettled(layers), timeout]);
+    if (disposed) return;
+    if (feed) {
+      balls.sync(feed.sample(performance.now()), (id) => feed?.look?.(id));
+      await Promise.race([balls.loaded(), timeout]);
+    }
+    if (disposed) return;
+    const route =
+      map === "happy_valley" ? await loadRoute().catch(() => null) : null;
+    if (disposed) return;
+    warm = new WarmUp(scene, warmUpSpots(route?.points ?? []), chase.camera);
+    await warm.done;
+    warm = undefined;
   }
 
   async function loadLocal(): Promise<void> {
@@ -359,6 +418,8 @@ export function createGame(
     local.onEvent = onEvent;
     container = visualResult.value;
     if (container) showMap(container);
+    await prepare();
+    if (disposed) return;
     status.state = "ready";
     status.message = "Ready";
     publish();
@@ -397,12 +458,13 @@ export function createGame(
   }
 
   return {
-    update(dt) {
+    update(dt, paused = false) {
       if (disposed) return;
       heavens.update(dt);
+      warm?.frame();
       if (status.state !== "ready") return;
       const hidden = typeof document !== "undefined" && document.hidden;
-      if (quality.update(dt, hidden)) applyQuality(quality.quality);
+      if (quality.update(dt, hidden || paused)) applyQuality(quality.quality);
       local?.advance(dt);
       if (!feed) return;
       const poses = feed.sample(performance.now());
@@ -444,7 +506,8 @@ export function createGame(
       if (local) {
         items.sync(local.itemBoxes(), local.puddles());
         toys.syncScoops(local.scoops());
-      } else if (options.session) {
+      } else if (options.session && options.session.version !== synced) {
+        synced = options.session.version; // boxes, stars and puddles only change with the state
         const {
           itemBoxes = [],
           puddles = [],
@@ -496,6 +559,7 @@ export function createGame(
       if (disposed) return;
       disposed = true;
       abort.abort();
+      warm?.dispose();
       removeEventListener("keydown", onKeyDown);
       local?.dispose();
       net?.dispose();

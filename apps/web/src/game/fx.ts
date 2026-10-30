@@ -425,6 +425,11 @@ export class GameFx {
   private readonly respawns = new Map<string, number>();
   private readonly lastSound = new Map<CueName, number>();
   private snowfall?: Fx;
+  /**
+   * One stopped copy of each ball's own systems (dust, boost flames and trail), made with the pools: the loading
+   * screen's warm-up compiles their shaders then, not on the first boost mid-race. Never started
+   */
+  private warm: Fx[] = [];
   private snowOn = false;
   private clock = 0;
   private phase?: Phase;
@@ -462,6 +467,13 @@ export class GameFx {
     }
     this.snowfall = this.make("fx_snowfall");
     if (this.snowOn) this.snowfall.start();
+    this.warm = (["fx_dust", "fx_boost_flames", "fx_boost_trail"] as const).map(
+      (file) => {
+        const ps = this.make(file);
+        ps.emitter = Vector3.Zero(); // a system without an emitter never counts as ready
+        return ps;
+      },
+    );
     this.loaded = true;
   }
 
@@ -543,6 +555,8 @@ export class GameFx {
     for (const pool of this.pools.values()) pool.forEach((ps) => ps.dispose());
     for (const b of this.balls.values()) this.dropBall(b);
     this.snowfall?.dispose();
+    this.warm.forEach((ps) => ps.dispose());
+    this.warm = [];
     this.pools.clear();
     this.balls.clear();
   }

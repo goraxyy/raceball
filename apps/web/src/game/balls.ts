@@ -129,6 +129,11 @@ export class BallViews {
     }
   }
 
+  /** Every ball model asked for so far is in (or failed), and its balls wear it */
+  async loaded(): Promise<void> {
+    await Promise.allSettled(this.models.values());
+  }
+
   dispose(): void {
     this.sync(new Map());
     for (const model of this.models.values())

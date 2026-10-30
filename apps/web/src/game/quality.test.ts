@@ -20,7 +20,7 @@ describe("ladderFor", () => {
     const flat = QUALITY_LADDER.filter((q) => q.scale === 1);
     expect(flat[0].glow).toBe(true);
     expect(flat.at(-1)!.glow).toBe(false);
-    expect(QUALITY_LADDER.findIndex((q) => q.shadows === "off")).toBe(
+    expect(QUALITY_LADDER.findIndex((q) => !q.shadows)).toBe(
       QUALITY_LADDER.length - 1,
     );
   });

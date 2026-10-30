@@ -35,10 +35,16 @@ export function GameView({
   session,
   onLoaded,
   hostControls,
+  paused = false,
   tour,
 }: {
   mode: GameMode;
   session?: SnapshotSource;
+  /**
+   * Loads, and compiles the race's shaders, without drawing: the big screen mounts it behind its lobby, so the race
+   * starts with nothing left to load. Nothing shows while paused
+   */
+  paused?: boolean;
   /** Once the map is in and the race can be drawn (a laptop tells the server its assets loaded) */
   onLoaded?: () => void;
   /** The host's race buttons: on the race board (host), or on this laptop's board when the host plays (viewer) */
@@ -51,8 +57,10 @@ export function GameView({
   const [status, setStatus] = useState<GameStatus | null>(null);
   const [mixer, setMixer] = useState<Mixer | null>(null);
   const onLoadedRef = useRef(onLoaded);
+  const pausedRef = useRef(paused);
   useEffect(() => {
     onLoadedRef.current = onLoaded;
+    pausedRef.current = paused;
   });
   const onTileRects = useCallback(
     (rects: Map<string, TileRect>) => gameRef.current?.setTileRects(rects),
@@ -151,8 +159,8 @@ export function GameView({
     gameRef.current = game;
     const removeInspector = installInspectorToggle(scene);
     engine.runRenderLoop(() => {
-      game.update(engine.getDeltaTime() / 1000);
-      scene.render();
+      game.update(engine.getDeltaTime() / 1000, pausedRef.current);
+      if (!pausedRef.current) scene.render();
     });
     const onResize = () => engine.resize();
     addEventListener("resize", onResize);
@@ -170,6 +178,8 @@ export function GameView({
     };
   }, [mode, session, tour]);
 
+  // the big screen behind its lobby shows nothing (the HUD of the other modes never pauses)
+  const shown = !paused;
   // fixed to the viewport, so page styles (body padding) never shrink the 3D view
   return (
     <>
@@ -184,13 +194,14 @@ export function GameView({
           height: "100%",
           display: "block",
           outline: "none",
+          visibility: paused ? "hidden" : undefined,
         }}
       />
-      {mode === "viewer" && tour && session && (
+      {shown && mode === "viewer" && tour && session && (
         <LobbyBackdrop session={session} stop={stop} dipRef={dipRef} />
       )}
-      {mode === "host" && mixer && <Captions mixer={mixer} />}
-      {mode === "host" && session && !!status?.tiles?.length && (
+      {shown && mode === "host" && mixer && <Captions mixer={mixer} />}
+      {shown && mode === "host" && session && !!status?.tiles?.length && (
         <TileFrames
           ids={status.tiles}
           session={session}
@@ -210,7 +221,8 @@ export function GameView({
           }
         />
       )}
-      {mode === "host" &&
+      {shown &&
+        mode === "host" &&
         session &&
         path &&
         status?.state === "ready" &&
@@ -233,7 +245,7 @@ export function GameView({
           wheelRef={(el) => wheel(OWN, el)}
         />
       )}
-      {mode !== "local" && status && status.state !== "ready" && (
+      {shown && mode !== "local" && status && status.state !== "ready" && (
         <p
           className="game-status"
           role={status.state === "error" ? "alert" : "status"}

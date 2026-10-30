@@ -15,6 +15,7 @@ import type { BallPose } from "./balls";
 import { createGame, type Game, type GameMode, type GameStatus } from "./game";
 import { HostBoard } from "./HostBoard";
 import { installInspectorToggle } from "./inspector";
+import { LobbyBackdrop } from "./LobbyBackdrop";
 import type { TileRect } from "./big-screen";
 import type { SnapshotSource } from "./net-feed";
 import { useRoute } from "./route";
@@ -35,6 +36,7 @@ export function GameView({
   onLoaded,
   hostControls,
   paused = false,
+  tour,
 }: {
   mode: GameMode;
   session?: SnapshotSource;
@@ -47,6 +49,8 @@ export function GameView({
   onLoaded?: () => void;
   /** The host's race buttons: on the race board (host), or on this laptop's board when the host plays (viewer) */
   hostControls?: ReactNode;
+  /** Viewer: in the lobby the camera tours the landmarks behind it, under a navy wash with the theme and each name */
+  tour?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -74,6 +78,10 @@ export function GameView({
   const ownSpeed = useRef(0);
   const speed = useCallback(() => ownSpeed.current, []);
   const path = useRoute(mode !== "local");
+  // the lobby tour: which shot is up (one render a shot), and the navy cover between shots (set every frame)
+  const [stop, setStop] = useState<number | null>(null);
+  const stopRef = useRef<number | null>(null);
+  const dipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -128,6 +136,17 @@ export function GameView({
         for (const [id, pose] of poses) next.set(id, [pose.p[0], pose.p[2]]);
         spots.current = next;
       },
+      onTour: tour
+        ? (frame) => {
+            if (!active) return;
+            if (dipRef.current)
+              dipRef.current.style.opacity = (frame?.dip ?? 0).toFixed(3);
+            const next = frame?.stop ?? null;
+            if (next === stopRef.current) return;
+            stopRef.current = next;
+            setStop(next);
+          }
+        : undefined,
       onStatus: (next) => {
         if (!active) return;
         setStatus(next);
@@ -157,7 +176,7 @@ export function GameView({
       scene.dispose();
       engine.dispose();
     };
-  }, [mode, session]);
+  }, [mode, session, tour]);
 
   // the big screen behind its lobby shows nothing (the HUD of the other modes never pauses)
   const shown = !paused;
@@ -178,6 +197,9 @@ export function GameView({
           visibility: paused ? "hidden" : undefined,
         }}
       />
+      {shown && mode === "viewer" && tour && session && (
+        <LobbyBackdrop session={session} stop={stop} dipRef={dipRef} />
+      )}
       {shown && mode === "host" && mixer && <Captions mixer={mixer} />}
       {shown && mode === "host" && session && !!status?.tiles?.length && (
         <TileFrames

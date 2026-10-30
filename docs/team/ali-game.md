@@ -579,6 +579,14 @@ On the real map, the bot's laps drop from about 64 s to about 61 s. The two star
 - **Events:** `game.ts` hears every game event, from the local race or the server's `evt` messages (`NetSession.onEvent`), in one `onEvent`. That's where `fx.ts` plugs in.
 - **Local mode** now has the same 3 s countdown as online, so the swoop plays after every reset. The panel's **Test bump** button fakes a strength 1 bump, for tuning the shake.
 
+### Lobby tour
+
+**Done.** On `/play`, the lobby shows the map instead of a flat background, so players see the theme before they race:
+- **The tour:** `LobbyTour` (`apps/web/src/game/lobby-tour.ts`) takes over the camera while the room is in the lobby. It holds each shot in `TOUR` for 7 s, drifting from `from` to `to` while it looks at `look`, and dips to navy between shots. The first shot is the starting grid, where every joined planet already sits (the server streams them from the moment they join). Then it follows the route: Old Main, Pattee Library, the Lion Shrine, the Creamery, Beaver Stadium and Mount Nittany.
+- **Framing:** each look point sits a little to the right of its landmark, so the landmark stays clear of the pairing card on the right. The shots were tuned by eye at 1024 × 768. To retune one, change its numbers in `TOUR`; the tests check every shot stays above the ground and looks a good way off.
+- **The overlay:** `LobbyBackdrop.tsx` draws a navy wash with a light blur, the theme card (HackPSU Fall 2026 · Space, the Happy Valley Grand Prix, eight planets) and the name of the landmark in view. `GameView` sets the navy cover's opacity every frame, with no React render.
+- **Reduced motion** holds each shot still. When the playing host uses their own laptop, the host lobby covers the view as before, so there's no tour.
+
 ---
 
 ## Assets: 3D models and pipeline
